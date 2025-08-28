@@ -282,8 +282,9 @@ const RightPanel: React.FC<RightPanelProps> = ({
               <button 
                 className={`provider-badge ${currentProvider}`}
                 onClick={() => setShowProviderDropdown(!showProviderDropdown)}
+                title={`Provider attuale: ${currentProvider.toUpperCase()} - Clicca per cambiare`}
               >
-                {currentProvider.toUpperCase()}
+                🛡️ {currentProvider.toUpperCase()} {showProviderDropdown ? '▲' : '▼'}
               </button>
               {showProviderDropdown && (
                 <div className="provider-dropdown">
@@ -296,7 +297,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         setShowProviderDropdown(false);
                       }}
                     >
-                      {provider.name}
+                      {getProviderIcon(provider.key)} {provider.name}
+                      {currentProvider === provider.key && ' ✓'}
                     </button>
                   ))}
                 </div>
@@ -432,6 +434,18 @@ function getAvailableProviders(config: LLMProviders) {
     { key: 'grok', name: 'Grok', enabled: config.grok.enabled && !!config.grok.apiKey },
     { key: 'local', name: 'Local', enabled: config.local.enabled }
   ].filter(provider => provider.enabled);
+}
+
+// Funzione per ottenere l'icona del provider
+function getProviderIcon(providerKey: string): string {
+  const icons: Record<string, string> = {
+    'openai': '🤖',
+    'anthropic': '🧠',
+    'gemini': '💎',
+    'grok': '⚡',
+    'local': '🏠'
+  };
+  return icons[providerKey] || '🔧';
 }
 
 export default RightPanel;

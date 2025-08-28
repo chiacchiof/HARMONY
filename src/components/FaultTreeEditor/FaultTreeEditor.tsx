@@ -4,8 +4,12 @@ import LeftPanel from '../LeftPanel/LeftPanel';
 import CentralPanel from '../CentralPanel/CentralPanel';
 import RightPanel from '../RightPanel/RightPanel';
 import ParameterModal from '../ParameterModal/ParameterModal';
+import SaveModal from '../SaveModal/SaveModal';
+import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree';
 import { FaultTreeModification } from '../../types/ChatIntegration';
+import { FileService } from '../../services/file-service';
+import { LLMProviders, loadLLMConfig, saveLLMConfig } from '../../config/llm-config';
 import './FaultTreeEditor.css';
 
 const FaultTreeEditor: React.FC = () => {
@@ -17,6 +21,9 @@ const FaultTreeEditor: React.FC = () => {
 
   const [selectedElement, setSelectedElement] = useState<BaseEvent | Gate | null>(null);
   const [showParameterModal, setShowParameterModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLLMConfigModal, setShowLLMConfigModal] = useState(false);
+  const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
 
   // Gestione aggiunta eventi base
   const handleAddBaseEvent = useCallback(() => {
@@ -92,20 +99,43 @@ const FaultTreeEditor: React.FC = () => {
   }, [faultTreeModel]);
 
   // Gestione apertura file
-  const handleOpenFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOpenFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const loadedModel = JSON.parse(e.target?.result as string);
-          setFaultTreeModel(loadedModel);
-        } catch (error) {
-          alert('Errore nel caricamento del file');
-        }
-      };
-      reader.readAsText(file);
+      try {
+        const model = await FileService.openFaultTree(file);
+        setFaultTreeModel(model);
+        alert('File caricato con successo!');
+      } catch (error) {
+        alert(`Errore nel caricamento del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+      }
     }
+  }, []);
+
+  // Gestione esportazione XML
+  const handleExportXML = useCallback(() => {
+    FileService.exportToXML(faultTreeModel);
+  }, [faultTreeModel]);
+
+  // Gestione esportazione CSV
+  const handleExportCSV = useCallback(() => {
+    FileService.exportToCSV(faultTreeModel);
+  }, [faultTreeModel]);
+
+  // Gestione apertura SaveModal
+  const handleShowSaveModal = useCallback(() => {
+    setShowSaveModal(true);
+  }, []);
+
+  // Gestione apertura LLM Config Modal
+  const handleShowLLMConfig = useCallback(() => {
+    setShowLLMConfigModal(true);
+  }, []);
+
+  // Gestione salvataggio configurazione LLM
+  const handleLLMConfigChange = useCallback((newConfig: LLMProviders) => {
+    setLlmConfig(newConfig);
+    saveLLMConfig(newConfig);
   }, []);
 
   // Gestione esportazione codice
@@ -268,11 +298,15 @@ const FaultTreeEditor: React.FC = () => {
 
   return (
     <div className="fault-tree-editor">
-      <MenuBar 
-        onSave={handleSaveFile}
-        onOpen={handleOpenFile}
-        onExportCode={handleExportCode}
-      />
+              <MenuBar
+          onSave={handleSaveFile}
+          onOpen={handleOpenFile}
+          onExportCode={handleExportCode}
+          onShowSaveModal={handleShowSaveModal}
+          onExportXML={handleExportXML}
+          onExportCSV={handleExportCSV}
+          onShowLLMConfig={handleShowLLMConfig}
+        />
       
       <div className="editor-content">
         <LeftPanel 
@@ -305,6 +339,18 @@ const FaultTreeEditor: React.FC = () => {
           }}
         />
       )}
+
+      <SaveModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        faultTreeModel={faultTreeModel}
+      />
+
+      <LLMConfigModal
+        isOpen={showLLMConfigModal}
+        onClose={() => setShowLLMConfigModal(false)}
+        onConfigChange={handleLLMConfigChange}
+      />
     </div>
   );
 };

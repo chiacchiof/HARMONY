@@ -82,9 +82,19 @@ const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
         </div>
         <div className="gate-info">
           <div className="gate-type">{gate.gateType}</div>
-          <div className="gate-name">{gate.name}</div>
+          <div 
+            className="gate-name" 
+            title={gate.name}
+          >
+            {gate.name}
+          </div>
           {gate.description && (
-            <div className="gate-description">{gate.description}</div>
+            <div 
+              className="gate-description" 
+              title={gate.description}
+            >
+              {gate.description}
+            </div>
           )}
           <div className="gate-inputs">
             Inputs: {gate.inputs.length}

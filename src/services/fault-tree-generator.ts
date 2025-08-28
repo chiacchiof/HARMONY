@@ -132,19 +132,26 @@ export class FaultTreeGenerator {
     const gates: Gate[] = [];
     const connections: Connection[] = [];
 
-    let xOffset = startPosition.x;
-    let yOffset = startPosition.y;
-    const spacing = 200;
-
     // Crea mappa per IDs
     const elementIds = new Map<string, string>();
+    
+    // Crea mappa per posizioni degli elementi
+    const elementPositions = new Map<string, { x: number; y: number }>();
 
-    // Genera eventi base
+    // Algoritmo di layout gerarchico intelligente
+    const layout = this.calculateHierarchicalLayout(generationResult, startPosition);
+
+    // Genera eventi base (posizionati in basso)
     generationResult.elements
       .filter(el => el.type === 'event')
       .forEach((element, index) => {
         const id = `event-${Date.now()}-${index}`;
         elementIds.set(element.name, id);
+
+        const position = layout.events[element.name] || { 
+          x: startPosition.x + (index % 4) * 180, 
+          y: startPosition.y + 400 
+        };
 
         events.push({
           id,
@@ -152,20 +159,24 @@ export class FaultTreeGenerator {
           name: element.name,
           description: element.description,
           failureRate: element.failureRate || 0.001,
-          position: element.position || { 
-            x: xOffset + (index % 3) * spacing, 
-            y: yOffset + Math.floor(index / 3) * spacing 
-          },
+          position,
           parameters: element.parameters || {}
         });
+        
+        elementPositions.set(element.name, position);
       });
 
-    // Genera porte
+    // Genera porte (posizionate sopra gli eventi)
     generationResult.elements
       .filter(el => el.type === 'gate')
       .forEach((element, index) => {
         const id = `gate-${Date.now()}-${index}`;
         elementIds.set(element.name, id);
+
+        const position = layout.gates[element.name] || { 
+          x: startPosition.x + (index % 3) * 250, 
+          y: startPosition.y + 200 
+        };
 
         gates.push({
           id,
@@ -173,13 +184,12 @@ export class FaultTreeGenerator {
           gateType: element.gateType || 'OR',
           name: element.name,
           description: element.description,
-          position: element.position || { 
-            x: xOffset + spacing + (index % 3) * spacing, 
-            y: yOffset + 100 + Math.floor(index / 3) * spacing 
-          },
+          position,
           inputs: [],
           parameters: element.parameters || {}
         });
+        
+        elementPositions.set(element.name, position);
       });
 
     // Crea connessioni
@@ -209,6 +219,81 @@ export class FaultTreeGenerator {
       connections,
       topEvent: generationResult.topEvent ? elementIds.get(generationResult.topEvent) : undefined
     };
+  }
+
+  /**
+   * Calcola layout gerarchico intelligente per posizionare elementi
+   */
+  private static calculateHierarchicalLayout(
+    generationResult: FaultTreeGenerationResult,
+    startPosition: { x: number; y: number }
+  ): { events: Record<string, { x: number; y: number }>, gates: Record<string, { x: number; y: number }> } {
+    const layout = {
+      events: {} as Record<string, { x: number; y: number }>,
+      gates: {} as Record<string, { x: number; y: number }>
+    };
+
+    const events = generationResult.elements.filter(el => el.type === 'event');
+    const gates = generationResult.elements.filter(el => el.type === 'gate');
+    const connections = generationResult.connections;
+
+    // Analizza la struttura per determinare livelli
+    const levels = this.analyzeHierarchy(connections, events, gates);
+    
+    // Posiziona elementi per livelli
+    levels.forEach((level, levelIndex) => {
+      const levelY = startPosition.y + (levelIndex * 200);
+      const levelElements = level.elements;
+      
+      // Distribuisci elementi orizzontalmente nel livello
+      levelElements.forEach((element, index) => {
+        const x = startPosition.x + (index * 220);
+        const y = levelY;
+        
+        if (element.type === 'event') {
+          layout.events[element.name] = { x, y };
+        } else {
+          layout.gates[element.name] = { x, y };
+        }
+      });
+    });
+
+    return layout;
+  }
+
+  /**
+   * Analizza la gerarchia per determinare i livelli
+   */
+  private static analyzeHierarchy(
+    connections: Array<{ source: string; target: string }>,
+    events: GeneratedElement[],
+    gates: GeneratedElement[]
+  ): Array<{ level: number; elements: GeneratedElement[] }> {
+    const levels: Array<{ level: number; elements: GeneratedElement[] }> = [];
+    
+    // Trova elementi senza input (livello più alto)
+    const topLevel = gates.filter(gate => 
+      !connections.some(conn => conn.target === gate.name)
+    );
+    
+    if (topLevel.length > 0) {
+      levels.push({ level: 0, elements: topLevel });
+    }
+    
+    // Trova elementi intermedi
+    const intermediateLevel = gates.filter(gate => 
+      connections.some(conn => conn.target === gate.name) &&
+      connections.some(conn => conn.source === gate.name)
+    );
+    
+    if (intermediateLevel.length > 0) {
+      levels.push({ level: 1, elements: intermediateLevel });
+    }
+    
+    // Eventi base sempre al livello più basso
+    levels.push({ level: 2, elements: events });
+    
+    return levels;
   }
 
   /**

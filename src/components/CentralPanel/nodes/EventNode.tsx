@@ -42,7 +42,12 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
         <div className="event-info">
           <div className="event-name">{event.name}</div>
           {event.description && (
-            <div className="event-description">{event.description}</div>
+            <div 
+              className="event-description" 
+              title={event.description}
+            >
+              {event.description}
+            </div>
           )}
           {event.failureRate && (
             <div className="event-rate">λ = {event.failureRate}</div>
