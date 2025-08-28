@@ -1,0 +1,38 @@
+.edge-delete-container {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.react-flow__edge:hover + .edge-delete-container,
+.edge-delete-container:hover {
+  opacity: 1;
+}
+
+.edge-delete-button {
+  width: 18px;
+  height: 18px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.edge-delete-button:hover {
+  background-color: #c0392b;
+  transform: scale(1.1);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Stile per rendere l'edge più visibile al hover */
+.react-flow__edge-path:hover {
+  stroke-width: 3px !important;
+  stroke: #e74c3c !important;
+}

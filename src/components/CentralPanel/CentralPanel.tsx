@@ -11,6 +11,7 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   NodeChange,
+  NodeRemoveChange,
   EdgeChange,
   MarkerType
 } from 'reactflow';
@@ -19,12 +20,15 @@ import 'reactflow/dist/style.css';
 import { FaultTreeModel, BaseEvent, Gate } from '../../types/FaultTree';
 import EventNode from './nodes/EventNode';
 import GateNode from './nodes/GateNode';
+import DeleteButtonEdge from './edges/DeleteButtonEdge';
 import './CentralPanel.css';
 
 interface CentralPanelProps {
   faultTreeModel: FaultTreeModel;
   onElementClick: (element: BaseEvent | Gate) => void;
   onModelChange: (model: FaultTreeModel) => void;
+  onDeleteElement: (elementId: string) => void;
+  onDeleteConnection: (connectionId: string) => void;
 }
 
 const nodeTypes = {
@@ -32,10 +36,16 @@ const nodeTypes = {
   gateNode: GateNode,
 };
 
+const edgeTypes = {
+  deleteButtonEdge: DeleteButtonEdge,
+};
+
 const CentralPanel: React.FC<CentralPanelProps> = ({
   faultTreeModel,
   onElementClick,
-  onModelChange
+  onModelChange,
+  onDeleteElement,
+  onDeleteConnection
 }) => {
   // Converti il modello in nodi e edge di React Flow
   const initialNodes: Node[] = useMemo(() => {
@@ -49,7 +59,8 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
         position: event.position,
         data: {
           event,
-          onClick: () => onElementClick(event)
+          onClick: () => onElementClick(event),
+          onDelete: onDeleteElement
         },
         draggable: true
       });
@@ -63,29 +74,33 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
         position: gate.position,
         data: {
           gate,
-          onClick: () => onElementClick(gate)
+          onClick: () => onElementClick(gate),
+          onDelete: onDeleteElement
         },
         draggable: true
       });
     });
 
     return nodes;
-  }, [faultTreeModel, onElementClick]);
+  }, [faultTreeModel, onElementClick, onDeleteElement]);
 
   const initialEdges: Edge[] = useMemo(() => {
     return faultTreeModel.connections.map(conn => ({
       id: conn.id,
       source: conn.source,
       target: conn.target,
-      type: 'smoothstep',
+      type: 'deleteButtonEdge',
       animated: true,
       style: { stroke: '#2c3e50', strokeWidth: 2 },
       markerEnd: {
         type: MarkerType.ArrowClosed,
         color: '#2c3e50',
+      },
+      data: {
+        onDelete: onDeleteConnection
       }
     }));
-  }, [faultTreeModel.connections]);
+  }, [faultTreeModel.connections, onDeleteConnection]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -133,12 +148,15 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     setEdges((eds) => addEdge({
       ...connection,
       id: newConnection.id,
-      type: 'smoothstep',
+      type: 'deleteButtonEdge',
       animated: true,
       style: { stroke: '#2c3e50', strokeWidth: 2 },
       markerEnd: {
         type: MarkerType.ArrowClosed,
         color: '#2c3e50',
+      },
+      data: {
+        onDelete: onDeleteConnection
       }
     }, eds));
   }, [faultTreeModel, onModelChange, setEdges]);
@@ -182,25 +200,56 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     
     changes.forEach(change => {
       if (change.type === 'remove') {
-        const updatedModel = {
-          ...faultTreeModel,
-          connections: faultTreeModel.connections.filter(conn => conn.id !== change.id)
-        };
-        
-        // Rimuovi anche dall'array inputs della porta
-        const removedConnection = faultTreeModel.connections.find(conn => conn.id === change.id);
-        if (removedConnection) {
-          updatedModel.gates = faultTreeModel.gates.map(gate =>
-            gate.id === removedConnection.target
-              ? { ...gate, inputs: gate.inputs.filter(input => input !== removedConnection.source) }
-              : gate
-          );
-        }
-        
-        onModelChange(updatedModel);
+        // Usa la funzione di cancellazione dedicata
+        onDeleteConnection(change.id);
       }
     });
-  }, [onEdgesChange, faultTreeModel, onModelChange]);
+  }, [onEdgesChange, onDeleteConnection]);
+
+  // Gestione eliminazione nodi
+  const handleNodesChangeWithDelete = useCallback((changes: NodeChange[]) => {
+    // Prima processa le eliminazioni
+    const deleteChanges = changes.filter(change => change.type === 'remove');
+    deleteChanges.forEach(change => {
+      // Type guard per NodeRemoveChange
+      if (change.type === 'remove') {
+        onDeleteElement((change as NodeRemoveChange).id);
+      }
+    });
+
+    // Poi processa gli altri cambiamenti (posizione, selezione, etc.)
+    const otherChanges = changes.filter(change => change.type !== 'remove');
+    if (otherChanges.length > 0) {
+      handleNodesChange(otherChanges);
+    }
+  }, [handleNodesChange, onDeleteElement]);
+
+  // Gestione tasti
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Trova i nodi selezionati
+      const selectedNodes = nodes.filter(node => node.selected);
+      const selectedEdges = edges.filter(edge => edge.selected);
+      
+      // Elimina i nodi selezionati
+      selectedNodes.forEach(node => {
+        onDeleteElement(node.id);
+      });
+      
+      // Elimina gli edge selezionati
+      selectedEdges.forEach(edge => {
+        onDeleteConnection(edge.id);
+      });
+      
+      event.preventDefault();
+    }
+  }, [nodes, edges, onDeleteElement, onDeleteConnection]);
+
+  // Aggiungi listener per tasti
+  React.useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <div className="central-panel">
@@ -211,18 +260,23 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
           <span>Porte: {faultTreeModel.gates.length}</span>
           <span>Connessioni: {faultTreeModel.connections.length}</span>
         </div>
+        <div className="diagram-help">
+          <span>💡 Hover su elementi e collegamenti per cancellare • DEL/Backspace per elementi selezionati</span>
+        </div>
       </div>
       
       <div className="react-flow-container">
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={handleNodesChange}
+          onNodesChange={handleNodesChangeWithDelete}
           onEdgesChange={handleEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
           attributionPosition="bottom-left"
+          deleteKeyCode={null} // Disabilita il delete di default per gestirlo manualmente
         >
           <Controls />
           <MiniMap 

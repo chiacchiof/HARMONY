@@ -6,10 +6,18 @@ import './GateNode.css';
 interface GateNodeData {
   gate: Gate;
   onClick: () => void;
+  onDelete?: (elementId: string) => void;
 }
 
 const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
-  const { gate, onClick } = data;
+  const { gate, onClick, onDelete } = data;
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(gate.id);
+    }
+  };
 
   const getGateIcon = (gateType: GateType): string => {
     const icons = {
@@ -54,6 +62,16 @@ const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
         className="gate-handle gate-handle-output"
         style={{ backgroundColor: getGateColor(gate.gateType) }}
       />
+      
+      {onDelete && (
+        <button 
+          className="delete-button" 
+          onClick={handleDelete}
+          title="Elimina porta (e tutti gli elementi collegati)"
+        >
+          ×
+        </button>
+      )}
       
       <div className="gate-content">
         <div 

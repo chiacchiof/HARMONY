@@ -6,10 +6,18 @@ import './EventNode.css';
 interface EventNodeData {
   event: BaseEvent;
   onClick: () => void;
+  onDelete?: (elementId: string) => void;
 }
 
 const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
-  const { event, onClick } = data;
+  const { event, onClick, onDelete } = data;
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(event.id);
+    }
+  };
 
   return (
     <div className="event-node" onClick={onClick}>
@@ -18,6 +26,16 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
         position={Position.Top}
         className="event-handle"
       />
+      
+      {onDelete && (
+        <button 
+          className="delete-button" 
+          onClick={handleDelete}
+          title="Elimina evento"
+        >
+          ×
+        </button>
+      )}
       
       <div className="event-content">
         <div className="event-icon">⬜</div>

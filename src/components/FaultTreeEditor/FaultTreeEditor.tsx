@@ -119,6 +119,84 @@ const FaultTreeEditor: React.FC = () => {
     URL.revokeObjectURL(url);
   }, [faultTreeModel]);
 
+  // Funzione per trovare tutti gli elementi collegati a una gate (ricorsiva)
+  const findConnectedElements = useCallback((gateId: string, visited = new Set<string>()): string[] => {
+    if (visited.has(gateId)) return [];
+    visited.add(gateId);
+    
+    const gate = faultTreeModel.gates.find(g => g.id === gateId);
+    if (!gate) return [];
+    
+    const connected: string[] = [];
+    
+    // Aggiungi tutti gli input della gate
+    gate.inputs.forEach(inputId => {
+      connected.push(inputId);
+      
+      // Se l'input è una gate, trova ricorsivamente i suoi elementi collegati
+      const inputGate = faultTreeModel.gates.find(g => g.id === inputId);
+      if (inputGate) {
+        connected.push(...findConnectedElements(inputId, visited));
+      }
+    });
+    
+    return connected;
+  }, [faultTreeModel.gates]);
+
+  // Gestione cancellazione elemento
+  const handleDeleteElement = useCallback((elementId: string) => {
+    const element = [...faultTreeModel.events, ...faultTreeModel.gates].find(e => e.id === elementId);
+    if (!element) return;
+
+    if (element.type === 'gate') {
+      // Cancellazione gate: elimina tutti gli elementi collegati
+      const connectedIds = findConnectedElements(elementId);
+      
+      setFaultTreeModel(prev => ({
+        ...prev,
+        events: prev.events.filter(event => !connectedIds.includes(event.id)),
+        gates: prev.gates.filter(gate => gate.id !== elementId && !connectedIds.includes(gate.id)),
+        connections: prev.connections.filter(conn => 
+          conn.source !== elementId && 
+          conn.target !== elementId &&
+          !connectedIds.includes(conn.source) &&
+          !connectedIds.includes(conn.target)
+        )
+      }));
+    } else {
+      // Cancellazione evento base: rimuovi solo l'evento e i suoi collegamenti
+      setFaultTreeModel(prev => ({
+        ...prev,
+        events: prev.events.filter(event => event.id !== elementId),
+        connections: prev.connections.filter(conn => 
+          conn.source !== elementId && conn.target !== elementId
+        ),
+        // Rimuovi l'evento dagli input delle gate
+        gates: prev.gates.map(gate => ({
+          ...gate,
+          inputs: gate.inputs.filter(inputId => inputId !== elementId)
+        }))
+      }));
+    }
+  }, [faultTreeModel, findConnectedElements]);
+
+  // Gestione cancellazione collegamento
+  const handleDeleteConnection = useCallback((connectionId: string) => {
+    const connection = faultTreeModel.connections.find(c => c.id === connectionId);
+    if (!connection) return;
+
+    setFaultTreeModel(prev => ({
+      ...prev,
+      connections: prev.connections.filter(conn => conn.id !== connectionId),
+      // Rimuovi l'input dalla gate target
+      gates: prev.gates.map(gate => 
+        gate.id === connection.target 
+          ? { ...gate, inputs: gate.inputs.filter(inputId => inputId !== connection.source) }
+          : gate
+      )
+    }));
+  }, [faultTreeModel.connections]);
+
   return (
     <div className="fault-tree-editor">
       <MenuBar 
@@ -137,6 +215,8 @@ const FaultTreeEditor: React.FC = () => {
           faultTreeModel={faultTreeModel}
           onElementClick={handleElementClick}
           onModelChange={setFaultTreeModel}
+          onDeleteElement={handleDeleteElement}
+          onDeleteConnection={handleDeleteConnection}
         />
         
         <RightPanel />

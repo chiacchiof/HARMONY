@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../../types/FaultTree';
-import { LLMProviders, loadLLMConfig, getActiveProvider } from '../../config/llm-config';
+import { LLMProviders, loadLLMConfig } from '../../config/llm-config';
 import { LLMService } from '../../services/llm-service';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import './RightPanel.css';
