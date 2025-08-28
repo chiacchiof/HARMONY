@@ -1,0 +1,79 @@
+.gate-node {
+  min-width: 140px;
+  background-color: #ffffff;
+  border: 2px solid #3498db;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.gate-node:hover {
+  box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+  transform: translateY(-1px);
+}
+
+.gate-content {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gate-icon {
+  font-size: 20px;
+  font-weight: bold;
+  min-width: 24px;
+  text-align: center;
+  color: #3498db;
+}
+
+.gate-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gate-type {
+  font-weight: 700;
+  font-size: 11px;
+  color: #2c3e50;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gate-name {
+  font-weight: 600;
+  font-size: 12px;
+  color: #2c3e50;
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.gate-description {
+  font-size: 10px;
+  color: #7f8c8d;
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.gate-inputs {
+  font-size: 10px;
+  color: #3498db;
+  font-weight: 500;
+}
+
+.gate-handle {
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid #ffffff !important;
+}
+
+.gate-handle-input {
+  bottom: -6px !important;
+}
+
+.gate-handle-output {
+  top: -6px !important;
+}

@@ -1,0 +1,20 @@
+.fault-tree-editor {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f0f0f0;
+}
+
+.editor-content {
+  flex: 1;
+  display: flex;
+  height: calc(100vh - 50px);
+}
+
+.editor-content > * {
+  border-right: 1px solid #ddd;
+}
+
+.editor-content > *:last-child {
+  border-right: none;
+}

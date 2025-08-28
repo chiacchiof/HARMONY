@@ -1,0 +1,47 @@
+{
+  "openai": {
+    "provider": "openai",
+    "apiKey": "sk-your-openai-api-key-here",
+    "model": "gpt-4o-mini",
+    "baseUrl": "https://api.openai.com/v1",
+    "temperature": 0.7,
+    "maxTokens": 1000,
+    "enabled": true
+  },
+  "anthropic": {
+    "provider": "anthropic",
+    "apiKey": "sk-ant-your-anthropic-api-key-here",
+    "model": "claude-3-haiku-20240307",
+    "baseUrl": "https://api.anthropic.com",
+    "temperature": 0.7,
+    "maxTokens": 1000,
+    "enabled": false
+  },
+  "gemini": {
+    "provider": "gemini",
+    "apiKey": "your-gemini-api-key-here",
+    "model": "gemini-1.5-flash",
+    "baseUrl": "https://generativelanguage.googleapis.com",
+    "temperature": 0.7,
+    "maxTokens": 1000,
+    "enabled": false
+  },
+  "grok": {
+    "provider": "grok",
+    "apiKey": "your-grok-api-key-here",
+    "model": "grok-beta",
+    "baseUrl": "https://api.x.ai/v1",
+    "temperature": 0.7,
+    "maxTokens": 1000,
+    "enabled": false
+  },
+  "local": {
+    "provider": "local",
+    "apiKey": "",
+    "model": "llama3.1:8b",
+    "baseUrl": "http://localhost:11434",
+    "temperature": 0.7,
+    "maxTokens": 1000,
+    "enabled": true
+  }
+}
