@@ -5,6 +5,7 @@ import CentralPanel from '../CentralPanel/CentralPanel';
 import RightPanel from '../RightPanel/RightPanel';
 import ParameterModal from '../ParameterModal/ParameterModal';
 import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree';
+import { FaultTreeModification } from '../../types/ChatIntegration';
 import './FaultTreeEditor.css';
 
 const FaultTreeEditor: React.FC = () => {
@@ -197,6 +198,74 @@ const FaultTreeEditor: React.FC = () => {
     }));
   }, [faultTreeModel.connections]);
 
+  // Gestione generazione fault tree dal chatbot
+  const handleGenerateFaultTree = useCallback((generatedModel: FaultTreeModel) => {
+    // Merge del modello generato con quello esistente
+    setFaultTreeModel(prev => ({
+      events: [...prev.events, ...generatedModel.events],
+      gates: [...prev.gates, ...generatedModel.gates],
+      connections: [...prev.connections, ...generatedModel.connections],
+      topEvent: generatedModel.topEvent || prev.topEvent
+    }));
+  }, []);
+
+  // Gestione modifiche fault tree dal chatbot
+  const handleModifyFaultTree = useCallback((modifications: FaultTreeModification[]) => {
+    modifications.forEach(mod => {
+      switch (mod.type) {
+        case 'add':
+          if (mod.elementType === 'event') {
+            const newEvent: BaseEvent = {
+              id: `event-${Date.now()}`,
+              type: 'basic-event',
+              name: mod.data.name || 'Nuovo Evento',
+              position: mod.data.position || { x: 300, y: 200 },
+              parameters: mod.data.parameters || {}
+            };
+            setFaultTreeModel(prev => ({
+              ...prev,
+              events: [...prev.events, newEvent]
+            }));
+          } else if (mod.elementType === 'gate') {
+            const newGate: Gate = {
+              id: `gate-${Date.now()}`,
+              type: 'gate',
+              gateType: mod.data.gateType || 'OR',
+              name: mod.data.name || 'Nuova Porta',
+              position: mod.data.position || { x: 300, y: 200 },
+              inputs: [],
+              parameters: mod.data.parameters || {}
+            };
+            setFaultTreeModel(prev => ({
+              ...prev,
+              gates: [...prev.gates, newGate]
+            }));
+          }
+          break;
+          
+        case 'remove':
+          if (mod.elementId) {
+            handleDeleteElement(mod.elementId);
+          }
+          break;
+          
+        case 'update':
+          if (mod.elementId && mod.data) {
+            setFaultTreeModel(prev => ({
+              ...prev,
+              events: prev.events.map(event => 
+                event.id === mod.elementId ? { ...event, ...mod.data } : event
+              ),
+              gates: prev.gates.map(gate => 
+                gate.id === mod.elementId ? { ...gate, ...mod.data } : gate
+              )
+            }));
+          }
+          break;
+      }
+    });
+  }, [handleDeleteElement]);
+
   return (
     <div className="fault-tree-editor">
       <MenuBar 
@@ -219,7 +288,11 @@ const FaultTreeEditor: React.FC = () => {
           onDeleteConnection={handleDeleteConnection}
         />
         
-        <RightPanel />
+        <RightPanel 
+          onGenerateFaultTree={handleGenerateFaultTree}
+          onModifyFaultTree={handleModifyFaultTree}
+          currentFaultTree={faultTreeModel}
+        />
       </div>
 
       {showParameterModal && selectedElement && (

@@ -1,4 +1,6 @@
 import { LLMConfig } from '../config/llm-config';
+import { FaultTreeGenerator, FaultTreeGenerationRequest, FaultTreeGenerationResult } from './fault-tree-generator';
+import { FaultTreeModel } from '../types/FaultTree';
 
 export interface LLMResponse {
   content: string;
@@ -17,6 +19,84 @@ export class LLMService {
 
   constructor(config: LLMConfig) {
     this.config = config;
+  }
+
+  /**
+   * Genera un fault tree basato su una richiesta dell'utente
+   */
+  async generateFaultTree(request: FaultTreeGenerationRequest): Promise<FaultTreeModel | null> {
+    try {
+      const prompt = FaultTreeGenerator.createFaultTreePrompt(request);
+      const response = await this.generateResponse(prompt);
+      
+      if (response.error) {
+        console.error('Errore nella generazione LLM:', response.error);
+        return null;
+      }
+
+      const generationResult = FaultTreeGenerator.parseLLMResponse(response.content);
+      if (!generationResult) {
+        console.error('Impossibile parsare la risposta LLM');
+        return null;
+      }
+
+      return FaultTreeGenerator.generateFaultTreeModel(generationResult);
+    } catch (error) {
+      console.error('Errore nella generazione del fault tree:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Analizza un messaggio dell'utente per determinare se richiede generazione di fault tree
+   */
+  static isGenerationRequest(message: string): boolean {
+    const generationKeywords = [
+      'genera fault tree',
+      'crea fault tree', 
+      'costruisci fault tree',
+      'modella il sistema',
+      'analisi del sistema',
+      'fault tree per',
+      'create fault tree',
+      'generate fault tree',
+      'build fault tree'
+    ];
+
+    const lowerMessage = message.toLowerCase();
+    return generationKeywords.some(keyword => lowerMessage.includes(keyword));
+  }
+
+  /**
+   * Estrae parametri di generazione da un messaggio dell'utente
+   */
+  static extractGenerationRequest(message: string): FaultTreeGenerationRequest {
+    const request: FaultTreeGenerationRequest = {
+      description: message
+    };
+
+    // Estrai top event se specificato
+    const topEventMatch = message.match(/top event[:\s]+([^.!?\n]+)/i);
+    if (topEventMatch) {
+      request.topEvent = topEventMatch[1].trim();
+    }
+
+    // Estrai tipo sistema
+    const systemTypeMatch = message.match(/sistema\s+([\w\s]+?)(?:\s+con|\s+per|\.|$)/i);
+    if (systemTypeMatch) {
+      request.systemType = systemTypeMatch[1].trim();
+    }
+
+    // Estrai componenti se elencati
+    const componentsMatch = message.match(/componenti[:\s]+([^.!?\n]+)/i);
+    if (componentsMatch) {
+      request.components = componentsMatch[1]
+        .split(/[,;]/)
+        .map(comp => comp.trim())
+        .filter(comp => comp.length > 0);
+    }
+
+    return request;
   }
 
   async generateResponse(prompt: string, context?: string): Promise<LLMResponse> {
