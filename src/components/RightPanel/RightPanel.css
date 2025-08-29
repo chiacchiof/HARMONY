@@ -1,5 +1,5 @@
 .right-panel {
-  width: 350px;
+  width: 550px;
   height: calc(100vh - 60px);
   background-color: #ffffff;
   border-left: 1px solid #e0e0e0;
@@ -280,7 +280,7 @@
 .message-content {
   padding: 12px 16px;
   border-radius: 16px;
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1.4;
   word-wrap: break-word;
   white-space: pre-wrap;
@@ -357,7 +357,7 @@
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 18px;
   font-family: inherit;
   resize: none;
   outline: none;
@@ -422,7 +422,7 @@
 }
 
 .help-item {
-  font-size: 12px;
+  font-size: 16px;
   color: #7f8c8d;
   padding: 6px 10px;
   background-color: #ffffff;

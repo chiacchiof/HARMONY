@@ -13,7 +13,8 @@ import ReactFlow, {
   NodeChange,
   NodeRemoveChange,
   EdgeChange,
-  MarkerType
+  MarkerType,
+  SelectionMode
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -104,6 +105,13 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  
+  // Stato per menu contestuale
+  const [contextMenu, setContextMenu] = React.useState<{
+    x: number;
+    y: number;
+    show: boolean;
+  }>({ x: 0, y: 0, show: false });
 
   // Aggiorna i nodi quando il modello cambia
   React.useEffect(() => {
@@ -242,14 +250,65 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       });
       
       event.preventDefault();
+    } else if (event.ctrlKey && event.key === 'a') {
+      // Ctrl+A per selezionare tutto
+      event.preventDefault();
+      
+      // Seleziona tutti i nodi
+      setNodes(nodes => nodes.map(node => ({ ...node, selected: true })));
+      
+      // Seleziona tutti gli edge
+      setEdges(edges => edges.map(edge => ({ ...edge, selected: true })));
     }
-  }, [nodes, edges, onDeleteElement, onDeleteConnection]);
+  }, [nodes, edges, onDeleteElement, onDeleteConnection, setNodes, setEdges]);
+
+  // Gestione menu contestuale
+  const handleContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      show: true
+    });
+  }, []);
+
+  // Nascondi menu contestuale
+  const hideContextMenu = useCallback(() => {
+    setContextMenu(prev => ({ ...prev, show: false }));
+  }, []);
+
+  // Azioni del menu contestuale
+  const handleSelectAll = useCallback(() => {
+    setNodes(nodes => nodes.map(node => ({ ...node, selected: true })));
+    setEdges(edges => edges.map(edge => ({ ...edge, selected: true })));
+    hideContextMenu();
+  }, [setNodes, setEdges, hideContextMenu]);
+
+  const handleDeselectAll = useCallback(() => {
+    setNodes(nodes => nodes.map(node => ({ ...node, selected: false })));
+    setEdges(edges => edges.map(edge => ({ ...edge, selected: false })));
+    hideContextMenu();
+  }, [setNodes, setEdges, hideContextMenu]);
+
+  const handleDeleteSelected = useCallback(() => {
+    const selectedNodes = nodes.filter(node => node.selected);
+    const selectedEdges = edges.filter(edge => edge.selected);
+    
+    selectedNodes.forEach(node => onDeleteElement(node.id));
+    selectedEdges.forEach(edge => onDeleteConnection(edge.id));
+    
+    hideContextMenu();
+  }, [nodes, edges, onDeleteElement, onDeleteConnection, hideContextMenu]);
 
   // Aggiungi listener per tasti
   React.useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    document.addEventListener('click', hideContextMenu);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', hideContextMenu);
+    };
+  }, [handleKeyDown, hideContextMenu]);
 
   return (
     <div className="central-panel">
@@ -261,11 +320,11 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
           <span>Connessioni: {faultTreeModel.connections.length}</span>
         </div>
         <div className="diagram-help">
-          <span>💡 Hover su elementi e collegamenti per cancellare • DEL/Backspace per elementi selezionati</span>
+          <span>💡 Tasto destro per menu • Trascina per selezione multipla • Ctrl+Click per selezione • Ctrl+A seleziona tutto • DEL/Backspace elimina</span>
         </div>
       </div>
       
-      <div className="react-flow-container">
+      <div className="react-flow-container" onContextMenu={handleContextMenu}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -277,6 +336,10 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
           fitView
           attributionPosition="bottom-left"
           deleteKeyCode={null} // Disabilita il delete di default per gestirlo manualmente
+          selectionOnDrag={true} // Abilita selezione trascinando
+          panOnDrag={[1, 2]} // Pan solo con tasto centrale e destro del mouse
+          selectionMode={SelectionMode.Partial} // Selezione parziale degli elementi
+          multiSelectionKeyCode="Control" // Ctrl per selezione multipla
         >
           <Controls />
           <MiniMap 
@@ -291,6 +354,33 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
             color="#e0e0e0"
           />
         </ReactFlow>
+        
+        {/* Menu contestuale */}
+        {contextMenu.show && (
+          <div 
+            className="context-menu"
+            style={{
+              position: 'fixed',
+              top: contextMenu.y,
+              left: contextMenu.x,
+              zIndex: 1000
+            }}
+          >
+            <button onClick={handleSelectAll}>
+              🔲 Seleziona tutto (Ctrl+A)
+            </button>
+            <button onClick={handleDeselectAll}>
+              ⬜ Deseleziona tutto
+            </button>
+            <hr />
+            <button 
+              onClick={handleDeleteSelected}
+              disabled={!nodes.some(n => n.selected) && !edges.some(e => e.selected)}
+            >
+              🗑️ Elimina selezionati (Del)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

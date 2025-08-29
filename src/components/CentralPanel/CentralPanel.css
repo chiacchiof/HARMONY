@@ -42,6 +42,7 @@
 .react-flow-container {
   flex: 1;
   position: relative;
+  margin-right: 200px; /* Spazio per il pannello destro */
 }
 
 /* Stili per React Flow */
@@ -67,4 +68,61 @@
 .react-flow__attribution {
   font-size: 10px;
   color: #bdc3c7;
+}
+
+/* Menu contestuale */
+.context-menu {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  min-width: 200px;
+  z-index: 1000;
+}
+
+.context-menu button {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.context-menu button:hover:not(:disabled) {
+  background-color: #f8f9fa;
+}
+
+.context-menu button:disabled {
+  color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.context-menu hr {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Miglioramento feedback visivo per selezione multipla */
+.react-flow__node.selected {
+  box-shadow: 0 0 0 2px #3498db !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3498db !important;
+  stroke-width: 3px !important;
+}
+
+/* Stile per la box selection */
+.react-flow__selection {
+  background-color: rgba(52, 152, 219, 0.1) !important;
+  border: 1px solid #3498db !important;
 }
