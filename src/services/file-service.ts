@@ -99,6 +99,48 @@ export class FileService {
       if (event.failureRate) {
         xml += `      <failureRate>${event.failureRate}</failureRate>\n`;
       }
+      if (event.failureProbabilityDistribution) {
+        xml += `      <failureProbabilityDistribution type="${event.failureProbabilityDistribution.type}">\n`;
+        switch (event.failureProbabilityDistribution.type) {
+          case 'exponential':
+            xml += `        <lambda>${event.failureProbabilityDistribution.lambda}</lambda>\n`;
+            break;
+          case 'weibull':
+            xml += `        <k>${event.failureProbabilityDistribution.k}</k>\n`;
+            xml += `        <lambda>${event.failureProbabilityDistribution.lambda}</lambda>\n`;
+            xml += `        <mu>${event.failureProbabilityDistribution.mu}</mu>\n`;
+            break;
+          case 'normal':
+            xml += `        <mu>${event.failureProbabilityDistribution.mu}</mu>\n`;
+            xml += `        <sigma>${event.failureProbabilityDistribution.sigma}</sigma>\n`;
+            break;
+          case 'constant':
+            xml += `        <probability>${event.failureProbabilityDistribution.probability}</probability>\n`;
+            break;
+        }
+        xml += `      </failureProbabilityDistribution>\n`;
+      }
+      if (event.repairProbabilityDistribution) {
+        xml += `      <repairProbabilityDistribution type="${event.repairProbabilityDistribution.type}">\n`;
+        switch (event.repairProbabilityDistribution.type) {
+          case 'exponential':
+            xml += `        <lambda>${event.repairProbabilityDistribution.lambda}</lambda>\n`;
+            break;
+          case 'weibull':
+            xml += `        <k>${event.repairProbabilityDistribution.k}</k>\n`;
+            xml += `        <lambda>${event.repairProbabilityDistribution.lambda}</lambda>\n`;
+            xml += `        <mu>${event.repairProbabilityDistribution.mu}</mu>\n`;
+            break;
+          case 'normal':
+            xml += `        <mu>${event.repairProbabilityDistribution.mu}</mu>\n`;
+            xml += `        <sigma>${event.repairProbabilityDistribution.sigma}</sigma>\n`;
+            break;
+          case 'constant':
+            xml += `        <probability>${event.repairProbabilityDistribution.probability}</probability>\n`;
+            break;
+        }
+        xml += `      </repairProbabilityDistribution>\n`;
+      }
       xml += `      <position x="${event.position.x}" y="${event.position.y}" />\n`;
       xml += '    </event>\n';
     });
@@ -141,21 +183,68 @@ export class FileService {
    * Genera CSV dal modello
    */
   private static generateCSV(model: FaultTreeModel): string {
-    let csv = 'Element Type,ID,Name,Description,Position X,Position Y,Additional Info\n';
+    let csv = 'Element Type,ID,Name,Description,Position X,Position Y,Failure Distribution,Repair Distribution,Additional Info\n';
     
     // Eventi
     model.events.forEach(event => {
-      csv += `Event,${event.id},"${event.name}","${event.description || ''}",${event.position.x},${event.position.y},`;
-      if (event.failureRate) {
-        csv += `Failure Rate: ${event.failureRate}`;
+      let failureDistributionInfo = '';
+      let repairDistributionInfo = '';
+      let additionalInfo = '';
+      
+      if (event.failureProbabilityDistribution) {
+        const params = [];
+        switch (event.failureProbabilityDistribution.type) {
+          case 'exponential':
+            params.push(`lambda: ${event.failureProbabilityDistribution.lambda} h⁻¹`);
+            break;
+          case 'weibull':
+            params.push(`k: ${event.failureProbabilityDistribution.k}`);
+            params.push(`lambda: ${event.failureProbabilityDistribution.lambda} h`);
+            params.push(`mu: ${event.failureProbabilityDistribution.mu} h`);
+            break;
+          case 'normal':
+            params.push(`mu: ${event.failureProbabilityDistribution.mu} h`);
+            params.push(`sigma: ${event.failureProbabilityDistribution.sigma} h`);
+            break;
+          case 'constant':
+            params.push(`probability: ${event.failureProbabilityDistribution.probability}`);
+            break;
+        }
+        failureDistributionInfo = `${event.failureProbabilityDistribution.type}: ${params.join('; ')}`;
       }
-      csv += '\n';
+
+      if (event.repairProbabilityDistribution) {
+        const params = [];
+        switch (event.repairProbabilityDistribution.type) {
+          case 'exponential':
+            params.push(`lambda: ${event.repairProbabilityDistribution.lambda} h⁻¹`);
+            break;
+          case 'weibull':
+            params.push(`k: ${event.repairProbabilityDistribution.k}`);
+            params.push(`lambda: ${event.repairProbabilityDistribution.lambda} h`);
+            params.push(`mu: ${event.repairProbabilityDistribution.mu} h`);
+            break;
+          case 'normal':
+            params.push(`mu: ${event.repairProbabilityDistribution.mu} h`);
+            params.push(`sigma: ${event.repairProbabilityDistribution.sigma} h`);
+            break;
+          case 'constant':
+            params.push(`probability: ${event.repairProbabilityDistribution.probability}`);
+            break;
+        }
+        repairDistributionInfo = `${event.repairProbabilityDistribution.type}: ${params.join('; ')}`;
+      }
+      
+      if (event.failureRate) {
+        additionalInfo = `Failure Rate: ${event.failureRate}`;
+      }
+      
+      csv += `Event,${event.id},"${event.name}","${event.description || ''}",${event.position.x},${event.position.y},"${failureDistributionInfo}","${repairDistributionInfo}","${additionalInfo}"\n`;
     });
     
     // Porte
     model.gates.forEach(gate => {
-      csv += `Gate,${gate.id},"${gate.name}","${gate.description || ''}",${gate.position.x},${gate.position.y},`;
-      csv += `Type: ${gate.gateType}, Inputs: ${gate.inputs.length}\n`;
+      csv += `Gate,${gate.id},"${gate.name}","${gate.description || ''}",${gate.position.x},${gate.position.y},"","","Type: ${gate.gateType}, Inputs: ${gate.inputs.length}"\n`;
     });
     
     // Connessioni

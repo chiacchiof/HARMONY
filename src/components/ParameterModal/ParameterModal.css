@@ -165,6 +165,197 @@
   background-color: #2980b9;
 }
 
+/* Stili per le distribuzioni di probabilità */
+.distribution-params {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 15px;
+}
+
+.distribution-params .form-group {
+  margin-bottom: 15px;
+}
+
+.distribution-params .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.distribution-params .form-input {
+  background-color: white;
+}
+
+.distribution-params .form-help {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Evidenziazione per i parametri della distribuzione selezionata */
+.form-section h4 {
+  position: relative;
+}
+
+.form-section h4::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  background-color: #3498db;
+  border-radius: 2px;
+}
+
+/* Stili per le unità di misura */
+.form-help {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.form-help::before {
+  content: '📊';
+  font-size: 12px;
+}
+
+/* Stili specifici per ogni tipo di distribuzione */
+.distribution-params[data-type="exponential"] {
+  border-left: 4px solid #e74c3c;
+}
+
+.distribution-params[data-type="weibull"] {
+  border-left: 4px solid #f39c12;
+}
+
+.distribution-params[data-type="normal"] {
+  border-left: 4px solid #27ae60;
+}
+
+.distribution-params[data-type="constant"] {
+  border-left: 4px solid #9b59b6;
+}
+
+/* Stili specifici per failure e repair */
+.distribution-params[data-type="failure"] {
+  border-left: 4px solid #e74c3c;
+  background-color: #fdf2f2;
+}
+
+.distribution-params[data-type="repair"] {
+  border-left: 4px solid #27ae60;
+  background-color: #f0f9f0;
+}
+
+/* Stili per checkbox nelle sezioni */
+.section-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.section-checkbox input[type="checkbox"] {
+  margin: 0;
+  width: auto;
+  padding: 0;
+  transform: scale(1.2);
+}
+
+/* Stili per le sezioni a fisarmonica */
+.accordion-section {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.accordion-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  cursor: pointer;
+  padding: 15px 20px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.accordion-header:hover {
+  background-color: #e9ecef;
+}
+
+.accordion-header h4 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: space-between;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.accordion-header h4::before {
+  display: none; /* Rimuovi il bordo sinistro dai titoli delle fisarmoniche */
+}
+
+.accordion-icon {
+  font-size: 12px;
+  transition: transform 0.2s;
+  color: #6c757d;
+}
+
+.accordion-icon.open {
+  transform: rotate(90deg);
+}
+
+.accordion-content {
+  padding: 20px;
+  background-color: white;
+}
+
+.optional-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: normal;
+  color: #6c757d;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.optional-checkbox input[type="checkbox"] {
+  margin: 0;
+  width: auto;
+  padding: 0;
+}
+
+.optional-checkbox:hover {
+  color: #495057;
+}
+
+/* Animazioni per le sezioni */
+.accordion-content {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .parameter-modal {

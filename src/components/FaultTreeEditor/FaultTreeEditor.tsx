@@ -445,6 +445,55 @@ const generateFaultTreeCode = (model: FaultTreeModel): string => {
     code += `  id: "${event.id}"\n`;
     if (event.description) code += `  description: "${event.description}"\n`;
     if (event.failureRate) code += `  failureRate: ${event.failureRate}\n`;
+    
+    // Aggiungi distribuzione di probabilità di guasto
+    if (event.failureProbabilityDistribution) {
+      code += `  failureProbabilityDistribution: {\n`;
+      code += `    type: "${event.failureProbabilityDistribution.type}"\n`;
+      switch (event.failureProbabilityDistribution.type) {
+        case 'exponential':
+          code += `    lambda: ${event.failureProbabilityDistribution.lambda} // h⁻¹\n`;
+          break;
+        case 'weibull':
+          code += `    k: ${event.failureProbabilityDistribution.k} // adimensionale\n`;
+          code += `    lambda: ${event.failureProbabilityDistribution.lambda} // h\n`;
+          code += `    mu: ${event.failureProbabilityDistribution.mu} // h\n`;
+          break;
+        case 'normal':
+          code += `    mu: ${event.failureProbabilityDistribution.mu} // h\n`;
+          code += `    sigma: ${event.failureProbabilityDistribution.sigma} // h\n`;
+          break;
+        case 'constant':
+          code += `    probability: ${event.failureProbabilityDistribution.probability} // adimensionale\n`;
+          break;
+      }
+      code += `  }\n`;
+    }
+
+    // Aggiungi distribuzione di probabilità di riparazione
+    if (event.repairProbabilityDistribution) {
+      code += `  repairProbabilityDistribution: {\n`;
+      code += `    type: "${event.repairProbabilityDistribution.type}"\n`;
+      switch (event.repairProbabilityDistribution.type) {
+        case 'exponential':
+          code += `    lambda: ${event.repairProbabilityDistribution.lambda} // h⁻¹\n`;
+          break;
+        case 'weibull':
+          code += `    k: ${event.repairProbabilityDistribution.k} // adimensionale\n`;
+          code += `    lambda: ${event.repairProbabilityDistribution.lambda} // h\n`;
+          code += `    mu: ${event.repairProbabilityDistribution.mu} // h\n`;
+          break;
+        case 'normal':
+          code += `    mu: ${event.repairProbabilityDistribution.mu} // h\n`;
+          code += `    sigma: ${event.repairProbabilityDistribution.sigma} // h\n`;
+          break;
+        case 'constant':
+          code += `    probability: ${event.repairProbabilityDistribution.probability} // adimensionale\n`;
+          break;
+      }
+      code += `  }\n`;
+    }
+    
     if (event.parameters) {
       Object.entries(event.parameters).forEach(([key, value]) => {
         code += `  ${key}: ${JSON.stringify(value)}\n`;

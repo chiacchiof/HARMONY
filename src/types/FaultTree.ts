@@ -1,13 +1,48 @@
 export type GateType = 'AND' | 'OR' | 'PAND' | 'SPARE' | 'SEQ' | 'FDEP';
 
+// Probability distribution types
+export type DistributionType = 'exponential' | 'weibull' | 'normal' | 'constant';
+
+export interface ExponentialDistribution {
+  type: 'exponential';
+  lambda: number; // Tasso di guasto (h⁻¹)
+}
+
+export interface WeibullDistribution {
+  type: 'weibull';
+  k: number; // Parametro di forma (adimensionale)
+  lambda: number; // Parametro di scala (h)
+  mu: number; // Parametro di posizione (h)
+}
+
+export interface NormalDistribution {
+  type: 'normal';
+  mu: number; // Media (h)
+  sigma: number; // Deviazione standard (h)
+}
+
+export interface ConstantDistribution {
+  type: 'constant';
+  probability: number; // Probabilità costante (adimensionale)
+}
+
+export type ProbabilityDistribution = 
+  | ExponentialDistribution 
+  | WeibullDistribution 
+  | NormalDistribution 
+  | ConstantDistribution;
+
 export interface BaseEvent {
   id: string;
   type: 'basic-event';
   name: string;
   description?: string;
-  failureRate?: number;
+  failureRate?: number; // Mantenuto per retrocompatibilità
   position: { x: number; y: number };
   parameters?: Record<string, any>;
+  // Distribuzioni di probabilità
+  failureProbabilityDistribution?: ProbabilityDistribution;
+  repairProbabilityDistribution?: ProbabilityDistribution;
 }
 
 export interface Gate {
