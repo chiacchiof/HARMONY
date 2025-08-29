@@ -323,6 +323,9 @@ const RightPanel: React.FC<RightPanelProps> = ({
           {messages.map((message) => (
             <div key={message.id} className={`message ${message.sender}`}>
               <div className="message-content">
+                <strong className="message-prefix">
+                  {message.sender === 'user' ? 'Tu: ' : 'AFT: '}
+                </strong>
                 {message.text.split('\n').map((line, index) => (
                   <React.Fragment key={index}>
                     {line}

@@ -15,21 +15,21 @@
   --success-light: #27ae60;
   --error-light: #e74c3c;
   
-  /* Dark mode colors */
-  --bg-primary-dark: #1a1a1a;
-  --bg-secondary-dark: #2d2d2d;
-  --bg-tertiary-dark: #3a3a3a;
-  --text-primary-dark: #e0e0e0;
-  --text-secondary-dark: #b0b0b0;
-  --text-muted-dark: #888888;
+  /* Dark mode colors - Enhanced for better visibility */
+  --bg-primary-dark: #121212;
+  --bg-secondary-dark: #1e1e1e;
+  --bg-tertiary-dark: #2d2d2d;
+  --text-primary-dark: #ffffff;
+  --text-secondary-dark: #e0e0e0;
+  --text-muted-dark: #b0b0b0;
   --border-dark: #404040;
   --border-secondary-dark: #555555;
-  --shadow-dark: rgba(0, 0, 0, 0.3);
-  --hover-dark: #404040;
-  --accent-dark: #4fc3f7;
-  --accent-hover-dark: #29b6f6;
-  --success-dark: #4caf50;
-  --error-dark: #f44336;
+  --shadow-dark: rgba(0, 0, 0, 0.5);
+  --hover-dark: #3a3a3a;
+  --accent-dark: #64b5f6;
+  --accent-hover-dark: #42a5f5;
+  --success-dark: #66bb6a;
+  --error-dark: #ef5350;
 }
 
 .app {

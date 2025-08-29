@@ -140,6 +140,7 @@
 .menu-bar.dark-mode .dropdown-menu {
   background: var(--dropdown-bg-dark);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--dropdown-border-dark);
 }
 
 @keyframes dropdownSlideIn {
@@ -170,6 +171,7 @@
 .menu-bar.dark-mode .dropdown-item {
   color: var(--dropdown-text-dark);
   border-bottom-color: var(--dropdown-border-dark);
+  font-weight: 500;
 }
 
 .dropdown-item:hover {

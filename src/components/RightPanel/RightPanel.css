@@ -173,6 +173,7 @@
   background: var(--bg-secondary-dark);
   border-color: var(--border-dark);
   box-shadow: 0 4px 12px var(--shadow-dark);
+  border-width: 2px;
 }
 
 .provider-option {
@@ -307,7 +308,8 @@
 }
 
 .right-panel.dark-mode .messages {
-  scrollbar-color: var(--text-muted-dark) var(--bg-tertiary-dark);
+  scrollbar-color: #888888 #2d2d2d;
+  background-color: #1e1e1e;
 }
 
 .messages::-webkit-scrollbar {
@@ -348,12 +350,12 @@
   max-width: 85%;
 }
 
-.user-message {
+.message.user {
   align-self: flex-end;
   align-items: flex-end;
 }
 
-.bot-message {
+.message.bot {
   align-self: flex-start;
   align-items: flex-start;
 }
@@ -367,27 +369,48 @@
   white-space: pre-wrap;
 }
 
-.user-message .message-content {
+.message-prefix {
+  font-weight: bold;
+  margin-right: 8px;
+  opacity: 0.9;
+}
+
+.message.user .message-content {
   background-color: var(--accent-light);
   color: white;
   border-bottom-right-radius: 4px;
   transition: background-color 0.3s ease;
 }
 
-.right-panel.dark-mode .user-message .message-content {
+.right-panel.dark-mode .message.user .message-content {
   background-color: var(--accent-dark);
+  color: #ffffff;
+  border: 1px solid #42a5f5;
+  box-shadow: 0 2px 8px rgba(100, 181, 246, 0.15);
 }
 
-.bot-message .message-content {
+.right-panel.dark-mode .message.user .message-prefix {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.right-panel.dark-mode .message.bot .message-prefix {
+  color: #64b5f6;
+  opacity: 1;
+}
+
+.message.bot .message-content {
   background-color: var(--bg-tertiary-light);
   color: var(--text-primary-light);
   border-bottom-left-radius: 4px;
   transition: all 0.3s ease;
 }
 
-.right-panel.dark-mode .bot-message .message-content {
-  background-color: var(--bg-tertiary-dark);
-  color: var(--text-primary-dark);
+.right-panel.dark-mode .message.bot .message-content {
+  background-color: #404040;
+  color: #f5f5f5;
+  border: 1px solid #666666;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
 }
 
 .message-time {
@@ -399,7 +422,7 @@
 }
 
 .right-panel.dark-mode .message-time {
-  color: var(--text-muted-dark);
+  color: #cccccc;
 }
 
 .typing {
@@ -422,7 +445,7 @@
 }
 
 .right-panel.dark-mode .typing-indicator span {
-  background-color: var(--text-muted-dark);
+  background-color: #ffffff;
 }
 
 .typing-indicator span:nth-child(2) {
@@ -456,8 +479,8 @@
 }
 
 .right-panel.dark-mode .input-area {
-  border-top-color: var(--border-dark);
-  background-color: var(--bg-tertiary-dark);
+  border-top-color: #555555;
+  background-color: #2d2d2d;
 }
 
 .message-input {
@@ -477,9 +500,10 @@
 }
 
 .right-panel.dark-mode .message-input {
-  border-color: var(--border-dark);
-  background-color: var(--bg-secondary-dark);
-  color: var(--text-primary-dark);
+  border-color: #555555;
+  background-color: #3a3a3a;
+  color: #ffffff;
+  border-width: 2px;
 }
 
 .message-input:focus {
@@ -496,7 +520,7 @@
 }
 
 .right-panel.dark-mode .message-input::placeholder {
-  color: var(--text-muted-dark);
+  color: #aaaaaa;
 }
 
 .send-button {
@@ -581,9 +605,10 @@
 }
 
 .right-panel.dark-mode .help-item {
-  color: var(--text-muted-dark);
+  color: var(--text-secondary-dark);
   background-color: var(--bg-secondary-dark);
   border-color: var(--border-dark);
+  border-width: 2px;
 }
 
 .help-item:hover {

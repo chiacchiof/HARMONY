@@ -77,6 +77,7 @@
 .left-panel.dark-mode .component-button {
   border-color: var(--border-dark);
   background-color: var(--bg-secondary-dark);
+  border-width: 2px;
 }
 
 .component-button:hover {
@@ -143,6 +144,7 @@
 
 .left-panel.dark-mode .component-label {
   color: var(--text-primary-dark);
+  font-weight: 600;
 }
 
 .gates-grid {
@@ -159,7 +161,7 @@
 }
 
 .left-panel.dark-mode .instructions {
-  color: var(--text-muted-dark);
+  color: var(--text-secondary-dark);
 }
 
 .instructions p {
@@ -241,6 +243,7 @@
 
 .left-panel.dark-mode .toggle-label {
   color: var(--text-primary-dark);
+  font-weight: 600;
 }
 
 /* Feedback componente selezionato */
