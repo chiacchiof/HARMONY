@@ -60,6 +60,7 @@ const ReactFlowComponent: React.FC<{
   edgeTypes: any;
   onPanelClick: (position: { x: number; y: number }) => void;
   componentToPlace: { type: 'event' | 'gate'; gateType?: string } | null;
+  isDarkMode: boolean;
 }> = ({
   nodes,
   edges,
@@ -69,7 +70,8 @@ const ReactFlowComponent: React.FC<{
   nodeTypes,
   edgeTypes,
   onPanelClick,
-  componentToPlace
+  componentToPlace,
+  isDarkMode
 }) => {
   const reactFlowInstance = useReactFlow();
 
@@ -132,7 +134,7 @@ const ReactFlowComponent: React.FC<{
         variant={BackgroundVariant.Dots} 
         gap={20} 
         size={1}
-        color="#e0e0e0"
+        color={isDarkMode ? "#404040" : "#e0e0e0"}
       />
     </ReactFlow>
   );
@@ -192,16 +194,19 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       target: conn.target,
       type: 'deleteButtonEdge',
       animated: true,
-      style: { stroke: '#2c3e50', strokeWidth: 2 },
+      style: { 
+        stroke: isDarkMode ? '#e0e0e0' : '#2c3e50', 
+        strokeWidth: 2 
+      },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: '#2c3e50',
+        color: isDarkMode ? '#e0e0e0' : '#2c3e50',
       },
       data: {
         onDelete: onDeleteConnection
       }
     }));
-  }, [faultTreeModel.connections, onDeleteConnection]);
+  }, [faultTreeModel.connections, onDeleteConnection, isDarkMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -258,16 +263,19 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       id: newConnection.id,
       type: 'deleteButtonEdge',
       animated: true,
-      style: { stroke: '#2c3e50', strokeWidth: 2 },
+      style: { 
+        stroke: isDarkMode ? '#e0e0e0' : '#2c3e50', 
+        strokeWidth: 2 
+      },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: '#2c3e50',
+        color: isDarkMode ? '#e0e0e0' : '#2c3e50',
       },
       data: {
         onDelete: onDeleteConnection
       }
     }, eds));
-  }, [faultTreeModel, onModelChange, setEdges]);
+  }, [faultTreeModel, onModelChange, setEdges, isDarkMode]);
 
   // Gestione spostamento nodi
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
@@ -441,6 +449,7 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
             edgeTypes={edgeTypes}
             onPanelClick={onPanelClick}
             componentToPlace={componentToPlace}
+            isDarkMode={isDarkMode}
           />
         </ReactFlowProvider>
         
