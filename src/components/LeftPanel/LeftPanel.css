@@ -1,45 +1,72 @@
 .left-panel {
   width: 280px;
-  background-color: #ffffff;
-  border-right: 1px solid #e0e0e0;
+  background-color: var(--bg-secondary-light);
+  border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+.left-panel.dark-mode {
+  background-color: var(--bg-secondary-dark);
+  border-right-color: var(--border-dark);
 }
 
 .panel-header {
   padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #f8f9fa;
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--bg-tertiary-light);
+  transition: all 0.3s ease;
+}
+
+.left-panel.dark-mode .panel-header {
+  border-bottom-color: var(--border-dark);
+  background-color: var(--bg-tertiary-dark);
 }
 
 .panel-header h3 {
   margin: 0;
-  color: #2c3e50;
+  color: var(--text-primary-light);
   font-size: 18px;
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .panel-header h3 {
+  color: var(--text-primary-dark);
 }
 
 .component-section {
   padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-light);
+  transition: border-color 0.3s ease;
+}
+
+.left-panel.dark-mode .component-section {
+  border-bottom-color: var(--border-dark);
 }
 
 .component-section h4 {
   margin: 0 0 15px 0;
-  color: #34495e;
+  color: var(--text-secondary-light);
   font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .component-section h4 {
+  color: var(--text-secondary-dark);
 }
 
 .component-button {
   width: 100%;
   padding: 12px;
   margin-bottom: 10px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-light);
   border-radius: 8px;
-  background-color: #ffffff;
+  background-color: var(--bg-secondary-light);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -47,11 +74,22 @@
   transition: all 0.2s ease;
 }
 
+.left-panel.dark-mode .component-button {
+  border-color: var(--border-dark);
+  background-color: var(--bg-secondary-dark);
+}
+
 .component-button:hover {
-  border-color: #3498db;
-  background-color: #f8f9ff;
+  border-color: var(--accent-light);
+  background-color: var(--hover-light);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+}
+
+.left-panel.dark-mode .component-button:hover {
+  border-color: var(--accent-dark);
+  background-color: var(--hover-dark);
+  box-shadow: 0 2px 8px rgba(79, 195, 247, 0.2);
 }
 
 .component-button:active {
@@ -60,9 +98,15 @@
 }
 
 .event-button:hover {
-  border-color: #e74c3c;
+  border-color: var(--error-light);
   background-color: #fff8f8;
   box-shadow: 0 2px 8px rgba(231, 76, 60, 0.2);
+}
+
+.left-panel.dark-mode .event-button:hover {
+  border-color: var(--error-dark);
+  background-color: #3a2a2a;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
 }
 
 .component-icon {
@@ -73,17 +117,32 @@
 }
 
 .event-button .component-icon {
-  color: #e74c3c;
+  color: var(--error-light);
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .event-button .component-icon {
+  color: var(--error-dark);
 }
 
 .gate-button .component-icon {
-  color: #3498db;
+  color: var(--accent-light);
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .gate-button .component-icon {
+  color: var(--accent-dark);
 }
 
 .component-label {
   font-size: 14px;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary-light);
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .component-label {
+  color: var(--text-primary-dark);
 }
 
 .gates-grid {
@@ -94,8 +153,13 @@
 
 .instructions {
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-muted-light);
   line-height: 1.4;
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .instructions {
+  color: var(--text-muted-dark);
 }
 
 .instructions p {
@@ -110,7 +174,12 @@
 .placement-mode-toggle {
   margin-top: 15px;
   padding-top: 15px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border-light);
+  transition: border-color 0.3s ease;
+}
+
+.left-panel.dark-mode .placement-mode-toggle {
+  border-top-color: var(--border-dark);
 }
 
 .toggle-container {
@@ -129,9 +198,13 @@
   position: relative;
   width: 50px;
   height: 24px;
-  background-color: #e0e0e0;
+  background-color: var(--border-light);
   border-radius: 12px;
   transition: background-color 0.3s;
+}
+
+.left-panel.dark-mode .toggle-slider {
+  background-color: var(--border-dark);
 }
 
 .toggle-slider::before {
@@ -148,7 +221,11 @@
 }
 
 .toggle-container input[type="checkbox"]:checked + .toggle-slider {
-  background-color: #3498db;
+  background-color: var(--accent-light);
+}
+
+.left-panel.dark-mode .toggle-container input[type="checkbox"]:checked + .toggle-slider {
+  background-color: var(--accent-dark);
 }
 
 .toggle-container input[type="checkbox"]:checked + .toggle-slider::before {
@@ -158,48 +235,89 @@
 .toggle-label {
   font-size: 13px;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary-light);
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .toggle-label {
+  color: var(--text-primary-dark);
 }
 
 /* Feedback componente selezionato */
 .component-selected {
   margin-top: 12px;
   padding: 10px;
-  background-color: #e8f4f8;
-  border: 1px solid #3498db;
+  background-color: rgba(52, 152, 219, 0.1);
+  border: 1px solid var(--accent-light);
   border-radius: 6px;
   font-size: 12px;
-  color: #2c3e50;
+  color: var(--text-primary-light);
+  transition: all 0.3s ease;
+}
+
+.left-panel.dark-mode .component-selected {
+  background-color: rgba(79, 195, 247, 0.1);
+  border-color: var(--accent-dark);
+  color: var(--text-primary-dark);
 }
 
 .component-selected strong {
-  color: #3498db;
+  color: var(--accent-light);
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .component-selected strong {
+  color: var(--accent-dark);
 }
 
 .component-selected small {
-  color: #7f8c8d;
+  color: var(--text-muted-light);
   font-style: italic;
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .component-selected small {
+  color: var(--text-muted-dark);
 }
 
 /* Stili per pulsanti selezionati */
 .component-button.selected {
-  border-color: #3498db;
-  background-color: #e8f4f8;
+  border-color: var(--accent-light);
+  background-color: rgba(52, 152, 219, 0.1);
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
+.left-panel.dark-mode .component-button.selected {
+  border-color: var(--accent-dark);
+  background-color: rgba(79, 195, 247, 0.1);
+  box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+}
+
 .component-button.selected .component-icon {
-  color: #3498db;
+  color: var(--accent-light);
+}
+
+.left-panel.dark-mode .component-button.selected .component-icon {
+  color: var(--accent-dark);
 }
 
 .component-button.selected .component-label {
-  color: #3498db;
+  color: var(--accent-light);
   font-weight: 600;
+}
+
+.left-panel.dark-mode .component-button.selected .component-label {
+  color: var(--accent-dark);
 }
 
 .selection-indicator {
   margin-left: auto;
-  color: #27ae60;
+  color: var(--success-light);
   font-weight: bold;
   font-size: 16px;
+  transition: color 0.3s ease;
+}
+
+.left-panel.dark-mode .selection-indicator {
+  color: var(--success-dark);
 }

@@ -24,6 +24,7 @@ const FaultTreeEditor: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLLMConfigModal, setShowLLMConfigModal] = useState(false);
   const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   // Stato per modalità click-to-place
   const [clickToPlaceMode, setClickToPlaceMode] = useState(false);
@@ -201,6 +202,11 @@ const FaultTreeEditor: React.FC = () => {
     saveLLMConfig(newConfig);
   }, []);
 
+  // Gestione toggle dark mode
+  const handleToggleDarkMode = useCallback(() => {
+    setIsDarkMode(prev => !prev);
+  }, []);
+
   // Gestione esportazione codice
   const handleExportCode = useCallback(() => {
     const codeStr = generateFaultTreeCode(faultTreeModel);
@@ -360,7 +366,7 @@ const FaultTreeEditor: React.FC = () => {
   }, [handleDeleteElement]);
 
   return (
-    <div className="fault-tree-editor">
+    <div className={`fault-tree-editor ${isDarkMode ? 'dark-mode' : ''}`}>
               <MenuBar
           onSave={handleSaveFile}
           onOpen={handleOpenFile}
@@ -369,6 +375,8 @@ const FaultTreeEditor: React.FC = () => {
           onExportXML={handleExportXML}
           onExportCSV={handleExportCSV}
           onShowLLMConfig={handleShowLLMConfig}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={handleToggleDarkMode}
         />
       
       <div className="editor-content">
@@ -378,6 +386,7 @@ const FaultTreeEditor: React.FC = () => {
           clickToPlaceMode={clickToPlaceMode}
           onToggleClickToPlace={handleToggleClickToPlace}
           componentToPlace={componentToPlace}
+          isDarkMode={isDarkMode}
         />
         
         <CentralPanel 
@@ -388,12 +397,14 @@ const FaultTreeEditor: React.FC = () => {
           onDeleteConnection={handleDeleteConnection}
           onPanelClick={handlePanelClick}
           componentToPlace={componentToPlace}
+          isDarkMode={isDarkMode}
         />
         
         <RightPanel 
           onGenerateFaultTree={handleGenerateFaultTree}
           onModifyFaultTree={handleModifyFaultTree}
           currentFaultTree={faultTreeModel}
+          isDarkMode={isDarkMode}
         />
       </div>
 

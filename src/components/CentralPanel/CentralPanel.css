@@ -2,41 +2,72 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #ffffff;
+  background-color: var(--bg-secondary-light);
+  transition: background-color 0.3s ease;
+}
+
+.central-panel.dark-mode {
+  background-color: var(--bg-secondary-dark);
 }
 
 .central-panel .panel-header {
   padding: 15px 20px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #f8f9fa;
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--bg-tertiary-light);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.central-panel.dark-mode .panel-header {
+  border-bottom-color: var(--border-dark);
+  background-color: var(--bg-tertiary-dark);
 }
 
 .central-panel .panel-header h3 {
   margin: 0;
-  color: #2c3e50;
+  color: var(--text-primary-light);
   font-size: 16px;
+  transition: color 0.3s ease;
+}
+
+.central-panel.dark-mode .panel-header h3 {
+  color: var(--text-primary-dark);
 }
 
 .diagram-info {
   display: flex;
   gap: 20px;
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-muted-light);
+  transition: color 0.3s ease;
+}
+
+.central-panel.dark-mode .diagram-info {
+  color: var(--text-muted-dark);
 }
 
 .diagram-info span {
-  background-color: #ecf0f1;
+  background-color: rgba(52, 152, 219, 0.1);
   padding: 4px 8px;
   border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.central-panel.dark-mode .diagram-info span {
+  background-color: rgba(79, 195, 247, 0.1);
 }
 
 .diagram-help span {
   font-size: 11px;
-  color: #95a5a6;
+  color: var(--text-muted-light);
   font-style: italic;
+  transition: color 0.3s ease;
+}
+
+.central-panel.dark-mode .diagram-help span {
+  color: var(--text-muted-dark);
 }
 
 .react-flow-container {
@@ -60,25 +91,43 @@
 }
 
 .react-flow__minimap {
-  background-color: #f8f9fa;
-  border: 1px solid #e0e0e0;
+  background-color: var(--bg-tertiary-light);
+  border: 1px solid var(--border-light);
   border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.central-panel.dark-mode .react-flow__minimap {
+  background-color: var(--bg-tertiary-dark);
+  border-color: var(--border-dark);
 }
 
 .react-flow__attribution {
   font-size: 10px;
-  color: #bdc3c7;
+  color: var(--text-muted-light);
+  transition: color 0.3s ease;
+}
+
+.central-panel.dark-mode .react-flow__attribution {
+  color: var(--text-muted-dark);
 }
 
 /* Menu contestuale */
 .context-menu {
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+  background-color: var(--bg-secondary-light);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--shadow-light);
   padding: 8px 0;
   min-width: 200px;
   z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.central-panel.dark-mode .context-menu {
+  background-color: var(--bg-secondary-dark);
+  border-color: var(--border-dark);
+  box-shadow: 0 4px 12px var(--shadow-dark);
 }
 
 .context-menu button {
@@ -89,42 +138,73 @@
   text-align: left;
   cursor: pointer;
   font-size: 14px;
-  color: #2c3e50;
+  color: var(--text-primary-light);
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+}
+
+.central-panel.dark-mode .context-menu button {
+  color: var(--text-primary-dark);
 }
 
 .context-menu button:hover:not(:disabled) {
-  background-color: #f8f9fa;
+  background-color: var(--hover-light);
+}
+
+.central-panel.dark-mode .context-menu button:hover:not(:disabled) {
+  background-color: var(--hover-dark);
 }
 
 .context-menu button:disabled {
-  color: #bdc3c7;
+  color: var(--text-muted-light);
   cursor: not-allowed;
+  transition: color 0.3s ease;
+}
+
+.central-panel.dark-mode .context-menu button:disabled {
+  color: var(--text-muted-dark);
 }
 
 .context-menu hr {
   margin: 8px 0;
   border: none;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border-light);
+  transition: border-color 0.3s ease;
+}
+
+.central-panel.dark-mode .context-menu hr {
+  border-top-color: var(--border-dark);
 }
 
 /* Miglioramento feedback visivo per selezione multipla */
 .react-flow__node.selected {
-  box-shadow: 0 0 0 2px #3498db !important;
+  box-shadow: 0 0 0 2px var(--accent-light) !important;
+}
+
+.central-panel.dark-mode .react-flow__node.selected {
+  box-shadow: 0 0 0 2px var(--accent-dark) !important;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #3498db !important;
+  stroke: var(--accent-light) !important;
   stroke-width: 3px !important;
+}
+
+.central-panel.dark-mode .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--accent-dark) !important;
 }
 
 /* Stile per la box selection */
 .react-flow__selection {
   background-color: rgba(52, 152, 219, 0.1) !important;
-  border: 1px solid #3498db !important;
+  border: 1px solid var(--accent-light) !important;
+}
+
+.central-panel.dark-mode .react-flow__selection {
+  background-color: rgba(79, 195, 247, 0.1) !important;
+  border-color: var(--accent-dark) !important;
 }
 
 /* Modalità placement */

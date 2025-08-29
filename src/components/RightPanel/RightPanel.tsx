@@ -6,12 +6,15 @@ import { LLMService } from '../../services/llm-service';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import './RightPanel.css';
 
-interface RightPanelProps extends ChatIntegrationProps {}
+interface RightPanelProps extends ChatIntegrationProps {
+  isDarkMode: boolean;
+}
 
 const RightPanel: React.FC<RightPanelProps> = ({ 
   onGenerateFaultTree,
   onModifyFaultTree,
-  currentFaultTree 
+  currentFaultTree,
+  isDarkMode
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -272,7 +275,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
   };
 
   return (
-    <div className="right-panel">
+    <div className={`right-panel ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="panel-header">
         <h3>🤖 Assistente Fault Tree</h3>
         <div className="header-controls">

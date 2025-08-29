@@ -37,6 +37,7 @@ interface CentralPanelProps {
     type: 'event' | 'gate';
     gateType?: string;
   } | null;
+  isDarkMode: boolean;
 }
 
 const nodeTypes = {
@@ -144,7 +145,8 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   onDeleteElement,
   onDeleteConnection,
   onPanelClick,
-  componentToPlace
+  componentToPlace,
+  isDarkMode
 }) => {
   // Converti il modello in nodi e edge di React Flow
   const initialNodes: Node[] = useMemo(() => {
@@ -411,7 +413,7 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   }, [handleKeyDown, hideContextMenu]);
 
   return (
-    <div className="central-panel">
+    <div className={`central-panel ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="panel-header">
         <h3>Fault Tree Diagram</h3>
         <div className="diagram-info">

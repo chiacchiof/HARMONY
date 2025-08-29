@@ -11,6 +11,7 @@ interface LeftPanelProps {
     type: 'event' | 'gate';
     gateType?: GateType;
   } | null;
+  isDarkMode: boolean;
 }
 
 const LeftPanel: React.FC<LeftPanelProps> = ({ 
@@ -18,7 +19,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   onAddGate, 
   clickToPlaceMode, 
   onToggleClickToPlace, 
-  componentToPlace 
+  componentToPlace,
+  isDarkMode
 }) => {
   const gateTypes: { type: GateType; label: string; description: string; icon: string }[] = [
     { type: 'AND', label: 'AND', description: 'Porta AND - Tutti gli input devono verificarsi', icon: '∧' },
@@ -30,7 +32,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   ];
 
   return (
-    <div className="left-panel">
+    <div className={`left-panel ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="panel-header">
         <h3>Componenti</h3>
         

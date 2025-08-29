@@ -9,6 +9,8 @@ interface MenuBarProps {
   onExportXML: () => void;
   onExportCSV: () => void;
   onShowLLMConfig: () => void;
+  isDarkMode: boolean;
+  onToggleDarkMode: () => void;
 }
 
 const MenuBar: React.FC<MenuBarProps> = ({ 
@@ -18,7 +20,9 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onShowSaveModal,
   onExportXML,
   onExportCSV,
-  onShowLLMConfig
+  onShowLLMConfig,
+  isDarkMode,
+  onToggleDarkMode
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showFileMenu, setShowFileMenu] = useState(false);
@@ -38,8 +42,10 @@ const MenuBar: React.FC<MenuBarProps> = ({
     setShowFileMenu(false);
   };
 
+
+
   return (
-    <div className="menu-bar">
+    <div className={`menu-bar ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="menu-section">
         <span className="menu-title">🌳 Dynamic Fault Tree Editor</span>
       </div>
@@ -90,6 +96,10 @@ const MenuBar: React.FC<MenuBarProps> = ({
 
         <button className="menu-button config" onClick={onShowLLMConfig}>
           ⚙️ LLM
+        </button>
+
+        <button className="menu-button dark-toggle" onClick={onToggleDarkMode}>
+          {isDarkMode ? '☀️' : '🌙'} {isDarkMode ? 'Light' : 'Dark'}
         </button>
       </div>
 
