@@ -9,6 +9,12 @@ interface GateNodeData {
   onDelete?: (elementId: string) => void;
 }
 
+// Helper per troncare il testo a 30 caratteri
+const truncateText = (text: string, maxLength: number = 30): string => {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength - 3) + '...';
+};
+
 const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
   const { gate, onClick, onDelete } = data;
 
@@ -86,14 +92,14 @@ const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
             className="gate-name" 
             title={gate.name}
           >
-            {gate.name}
+            {truncateText(gate.name)}
           </div>
           {gate.description && (
             <div 
               className="gate-description" 
               title={gate.description}
             >
-              {gate.description}
+              {truncateText(gate.description, 25)}
             </div>
           )}
           <div className="gate-inputs">

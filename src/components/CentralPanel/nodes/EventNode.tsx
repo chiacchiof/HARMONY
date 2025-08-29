@@ -9,6 +9,12 @@ interface EventNodeData {
   onDelete?: (elementId: string) => void;
 }
 
+// Helper per troncare il testo a 30 caratteri
+const truncateText = (text: string, maxLength: number = 20): string => {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength - 3) + '...';
+};
+
 const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
   const { event, onClick, onDelete } = data;
 
@@ -40,13 +46,18 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
       <div className="event-content">
         <div className="event-icon">⬜</div>
         <div className="event-info">
-          <div className="event-name">{event.name}</div>
+          <div 
+            className="event-name"
+            title={event.name}
+          >
+            {truncateText(event.name)}
+          </div>
           {event.description && (
             <div 
               className="event-description" 
               title={event.description}
             >
-              {event.description}
+              {truncateText(event.description, 25)}
             </div>
           )}
           {event.failureRate && (
