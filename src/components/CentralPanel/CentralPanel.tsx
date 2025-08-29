@@ -14,7 +14,9 @@ import ReactFlow, {
   NodeRemoveChange,
   EdgeChange,
   MarkerType,
-  SelectionMode
+  SelectionMode,
+  useReactFlow,
+  ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -30,6 +32,11 @@ interface CentralPanelProps {
   onModelChange: (model: FaultTreeModel) => void;
   onDeleteElement: (elementId: string) => void;
   onDeleteConnection: (connectionId: string) => void;
+  onPanelClick: (position: { x: number; y: number }) => void;
+  componentToPlace: {
+    type: 'event' | 'gate';
+    gateType?: string;
+  } | null;
 }
 
 const nodeTypes = {
@@ -41,12 +48,103 @@ const edgeTypes = {
   deleteButtonEdge: DeleteButtonEdge,
 };
 
+// Componente interno che usa useReactFlow
+const ReactFlowComponent: React.FC<{
+  nodes: Node[];
+  edges: Edge[];
+  onNodesChange: (changes: NodeChange[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
+  onConnect: (connection: Connection) => void;
+  nodeTypes: any;
+  edgeTypes: any;
+  onPanelClick: (position: { x: number; y: number }) => void;
+  componentToPlace: { type: 'event' | 'gate'; gateType?: string } | null;
+}> = ({
+  nodes,
+  edges,
+  onNodesChange,
+  onEdgesChange,
+  onConnect,
+  nodeTypes,
+  edgeTypes,
+  onPanelClick,
+  componentToPlace
+}) => {
+  const reactFlowInstance = useReactFlow();
+
+  // Gestione click sul background per posizionare componenti
+  const handlePaneClick = useCallback((event: React.MouseEvent) => {
+    if (!componentToPlace) return;
+    
+    // Usa screenToFlowPosition per ottenere la posizione corretta considerando zoom e pan
+    const flowPosition = reactFlowInstance.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY
+    });
+    
+    // Dimensioni approssimative dei componenti per centrarli
+    const componentSizes = {
+      event: { width: 135, height: 45 }, // EventNode tipico
+      gate: { width: 155, height: 45 }   // GateNode tipico
+    };
+    
+    const size = componentSizes[componentToPlace.type];
+    
+    // Centra il componente rispetto al cursore
+    const centeredPosition = {
+      x: flowPosition.x - (size.width / 2),
+      y: flowPosition.y - (size.height / 2)
+    };
+    
+    console.log('Mouse position:', { x: event.clientX, y: event.clientY });
+    console.log('Flow position:', flowPosition);
+    console.log('Centered position:', centeredPosition);
+    
+    onPanelClick(centeredPosition);
+  }, [componentToPlace, onPanelClick, reactFlowInstance]);
+
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
+      fitView
+      attributionPosition="bottom-left"
+      deleteKeyCode={null}
+      selectionOnDrag={!componentToPlace}
+      panOnDrag={componentToPlace ? false : [1, 2]}
+      selectionMode={SelectionMode.Partial}
+      multiSelectionKeyCode="Control"
+      onPaneClick={componentToPlace ? handlePaneClick : undefined}
+    >
+      <Controls />
+      <MiniMap 
+        nodeColor="#3498db"
+        maskColor="rgba(0, 0, 0, 0.1)"
+        position="top-right"
+      />
+      <Background 
+        variant={BackgroundVariant.Dots} 
+        gap={20} 
+        size={1}
+        color="#e0e0e0"
+      />
+    </ReactFlow>
+  );
+};
+
 const CentralPanel: React.FC<CentralPanelProps> = ({
   faultTreeModel,
   onElementClick,
   onModelChange,
   onDeleteElement,
-  onDeleteConnection
+  onDeleteConnection,
+  onPanelClick,
+  componentToPlace
 }) => {
   // Converti il modello in nodi e edge di React Flow
   const initialNodes: Node[] = useMemo(() => {
@@ -300,6 +398,8 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     hideContextMenu();
   }, [nodes, edges, onDeleteElement, onDeleteConnection, hideContextMenu]);
 
+
+
   // Aggiungi listener per tasti
   React.useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -324,36 +424,23 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
         </div>
       </div>
       
-      <div className="react-flow-container" onContextMenu={handleContextMenu}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChangeWithDelete}
-          onEdgesChange={handleEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-          attributionPosition="bottom-left"
-          deleteKeyCode={null} // Disabilita il delete di default per gestirlo manualmente
-          selectionOnDrag={true} // Abilita selezione trascinando
-          panOnDrag={[1, 2]} // Pan solo con tasto centrale e destro del mouse
-          selectionMode={SelectionMode.Partial} // Selezione parziale degli elementi
-          multiSelectionKeyCode="Control" // Ctrl per selezione multipla
-        >
-          <Controls />
-          <MiniMap 
-            nodeColor="#3498db"
-            maskColor="rgba(0, 0, 0, 0.1)"
-            position="top-right"
+      <div 
+        className={`react-flow-container ${componentToPlace ? 'placement-mode' : ''}`} 
+        onContextMenu={handleContextMenu}
+      >
+        <ReactFlowProvider>
+          <ReactFlowComponent
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={handleNodesChangeWithDelete}
+            onEdgesChange={handleEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onPanelClick={onPanelClick}
+            componentToPlace={componentToPlace}
           />
-          <Background 
-            variant={BackgroundVariant.Dots} 
-            gap={20} 
-            size={1}
-            color="#e0e0e0"
-          />
-        </ReactFlow>
+        </ReactFlowProvider>
         
         {/* Menu contestuale */}
         {contextMenu.show && (

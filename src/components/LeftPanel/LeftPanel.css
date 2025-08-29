@@ -105,3 +105,101 @@
 .instructions p:last-child {
   margin-bottom: 0;
 }
+
+/* Toggle per modalità click-to-place */
+.placement-mode-toggle {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-container input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  background-color: #e0e0e0;
+  border-radius: 12px;
+  transition: background-color 0.3s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-container input[type="checkbox"]:checked + .toggle-slider {
+  background-color: #3498db;
+}
+
+.toggle-container input[type="checkbox"]:checked + .toggle-slider::before {
+  transform: translateX(26px);
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+/* Feedback componente selezionato */
+.component-selected {
+  margin-top: 12px;
+  padding: 10px;
+  background-color: #e8f4f8;
+  border: 1px solid #3498db;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #2c3e50;
+}
+
+.component-selected strong {
+  color: #3498db;
+}
+
+.component-selected small {
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+/* Stili per pulsanti selezionati */
+.component-button.selected {
+  border-color: #3498db;
+  background-color: #e8f4f8;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.component-button.selected .component-icon {
+  color: #3498db;
+}
+
+.component-button.selected .component-label {
+  color: #3498db;
+  font-weight: 600;
+}
+
+.selection-indicator {
+  margin-left: auto;
+  color: #27ae60;
+  font-weight: bold;
+  font-size: 16px;
+}

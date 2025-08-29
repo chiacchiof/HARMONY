@@ -24,45 +24,108 @@ const FaultTreeEditor: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLLMConfigModal, setShowLLMConfigModal] = useState(false);
   const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
+  
+  // Stato per modalità click-to-place
+  const [clickToPlaceMode, setClickToPlaceMode] = useState(false);
+  const [componentToPlace, setComponentToPlace] = useState<{
+    type: 'event' | 'gate';
+    gateType?: GateType;
+  } | null>(null);
 
   // Gestione aggiunta eventi base
   const handleAddBaseEvent = useCallback(() => {
-    const newEvent: BaseEvent = {
-      id: `event-${Date.now()}`,
-      type: 'basic-event',
-      name: `Evento Base ${faultTreeModel.events.length + 1}`,
-      position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
-      parameters: {}
-    };
+    if (clickToPlaceMode) {
+      // Modalità click-to-place: prepara il componente per il posizionamento
+      setComponentToPlace({ type: 'event' });
+    } else {
+      // Modalità normale: aggiungi subito con posizione casuale
+      const newEvent: BaseEvent = {
+        id: `event-${Date.now()}`,
+        type: 'basic-event',
+        name: `Evento Base ${faultTreeModel.events.length + 1}`,
+        position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
+        parameters: {}
+      };
 
-    setFaultTreeModel(prev => ({
-      ...prev,
-      events: [...prev.events, newEvent]
-    }));
-  }, [faultTreeModel.events.length]);
+      setFaultTreeModel(prev => ({
+        ...prev,
+        events: [...prev.events, newEvent]
+      }));
+    }
+  }, [clickToPlaceMode, faultTreeModel.events.length]);
 
   // Gestione aggiunta porte
   const handleAddGate = useCallback((gateType: GateType) => {
-    const newGate: Gate = {
-      id: `gate-${Date.now()}`,
-      type: 'gate',
-      gateType,
-      name: `Porta ${gateType} ${faultTreeModel.gates.length + 1}`,
-      position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
-      inputs: [],
-      parameters: {}
-    };
+    if (clickToPlaceMode) {
+      // Modalità click-to-place: prepara il componente per il posizionamento
+      setComponentToPlace({ type: 'gate', gateType });
+    } else {
+      // Modalità normale: aggiungi subito con posizione casuale
+      const newGate: Gate = {
+        id: `gate-${Date.now()}`,
+        type: 'gate',
+        gateType,
+        name: `Porta ${gateType} ${faultTreeModel.gates.length + 1}`,
+        position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
+        inputs: [],
+        parameters: {}
+      };
 
-    setFaultTreeModel(prev => ({
-      ...prev,
-      gates: [...prev.gates, newGate]
-    }));
-  }, [faultTreeModel.gates.length]);
+      setFaultTreeModel(prev => ({
+        ...prev,
+        gates: [...prev.gates, newGate]
+      }));
+    }
+  }, [clickToPlaceMode, faultTreeModel.gates.length]);
 
   // Gestione click su elemento per aprire parametri
   const handleElementClick = useCallback((element: BaseEvent | Gate) => {
     setSelectedElement(element);
     setShowParameterModal(true);
+  }, []);
+
+  // Gestione click sul pannello per posizionare componente
+  const handlePanelClick = useCallback((position: { x: number; y: number }) => {
+    if (!componentToPlace) return;
+
+    if (componentToPlace.type === 'event') {
+      const newEvent: BaseEvent = {
+        id: `event-${Date.now()}`,
+        type: 'basic-event',
+        name: `Evento Base ${faultTreeModel.events.length + 1}`,
+        position,
+        parameters: {}
+      };
+
+      setFaultTreeModel(prev => ({
+        ...prev,
+        events: [...prev.events, newEvent]
+      }));
+    } else if (componentToPlace.type === 'gate' && componentToPlace.gateType) {
+      const newGate: Gate = {
+        id: `gate-${Date.now()}`,
+        type: 'gate',
+        gateType: componentToPlace.gateType,
+        name: `Porta ${componentToPlace.gateType} ${faultTreeModel.gates.length + 1}`,
+        position,
+        inputs: [],
+        parameters: {}
+      };
+
+      setFaultTreeModel(prev => ({
+        ...prev,
+        gates: [...prev.gates, newGate]
+      }));
+    }
+
+    // NON resettare componentToPlace - mantieni la selezione per posizionamenti multipli
+    // setComponentToPlace(null); // Rimosso
+  }, [componentToPlace, faultTreeModel.events.length, faultTreeModel.gates.length]);
+
+  // Toggle modalità click-to-place
+  const handleToggleClickToPlace = useCallback(() => {
+    setClickToPlaceMode(prev => !prev);
+    setComponentToPlace(null); // Reset componente selezionato
   }, []);
 
   // Gestione aggiornamento parametri
@@ -312,6 +375,9 @@ const FaultTreeEditor: React.FC = () => {
         <LeftPanel 
           onAddBaseEvent={handleAddBaseEvent}
           onAddGate={handleAddGate}
+          clickToPlaceMode={clickToPlaceMode}
+          onToggleClickToPlace={handleToggleClickToPlace}
+          componentToPlace={componentToPlace}
         />
         
         <CentralPanel 
@@ -320,6 +386,8 @@ const FaultTreeEditor: React.FC = () => {
           onModelChange={setFaultTreeModel}
           onDeleteElement={handleDeleteElement}
           onDeleteConnection={handleDeleteConnection}
+          onPanelClick={handlePanelClick}
+          componentToPlace={componentToPlace}
         />
         
         <RightPanel 
