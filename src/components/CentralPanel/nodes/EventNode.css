@@ -82,33 +82,37 @@
 .event-repair {
   display: flex; /* make full-width rows */
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-size: 11px;
+  gap: 2px; /* tighter */
+  margin-top: 3px;
+  font-size: 9px; /* slightly smaller */
   color: #2c3e50;
   width: 100%;
 }
 
 .dist-icon {
-  font-size: 12px;
+  font-size: 10px;
+  margin-right: 0px;
 }
 
 .repair-icon {
-  font-size: 12px;
+  font-size: 10px;
+  margin-right: 0px;
 }
 
 .dist-label {
-  /* Removed background per request */
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 11px;
+  /* compact label */
+  border-radius: 3px;
+  padding: 0 1px;
+  margin-top: 2px;
+  font-size: 10px;
   color: #34495e;
+  line-height: 1;
 }
 
 .dist-param {
-  color: #7f8c8d;
-  margin-left: 6px;
-  font-size: 11px;
+  color: #95a5a6;
+  margin-left: 1px;
+  font-size: 10px;
 }
 
 .event-handle {
