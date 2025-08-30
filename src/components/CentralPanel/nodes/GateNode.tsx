@@ -90,6 +90,9 @@ const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
         {gate.isTopEvent && (
           <div className="top-event-badge" title="TOP EVENT">TE</div>
         )}
+        {gate.isFailureGate && (
+          <div className="failure-badge" title="Failure Gate">F</div>
+        )}
         <div className="gate-info">
           <div className="gate-type">{gate.gateType}</div>
           <div 

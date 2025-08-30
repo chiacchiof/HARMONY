@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BaseEvent, Gate, ProbabilityDistribution, DistributionType } from '../../types/FaultTree';
+import { BaseEvent, Gate, GateType, ProbabilityDistribution, DistributionType } from '../../types/FaultTree';
 import './ParameterModal.css';
 
 interface ParameterModalProps {
@@ -46,6 +46,9 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
   // Stato per TOP EVENT
   const [isTopEvent, setIsTopEvent] = useState(false);
 
+  // Stato locale per il tipo di gate (per poter cambiare tipo in modal)
+  const [gateTypeLocal, setGateTypeLocal] = useState<GateType | null>(null);
+
   // Stato per gestione input primari/secondari (solo per SPARE e FDEP)
   const [primaryInputs, setPrimaryInputs] = useState<string[]>([]);
   const [secondaryInputs, setSecondaryInputs] = useState<string[]>([]);
@@ -64,6 +67,7 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
       const gate = element as Gate;
       setIsFailureGate(gate.isFailureGate || false);
       setIsTopEvent(gate.isTopEvent || false);
+      setGateTypeLocal(gate.gateType || null);
       setPrimaryInputs(gate.inputs || []);
       setSecondaryInputs(gate.secondaryInputs || []);
     }
@@ -226,13 +230,9 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
       (updatedElement as Gate).inputs = primaryInputs;
       (updatedElement as Gate).secondaryInputs = secondaryInputs;
       (updatedElement as Gate).isTopEvent = isTopEvent;
-      // Se impostato TOP EVENT, assicuriamoci che sia unico: rimuoviamo la flag da altre gate
-      if (isTopEvent && faultTreeModel) {
-        faultTreeModel.gates.forEach(g => {
-          if (g.id !== updatedElement.id && g.isTopEvent) {
-            g.isTopEvent = false;
-          }
-        });
+      // Applica eventuale cambio di tipo porta (se selezionato)
+      if (gateTypeLocal) {
+        (updatedElement as Gate).gateType = gateTypeLocal;
       }
     }
 
@@ -721,6 +721,27 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
                 </div>
               </div>
 
+              {/* Sezione Cambio Tipo Porta */}
+              <div className="form-section">
+                <h4>Cambia Tipo Porta</h4>
+                <div className="form-group">
+                  <label>Tipo:</label>
+                  <select
+                    value={gateTypeLocal || (element as Gate).gateType}
+                    onChange={(e) => setGateTypeLocal(e.target.value as GateType)}
+                    className="form-select"
+                  >
+                    <option value="AND">AND</option>
+                    <option value="OR">OR</option>
+                    <option value="PAND">PAND</option>
+                    <option value="SPARE">SPARE</option>
+                    <option value="SEQ">SEQ</option>
+                    <option value="FDEP">FDEP</option>
+                  </select>
+                  <span className="form-help">Modifica il tipo di porta. Confermando la modale, la vista verrà aggiornata.</span>
+                </div>
+              </div>
+
               {/* Sezione per ordinamento input (tutte le porte) */}
               {((element as Gate).gateType !== 'SPARE' && (element as Gate).gateType !== 'FDEP') && (
                 <div className="form-section">
@@ -842,22 +863,6 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
               )}
 
               <div className="form-section">
-                <h4>Altri Parametri</h4>
-                
-                {((element as Gate).gateType === 'PAND' || (element as Gate).gateType === 'SEQ') && (
-                <div className="form-group">
-                  <label>Priorità/Ordine:</label>
-                  <input
-                    type="text"
-                    value={gateFields.priority}
-                    onChange={(e) => handleGateFieldChange('priority', e.target.value)}
-                    className="form-input"
-                    placeholder="es. A,B,C"
-                  />
-                  <span className="form-help">Ordine degli eventi separati da virgola</span>
-                </div>
-              )}
-
               {(element as Gate).gateType === 'SPARE' && (
                 <>
                   <div className="form-group">
