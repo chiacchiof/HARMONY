@@ -275,6 +275,47 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
     setSecondaryInputs(prev => [...prev, inputId]);
   };
 
+  // Reordering helpers
+  const movePrimaryUp = (inputId: string) => {
+    setPrimaryInputs(prev => {
+      const idx = prev.indexOf(inputId);
+      if (idx <= 0) return prev;
+      const arr = [...prev];
+      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+      return arr;
+    });
+  };
+
+  const movePrimaryDown = (inputId: string) => {
+    setPrimaryInputs(prev => {
+      const idx = prev.indexOf(inputId);
+      if (idx === -1 || idx >= prev.length - 1) return prev;
+      const arr = [...prev];
+      [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+      return arr;
+    });
+  };
+
+  const moveSecondaryUp = (inputId: string) => {
+    setSecondaryInputs(prev => {
+      const idx = prev.indexOf(inputId);
+      if (idx <= 0) return prev;
+      const arr = [...prev];
+      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+      return arr;
+    });
+  };
+
+  const moveSecondaryDown = (inputId: string) => {
+    setSecondaryInputs(prev => {
+      const idx = prev.indexOf(inputId);
+      if (idx === -1 || idx >= prev.length - 1) return prev;
+      const arr = [...prev];
+      [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+      return arr;
+    });
+  };
+
   // Funzione per ottenere il nome dell'elemento dato il suo ID
   const getElementName = (elementId: string): string => {
     if (!faultTreeModel) return elementId;
@@ -665,17 +706,37 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
                     <div className="input-list">
                       <h5>🔵 Input Primari ({primaryInputs.length})</h5>
                       <div className="input-items">
-                        {primaryInputs.map(inputId => (
+                        {primaryInputs.map((inputId, idx) => (
                           <div key={inputId} className="input-item primary">
-                            <span className="input-name">{getElementName(inputId)}</span>
-                            <button
-                              type="button"
-                              className="move-button"
-                              onClick={() => moveInputToSecondary(inputId)}
-                              title="Sposta a secondari"
-                            >
-                              ➡️
-                            </button>
+                            <div style={{display: 'flex', gap: 8, alignItems: 'center'}}>
+                              <button
+                                type="button"
+                                className="move-button"
+                                onClick={() => movePrimaryUp(inputId)}
+                                title="Sposta su"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                className="move-button"
+                                onClick={() => movePrimaryDown(inputId)}
+                                title="Sposta giù"
+                              >
+                                ▼
+                              </button>
+                              <span className="input-name">{getElementName(inputId)}</span>
+                            </div>
+                            <div>
+                              <button
+                                type="button"
+                                className="move-button"
+                                onClick={() => moveInputToSecondary(inputId)}
+                                title="Sposta a secondari"
+                              >
+                                ➡️
+                              </button>
+                            </div>
                           </div>
                         ))}
                         {primaryInputs.length === 0 && (
@@ -687,17 +748,37 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
                     <div className="input-list">
                       <h5>🟡 Input Secondari ({secondaryInputs.length})</h5>
                       <div className="input-items">
-                        {secondaryInputs.map(inputId => (
+                        {secondaryInputs.map((inputId) => (
                           <div key={inputId} className="input-item secondary">
-                            <button
-                              type="button"
-                              className="move-button"
-                              onClick={() => moveInputToPrimary(inputId)}
-                              title="Sposta a primari"
-                            >
-                              ⬅️
-                            </button>
-                            <span className="input-name">{getElementName(inputId)}</span>
+                            <div>
+                              <button
+                                type="button"
+                                className="move-button"
+                                onClick={() => moveInputToPrimary(inputId)}
+                                title="Sposta a primari"
+                              >
+                                ⬅️
+                              </button>
+                            </div>
+                            <div style={{display: 'flex', gap: 8, alignItems: 'center'}}>
+                              <span className="input-name">{getElementName(inputId)}</span>
+                              <button
+                                type="button"
+                                className="move-button"
+                                onClick={() => moveSecondaryUp(inputId)}
+                                title="Sposta su"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                className="move-button"
+                                onClick={() => moveSecondaryDown(inputId)}
+                                title="Sposta giù"
+                              >
+                                ▼
+                              </button>
+                            </div>
                           </div>
                         ))}
                         {secondaryInputs.length === 0 && (
