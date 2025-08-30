@@ -72,6 +72,7 @@ const FaultTreeEditor: React.FC = () => {
         name: `Porta ${gateType} ${faultTreeModel.gates.length + 1}`,
         position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
         inputs: [],
+        isFailureGate: false,
         parameters: {}
       };
 
@@ -113,6 +114,7 @@ const FaultTreeEditor: React.FC = () => {
         name: `Porta ${componentToPlace.gateType} ${faultTreeModel.gates.length + 1}`,
         position,
         inputs: [],
+        isFailureGate: false,
         parameters: {}
       };
 
@@ -346,6 +348,7 @@ const FaultTreeEditor: React.FC = () => {
               name: mod.data.name || 'Nuova Porta',
               position: mod.data.position || { x: 300, y: 200 },
               inputs: [],
+              isFailureGate: false,
               parameters: mod.data.parameters || {}
             };
             setFaultTreeModel(prev => ({
@@ -432,6 +435,7 @@ const FaultTreeEditor: React.FC = () => {
             setShowParameterModal(false);
             setSelectedElement(null);
           }}
+          faultTreeModel={faultTreeModel}
         />
       )}
 

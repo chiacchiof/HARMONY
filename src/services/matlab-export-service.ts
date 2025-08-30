@@ -127,6 +127,7 @@ export class MatlabExportService {
   private static generateGateCode(gate: Gate, model: FaultTreeModel): string {
     const name = this.sanitizeMatlabName(gate.name);
     const gateType = gate.gateType;
+    const isFailureGate = gate.isFailureGate || false;
     
     // Get primary input names
     const primaryInputNames = gate.inputs.map(inputId => {
@@ -149,11 +150,11 @@ export class MatlabExportService {
         secondaryInputs = `[${secondaryInputNames.join(', ')}]`;
       }
       
-      return `${name} = Gate('${name}', '${gateType}', false, ${primaryInputs}, ${secondaryInputs});\n`;
+      return `${name} = Gate('${name}', '${gateType}', ${isFailureGate ? 'true' : 'false'}, ${primaryInputs}, ${secondaryInputs});\n`;
     } else {
       // Standard gates (AND, OR, SEQ, PAND)
       const inputs = `[${primaryInputNames.join(', ')}]`;
-      return `${name} = Gate('${name}', '${gateType}', false, ${inputs});\n`;
+      return `${name} = Gate('${name}', '${gateType}', ${isFailureGate ? 'true' : 'false'}, ${inputs});\n`;
     }
   }
 

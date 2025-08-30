@@ -6,9 +6,10 @@ interface ParameterModalProps {
   element: BaseEvent | Gate;
   onSave: (element: BaseEvent | Gate) => void;
   onClose: () => void;
+  faultTreeModel?: { events: BaseEvent[], gates: Gate[] }; // Per ottenere i nomi degli elementi collegati
 }
 
-const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClose }) => {
+const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClose, faultTreeModel }) => {
   const [formData, setFormData] = useState({
     name: element.name,
     description: element.description || '',
@@ -40,6 +41,13 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
     switchingTime: ''
   });
 
+  // Stato per Failure Gate checkbox
+  const [isFailureGate, setIsFailureGate] = useState(false);
+
+  // Stato per gestione input primari/secondari (solo per SPARE e FDEP)
+  const [primaryInputs, setPrimaryInputs] = useState<string[]>([]);
+  const [secondaryInputs, setSecondaryInputs] = useState<string[]>([]);
+
   useEffect(() => {
     if (element.parameters) {
       if (element.type === 'basic-event') {
@@ -47,6 +55,14 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
       } else {
         setGateFields(prev => ({ ...prev, ...element.parameters }));
       }
+    }
+
+    // Inizializza i campi specifici delle porte
+    if (element.type === 'gate') {
+      const gate = element as Gate;
+      setIsFailureGate(gate.isFailureGate || false);
+      setPrimaryInputs(gate.inputs || []);
+      setSecondaryInputs(gate.secondaryInputs || []);
     }
 
     // Inizializza le distribuzioni di probabilità se presenti
@@ -201,6 +217,11 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
         // Rimuovi la distribuzione di riparazione se disabilitata
         (updatedElement as BaseEvent).repairProbabilityDistribution = undefined;
       }
+    } else if (element.type === 'gate') {
+      // Aggiorna i campi specifici delle porte
+      (updatedElement as Gate).isFailureGate = isFailureGate;
+      (updatedElement as Gate).inputs = primaryInputs;
+      (updatedElement as Gate).secondaryInputs = secondaryInputs;
     }
 
     onSave(updatedElement);
@@ -241,6 +262,30 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
     if (!enabled) {
       setRepairDistributionParams({});
     }
+  };
+
+  // Funzioni per gestire input primari/secondari
+  const moveInputToPrimary = (inputId: string) => {
+    setSecondaryInputs(prev => prev.filter(id => id !== inputId));
+    setPrimaryInputs(prev => [...prev, inputId]);
+  };
+
+  const moveInputToSecondary = (inputId: string) => {
+    setPrimaryInputs(prev => prev.filter(id => id !== inputId));
+    setSecondaryInputs(prev => [...prev, inputId]);
+  };
+
+  // Funzione per ottenere il nome dell'elemento dato il suo ID
+  const getElementName = (elementId: string): string => {
+    if (!faultTreeModel) return elementId;
+    
+    const event = faultTreeModel.events.find(e => e.id === elementId);
+    if (event) return event.name;
+    
+    const gate = faultTreeModel.gates.find(g => g.id === elementId);
+    if (gate) return gate.name;
+    
+    return elementId;
   };
 
   const getDistributionLabel = (type: DistributionType): string => {
@@ -587,10 +632,87 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
 
           {/* Campi specifici per porte */}
           {element.type === 'gate' && (
-            <div className="form-section">
-              <h4>Parametri Porta {(element as Gate).gateType}</h4>
-              
-              {((element as Gate).gateType === 'PAND' || (element as Gate).gateType === 'SEQ') && (
+            <>
+              {/* Sezione Failure Gate */}
+              <div className="form-section">
+                <h4>Configurazione Porta {(element as Gate).gateType}</h4>
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={isFailureGate}
+                      onChange={(e) => setIsFailureGate(e.target.checked)}
+                      className="form-checkbox"
+                    />
+                    <span className="checkbox-text">Failure Gate</span>
+                  </label>
+                  <span className="form-help">
+                    Indica se questa porta rappresenta un guasto (default: false)
+                  </span>
+                </div>
+              </div>
+
+              {/* Sezione Input Primari/Secondari per SPARE e FDEP */}
+              {((element as Gate).gateType === 'SPARE' || (element as Gate).gateType === 'FDEP') && (
+                <div className="form-section">
+                  <h4>Gestione Input - {(element as Gate).gateType}</h4>
+                  <p className="section-description">
+                    Per le porte {(element as Gate).gateType}, è possibile distinguere tra input primari e secondari.
+                    Trascina gli elementi tra le due liste per configurarli.
+                  </p>
+                  
+                  <div className="input-management">
+                    <div className="input-list">
+                      <h5>🔵 Input Primari ({primaryInputs.length})</h5>
+                      <div className="input-items">
+                        {primaryInputs.map(inputId => (
+                          <div key={inputId} className="input-item primary">
+                            <span className="input-name">{getElementName(inputId)}</span>
+                            <button
+                              type="button"
+                              className="move-button"
+                              onClick={() => moveInputToSecondary(inputId)}
+                              title="Sposta a secondari"
+                            >
+                              ➡️
+                            </button>
+                          </div>
+                        ))}
+                        {primaryInputs.length === 0 && (
+                          <div className="empty-list">Nessun input primario</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="input-list">
+                      <h5>🟡 Input Secondari ({secondaryInputs.length})</h5>
+                      <div className="input-items">
+                        {secondaryInputs.map(inputId => (
+                          <div key={inputId} className="input-item secondary">
+                            <button
+                              type="button"
+                              className="move-button"
+                              onClick={() => moveInputToPrimary(inputId)}
+                              title="Sposta a primari"
+                            >
+                              ⬅️
+                            </button>
+                            <span className="input-name">{getElementName(inputId)}</span>
+                          </div>
+                        ))}
+                        {secondaryInputs.length === 0 && (
+                          <div className="empty-list">Nessun input secondario</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="form-section">
+                <h4>Altri Parametri</h4>
+                
+                {((element as Gate).gateType === 'PAND' || (element as Gate).gateType === 'SEQ') && (
                 <div className="form-group">
                   <label>Priorità/Ordine:</label>
                   <input
@@ -648,7 +770,8 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
                   <span className="form-help">Ritardo nella propagazione del guasto</span>
                 </div>
               )}
-            </div>
+              </div>
+            </>
           )}
         </div>
 
