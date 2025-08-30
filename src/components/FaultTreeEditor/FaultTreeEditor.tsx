@@ -316,6 +316,14 @@ const FaultTreeEditor: React.FC = () => {
 
   // Gestione generazione fault tree dal chatbot
   const handleGenerateFaultTree = useCallback((generatedModel: FaultTreeModel) => {
+    console.log('FaultTreeEditor - Modello generato ricevuto:', {
+      eventsCount: generatedModel.events.length,
+      gatesCount: generatedModel.gates.length,
+      connectionsCount: generatedModel.connections.length,
+      topEvent: generatedModel.topEvent,
+      topEventGate: generatedModel.gates.find(g => g.isTopEvent)
+    });
+
     // Merge del modello generato con quello esistente
     setFaultTreeModel(prev => ({
       events: [...prev.events, ...generatedModel.events],

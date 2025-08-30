@@ -36,11 +36,36 @@ export class LLMService {
 
       const generationResult = FaultTreeGenerator.parseLLMResponse(response.content);
       if (!generationResult) {
-        console.error('Impossibile parsare la risposta LLM');
+        console.error('Impossibile parsare la risposta LLM. Raw response:', response.content, 'provider:', response.provider, 'model:', response.model);
         return null;
       }
 
-      return FaultTreeGenerator.generateFaultTreeModel(generationResult);
+      // Loggare il risultato del parsing per debug
+      console.log('LLM Response parsata:', {
+        elementsCount: generationResult.elements?.length || 0,
+        connectionsCount: generationResult.connections?.length || 0,
+        topEvent: generationResult.topEvent,
+        description: generationResult.description
+      });
+
+      // Loggare se la LLM ha restituito un fault tree vuoto
+      if ((!generationResult.elements || generationResult.elements.length === 0) && (!generationResult.connections || generationResult.connections.length === 0)) {
+        console.error('LLM ha restituito un fault tree vuoto. Raw response:', response.content, 'provider:', response.provider, 'model:', response.model);
+        return null;
+      }
+
+      const finalModel = FaultTreeGenerator.generateFaultTreeModel(generationResult);
+      
+      // Loggare il modello finale per debug
+      console.log('Modello finale generato da LLMService:', {
+        eventsCount: finalModel.events.length,
+        gatesCount: finalModel.gates.length,
+        connectionsCount: finalModel.connections.length,
+        topEvent: finalModel.topEvent,
+        topEventGate: finalModel.gates.find(g => g.isTopEvent)
+      });
+      
+      return finalModel;
     } catch (error) {
       console.error('Errore nella generazione del fault tree:', error);
       return null;

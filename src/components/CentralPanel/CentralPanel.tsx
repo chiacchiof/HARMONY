@@ -156,6 +156,18 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   const initialNodes: Node[] = useMemo(() => {
     const nodes: Node[] = [];
     
+    // Debug: verifica Top Event
+    const topEventGate = faultTreeModel.gates.find(g => g.isTopEvent);
+    console.log('CentralPanel - Modello ricevuto:', {
+      eventsCount: faultTreeModel.events.length,
+      gatesCount: faultTreeModel.gates.length,
+      connectionsCount: faultTreeModel.connections.length,
+      topEvent: faultTreeModel.topEvent,
+      topEventGateName: topEventGate?.name,
+      topEventGateId: topEventGate?.id,
+      topEventGateFlag: topEventGate?.isTopEvent
+    });
+    
     // Aggiungi eventi base
     faultTreeModel.events.forEach(event => {
       nodes.push({
