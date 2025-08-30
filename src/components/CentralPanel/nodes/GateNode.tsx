@@ -7,6 +7,7 @@ interface GateNodeData {
   gate: Gate;
   onClick: () => void;
   onDelete?: (elementId: string) => void;
+  isTopEventBadge?: boolean;
 }
 
 // Helper per troncare il testo a 30 caratteri
@@ -86,6 +87,9 @@ const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
         >
           {getGateIcon(gate.gateType)}
         </div>
+        {gate.isTopEvent && (
+          <div className="top-event-badge" title="TOP EVENT">TE</div>
+        )}
         <div className="gate-info">
           <div className="gate-type">{gate.gateType}</div>
           <div 

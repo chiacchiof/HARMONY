@@ -55,6 +55,7 @@ export interface Gate {
   inputs: string[]; // IDs degli eventi di input (primary inputs for SPARE/FDEP)
   secondaryInputs?: string[]; // IDs degli eventi secondari (for SPARE/FDEP gates)
   isFailureGate?: boolean; // Indica se è una Failure Gate (default false)
+  isTopEvent?: boolean; // Indica se questa gate è il TOP EVENT (univoco)
   parameters?: Record<string, any>;
 }
 

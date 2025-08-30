@@ -43,6 +43,8 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
 
   // Stato per Failure Gate checkbox
   const [isFailureGate, setIsFailureGate] = useState(false);
+  // Stato per TOP EVENT
+  const [isTopEvent, setIsTopEvent] = useState(false);
 
   // Stato per gestione input primari/secondari (solo per SPARE e FDEP)
   const [primaryInputs, setPrimaryInputs] = useState<string[]>([]);
@@ -61,6 +63,7 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
     if (element.type === 'gate') {
       const gate = element as Gate;
       setIsFailureGate(gate.isFailureGate || false);
+      setIsTopEvent(gate.isTopEvent || false);
       setPrimaryInputs(gate.inputs || []);
       setSecondaryInputs(gate.secondaryInputs || []);
     }
@@ -222,6 +225,15 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
       (updatedElement as Gate).isFailureGate = isFailureGate;
       (updatedElement as Gate).inputs = primaryInputs;
       (updatedElement as Gate).secondaryInputs = secondaryInputs;
+      (updatedElement as Gate).isTopEvent = isTopEvent;
+      // Se impostato TOP EVENT, assicuriamoci che sia unico: rimuoviamo la flag da altre gate
+      if (isTopEvent && faultTreeModel) {
+        faultTreeModel.gates.forEach(g => {
+          if (g.id !== updatedElement.id && g.isTopEvent) {
+            g.isTopEvent = false;
+          }
+        });
+      }
     }
 
     onSave(updatedElement);
@@ -690,6 +702,22 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
                   <span className="form-help">
                     Indica se questa porta rappresenta un guasto (default: false)
                   </span>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4>TOP Event</h4>
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={isTopEvent}
+                      onChange={(e) => setIsTopEvent(e.target.checked)}
+                      className="form-checkbox"
+                    />
+                    <span className="checkbox-text">Imposta come TOP Event</span>
+                  </label>
+                  <span className="form-help">Solo una porta può essere TOP EVENT; se impostata verrà rimossa l'etichetta da altre porte.</span>
                 </div>
               </div>
 
