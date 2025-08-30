@@ -42,6 +42,23 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
     }
   };
 
+  // Helper to get a primary parameter for distribution
+  const getDistributionParam = (dist: any) => {
+    if (!dist || !dist.type) return null;
+    switch (dist.type) {
+      case 'exponential':
+        return dist.lambda != null ? dist.lambda : null;
+      case 'weibull':
+        return dist.lambda != null ? dist.lambda : null; // show scale for weibull
+      case 'normal':
+        return dist.mu != null ? dist.mu : null; // show mean for normal
+      case 'constant':
+        return dist.probability != null ? dist.probability : null;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="event-node" onClick={onClick}>
       <Handle
@@ -61,14 +78,12 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
       )}
       
       <div className="event-content">
-        <div className="event-icon">
-          <span className="blue-dot" />
-        </div>
         <div className="event-info">
           <div 
             className="event-name"
             title={event.name}
           >
+            <span className="inline-dot" />
             {truncateText(event.name)}
           </div>
           {event.description && (
@@ -82,18 +97,30 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
           {event.failureRate && (
             <div className="event-rate">λ = {event.failureRate}</div>
           )}
-          {/* Show failure distribution label */}
+          {/* Show failure distribution label + primary parameter */}
           {event.failureProbabilityDistribution && (
             <div className="event-distribution">
               <span className="dist-icon">⚠️</span>
-              <span className="dist-label">{getDistributionLabel(event.failureProbabilityDistribution)}</span>
+              <span className="dist-label">
+                {getDistributionLabel(event.failureProbabilityDistribution)}
+                {(() => {
+                  const p = getDistributionParam(event.failureProbabilityDistribution);
+                  return p != null ? <span className="dist-param">{` (${p})`}</span> : null;
+                })()}
+              </span>
             </div>
           )}
           {/* If repair distribution exists, show wrench icon and its distribution */}
           {event.repairProbabilityDistribution && (
             <div className="event-repair">
               <span className="repair-icon">🔧</span>
-              <span className="dist-label">{getDistributionLabel(event.repairProbabilityDistribution)}</span>
+              <span className="dist-label">
+                {getDistributionLabel(event.repairProbabilityDistribution)}
+                {(() => {
+                  const p = getDistributionParam(event.repairProbabilityDistribution);
+                  return p != null ? <span className="dist-param">{` (${p})`}</span> : null;
+                })()}
+              </span>
             </div>
           )}
         </div>

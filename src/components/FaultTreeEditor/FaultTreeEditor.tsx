@@ -48,7 +48,8 @@ const FaultTreeEditor: React.FC = () => {
         type: 'basic-event',
         name: `BE_${faultTreeModel.events.length + 1}`,
         position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
-        parameters: {}
+        parameters: {},
+        failureProbabilityDistribution: { type: 'exponential', lambda: 0.01 }
       };
 
       setFaultTreeModel(prev => ({
@@ -97,9 +98,10 @@ const FaultTreeEditor: React.FC = () => {
       const newEvent: BaseEvent = {
         id: `event-${Date.now()}`,
         type: 'basic-event',
-        name: `Evento Base ${faultTreeModel.events.length + 1}`,
+        name: `BE_${faultTreeModel.events.length + 1}`,
         position,
-        parameters: {}
+        parameters: {},
+        failureProbabilityDistribution: { type: 'exponential', lambda: 0.01 }
       };
 
       setFaultTreeModel(prev => ({
@@ -334,7 +336,8 @@ const FaultTreeEditor: React.FC = () => {
               type: 'basic-event',
               name: mod.data.name || 'Nuovo Evento',
               position: mod.data.position || { x: 300, y: 200 },
-              parameters: mod.data.parameters || {}
+              parameters: mod.data.parameters || {},
+              failureProbabilityDistribution: mod.data.failureProbabilityDistribution || { type: 'exponential', lambda: 0.01 }
             };
             setFaultTreeModel(prev => ({
               ...prev,
