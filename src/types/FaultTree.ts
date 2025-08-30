@@ -52,7 +52,8 @@ export interface Gate {
   name: string;
   description?: string;
   position: { x: number; y: number };
-  inputs: string[]; // IDs degli eventi di input
+  inputs: string[]; // IDs degli eventi di input (primary inputs for SPARE/FDEP)
+  secondaryInputs?: string[]; // IDs degli eventi secondari (for SPARE/FDEP gates)
   parameters?: Record<string, any>;
 }
 

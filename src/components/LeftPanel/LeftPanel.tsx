@@ -11,6 +11,8 @@ interface LeftPanelProps {
     type: 'event' | 'gate';
     gateType?: GateType;
   } | null;
+  missionTime: number;
+  onMissionTimeChange: (value: number) => void;
   isDarkMode: boolean;
 }
 
@@ -20,6 +22,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   clickToPlaceMode, 
   onToggleClickToPlace, 
   componentToPlace,
+  missionTime,
+  onMissionTimeChange,
   isDarkMode
 }) => {
   const gateTypes: { type: GateType; label: string; description: string; icon: string }[] = [
@@ -34,8 +38,28 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   return (
     <div className={`left-panel ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="panel-header">
-        <h3>Componenti</h3>
-        
+        <h3>🔧 Componenti</h3>
+      </div>
+
+      {/* Mission Time Section */}
+      <div className="component-section">
+        <h4>⏱️ Parametri Analisi</h4>
+        <div className="mission-time-group">
+          <label htmlFor="mission-time">Tempo di Missione (Tm) [h]:</label>
+          <input
+            id="mission-time"
+            type="number"
+            value={missionTime}
+            onChange={(e) => onMissionTimeChange(Number(e.target.value) || 0)}
+            placeholder="500"
+            min="0"
+            step="0.1"
+            className="mission-time-input"
+          />
+        </div>
+      </div>
+
+      <div className="panel-header">
         {/* Toggle per modalità click-to-place */}
         <div className="placement-mode-toggle">
           <label className="toggle-container">
@@ -50,6 +74,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
             </span>
           </label>
         </div>
+
         
         {/* Feedback componente selezionato */}
         {componentToPlace && (

@@ -6,6 +6,7 @@ import RightPanel from '../RightPanel/RightPanel';
 import ParameterModal from '../ParameterModal/ParameterModal';
 import SaveModal from '../SaveModal/SaveModal';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
+import MatlabExportModal from '../MatlabExportModal/MatlabExportModal';
 import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree';
 import { FaultTreeModification } from '../../types/ChatIntegration';
 import { FileService } from '../../services/file-service';
@@ -23,6 +24,8 @@ const FaultTreeEditor: React.FC = () => {
   const [showParameterModal, setShowParameterModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLLMConfigModal, setShowLLMConfigModal] = useState(false);
+  const [showMatlabExportModal, setShowMatlabExportModal] = useState(false);
+  const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
   const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
   const [isDarkMode, setIsDarkMode] = useState(false);
   
@@ -196,6 +199,16 @@ const FaultTreeEditor: React.FC = () => {
     setShowLLMConfigModal(true);
   }, []);
 
+  // Gestione apertura MATLAB Export Modal
+  const handleShowMatlabExport = useCallback(() => {
+    setShowMatlabExportModal(true);
+  }, []);
+
+  // Gestione cambio mission time
+  const handleMissionTimeChange = useCallback((value: number) => {
+    setMissionTime(value);
+  }, []);
+
   // Gestione salvataggio configurazione LLM
   const handleLLMConfigChange = useCallback((newConfig: LLMProviders) => {
     setLlmConfig(newConfig);
@@ -295,7 +308,7 @@ const FaultTreeEditor: React.FC = () => {
           : gate
       )
     }));
-  }, [faultTreeModel.connections]);
+  }, [faultTreeModel]);
 
   // Gestione generazione fault tree dal chatbot
   const handleGenerateFaultTree = useCallback((generatedModel: FaultTreeModel) => {
@@ -374,6 +387,7 @@ const FaultTreeEditor: React.FC = () => {
           onShowSaveModal={handleShowSaveModal}
           onExportXML={handleExportXML}
           onExportCSV={handleExportCSV}
+          onExportMatlab={handleShowMatlabExport}
           onShowLLMConfig={handleShowLLMConfig}
           isDarkMode={isDarkMode}
           onToggleDarkMode={handleToggleDarkMode}
@@ -386,6 +400,8 @@ const FaultTreeEditor: React.FC = () => {
           clickToPlaceMode={clickToPlaceMode}
           onToggleClickToPlace={handleToggleClickToPlace}
           componentToPlace={componentToPlace}
+          missionTime={missionTime}
+          onMissionTimeChange={handleMissionTimeChange}
           isDarkMode={isDarkMode}
         />
         
@@ -429,6 +445,13 @@ const FaultTreeEditor: React.FC = () => {
         isOpen={showLLMConfigModal}
         onClose={() => setShowLLMConfigModal(false)}
         onConfigChange={handleLLMConfigChange}
+      />
+
+      <MatlabExportModal
+        isOpen={showMatlabExportModal}
+        onClose={() => setShowMatlabExportModal(false)}
+        faultTreeModel={faultTreeModel}
+        missionTime={missionTime}
       />
     </div>
   );

@@ -8,6 +8,7 @@ interface MenuBarProps {
   onShowSaveModal: () => void;
   onExportXML: () => void;
   onExportCSV: () => void;
+  onExportMatlab: () => void;
   onShowLLMConfig: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
@@ -20,6 +21,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onShowSaveModal,
   onExportXML,
   onExportCSV,
+  onExportMatlab,
   onShowLLMConfig,
   isDarkMode,
   onToggleDarkMode
@@ -77,6 +79,9 @@ const MenuBar: React.FC<MenuBarProps> = ({
               </button>
               <button className="dropdown-item" onClick={onExportCSV}>
                 📊 Esporta CSV
+              </button>
+              <button className="dropdown-item" onClick={onExportMatlab}>
+                🧮 Esporta MATLAB
               </button>
               <div className="dropdown-divider"></div>
               <button className="dropdown-item" onClick={onExportCode}>
