@@ -46,7 +46,7 @@ const FaultTreeEditor: React.FC = () => {
       const newEvent: BaseEvent = {
         id: `event-${Date.now()}`,
         type: 'basic-event',
-        name: `Evento Base ${faultTreeModel.events.length + 1}`,
+        name: `BE_${faultTreeModel.events.length + 1}`,
         position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
         parameters: {}
       };
@@ -69,7 +69,7 @@ const FaultTreeEditor: React.FC = () => {
         id: `gate-${Date.now()}`,
         type: 'gate',
         gateType,
-        name: `Porta ${gateType} ${faultTreeModel.gates.length + 1}`,
+        name: `${gateType}_${faultTreeModel.gates.length + 1}`,
         position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
         inputs: [],
         isFailureGate: false,

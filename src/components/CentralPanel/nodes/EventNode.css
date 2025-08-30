@@ -30,6 +30,14 @@
   text-align: center;
 }
 
+.blue-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background-color: #2b7cff; /* blu pieno */
+  border-radius: 50%;
+}
+
 .event-info {
   flex: 1;
   min-width: 0;
@@ -61,6 +69,32 @@
   font-size: 10px;
   color: #e74c3c;
   font-weight: 500;
+}
+
+.event-distribution,
+.event-repair {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #2c3e50;
+}
+
+.dist-icon {
+  font-size: 12px;
+}
+
+.repair-icon {
+  font-size: 12px;
+}
+
+.dist-label {
+  /* Removed background per request */
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #34495e;
 }
 
 .event-handle {

@@ -25,6 +25,23 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
     }
   };
 
+  // Helper to map distribution type to short label
+  const getDistributionLabel = (dist: any) => {
+    if (!dist || !dist.type) return null;
+    switch (dist.type) {
+      case 'exponential':
+        return 'exp';
+      case 'weibull':
+        return 'wei';
+      case 'normal':
+        return 'gauss';
+      case 'constant':
+        return 'const';
+      default:
+        return dist.type;
+    }
+  };
+
   return (
     <div className="event-node" onClick={onClick}>
       <Handle
@@ -44,7 +61,9 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
       )}
       
       <div className="event-content">
-        <div className="event-icon">⬜</div>
+        <div className="event-icon">
+          <span className="blue-dot" />
+        </div>
         <div className="event-info">
           <div 
             className="event-name"
@@ -62,6 +81,20 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
           )}
           {event.failureRate && (
             <div className="event-rate">λ = {event.failureRate}</div>
+          )}
+          {/* Show failure distribution label */}
+          {event.failureProbabilityDistribution && (
+            <div className="event-distribution">
+              <span className="dist-icon">⚠️</span>
+              <span className="dist-label">{getDistributionLabel(event.failureProbabilityDistribution)}</span>
+            </div>
+          )}
+          {/* If repair distribution exists, show wrench icon and its distribution */}
+          {event.repairProbabilityDistribution && (
+            <div className="event-repair">
+              <span className="repair-icon">🔧</span>
+              <span className="dist-label">{getDistributionLabel(event.repairProbabilityDistribution)}</span>
+            </div>
           )}
         </div>
       </div>
