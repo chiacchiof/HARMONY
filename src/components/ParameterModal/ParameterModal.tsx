@@ -693,6 +693,29 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
                 </div>
               </div>
 
+              {/* Sezione per ordinamento input (tutte le porte) */}
+              {((element as Gate).gateType !== 'SPARE' && (element as Gate).gateType !== 'FDEP') && (
+                <div className="form-section">
+                  <h4>Ordina Input</h4>
+                  <p className="section-description">Ordina gli input nell'ordine desiderato (verrà usato nell'export MATLAB)</p>
+                  <div className="input-list">
+                    <h5>Inputs ({primaryInputs.length})</h5>
+                    <div className="input-items">
+                      {primaryInputs.map(inputId => (
+                        <div key={inputId} className="input-item">
+                          <div style={{display: 'flex', gap: 8, alignItems: 'center'}}>
+                            <button type="button" className="move-button" onClick={() => movePrimaryUp(inputId)} title="Sposta su">▲</button>
+                            <button type="button" className="move-button" onClick={() => movePrimaryDown(inputId)} title="Sposta giù">▼</button>
+                            <span className="input-name">{getElementName(inputId)}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {primaryInputs.length === 0 && <div className="empty-list">Nessun input</div>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Sezione Input Primari/Secondari per SPARE e FDEP */}
               {((element as Gate).gateType === 'SPARE' || (element as Gate).gateType === 'FDEP') && (
                 <div className="form-section">
