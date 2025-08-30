@@ -42,18 +42,24 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
     }
   };
 
-  // Helper to get a primary parameter for distribution
-  const getDistributionParam = (dist: any) => {
+  // Format number with up to 3 decimals, trim trailing zeros
+  const formatNumber = (n: number) => {
+    if (n == null || Number.isNaN(n)) return '';
+    return parseFloat(n.toFixed(3)).toString();
+  };
+
+  // Helper to get a full parameter string for any distribution
+  const getDistributionParamsString = (dist: any) => {
     if (!dist || !dist.type) return null;
     switch (dist.type) {
       case 'exponential':
-        return dist.lambda != null ? dist.lambda : null;
+        return dist.lambda != null ? `(λ=${formatNumber(dist.lambda)})` : null;
       case 'weibull':
-        return dist.lambda != null ? dist.lambda : null; // show scale for weibull
+        return `(${typeof dist.k !== 'undefined' ? `k=${formatNumber(dist.k)}, ` : ''}${typeof dist.lambda !== 'undefined' ? `λ=${formatNumber(dist.lambda)}` : ''}${typeof dist.mu !== 'undefined' ? `, μ=${formatNumber(dist.mu)}` : ''})`;
       case 'normal':
-        return dist.mu != null ? dist.mu : null; // show mean for normal
+        return `(${typeof dist.mu !== 'undefined' ? `μ=${formatNumber(dist.mu)}` : ''}${typeof dist.sigma !== 'undefined' ? `, σ=${formatNumber(dist.sigma)}` : ''})`;
       case 'constant':
-        return dist.probability != null ? dist.probability : null;
+        return dist.probability != null ? `(p=${formatNumber(dist.probability)})` : null;
       default:
         return null;
     }
@@ -104,8 +110,8 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
               <span className="dist-label">
                 {getDistributionLabel(event.failureProbabilityDistribution)}
                 {(() => {
-                  const p = getDistributionParam(event.failureProbabilityDistribution);
-                  return p != null ? <span className="dist-param">{` (${p})`}</span> : null;
+                  const params = getDistributionParamsString(event.failureProbabilityDistribution);
+                  return params ? <span className="dist-param">{` ${params}`}</span> : null;
                 })()}
               </span>
             </div>
@@ -117,8 +123,8 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
               <span className="dist-label">
                 {getDistributionLabel(event.repairProbabilityDistribution)}
                 {(() => {
-                  const p = getDistributionParam(event.repairProbabilityDistribution);
-                  return p != null ? <span className="dist-param">{` (${p})`}</span> : null;
+                  const params = getDistributionParamsString(event.repairProbabilityDistribution);
+                  return params ? <span className="dist-param">{` ${params}`}</span> : null;
                 })()}
               </span>
             </div>
