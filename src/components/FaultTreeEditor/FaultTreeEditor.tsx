@@ -417,6 +417,7 @@ const FaultTreeEditor: React.FC = () => {
           onPanelClick={handlePanelClick}
           componentToPlace={componentToPlace}
           isDarkMode={isDarkMode}
+          disableDeletion={showParameterModal}
         />
         
         <RightPanel 

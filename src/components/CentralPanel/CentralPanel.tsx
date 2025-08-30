@@ -38,6 +38,7 @@ interface CentralPanelProps {
     gateType?: string;
   } | null;
   isDarkMode: boolean;
+  disableDeletion?: boolean;
 }
 
 const nodeTypes = {
@@ -148,7 +149,8 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   onDeleteConnection,
   onPanelClick,
   componentToPlace,
-  isDarkMode
+  isDarkMode,
+  disableDeletion = false
 }) => {
   // Converti il modello in nodi e edge di React Flow
   const initialNodes: Node[] = useMemo(() => {
@@ -342,7 +344,9 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
 
   // Gestione tasti
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (event.key === 'Delete' || event.key === 'Backspace') {
+    if (disableDeletion) return;
+
+    if (event.key === 'Delete') {
       // Trova i nodi selezionati
       const selectedNodes = nodes.filter(node => node.selected);
       const selectedEdges = edges.filter(edge => edge.selected);
@@ -368,7 +372,7 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       // Seleziona tutti gli edge
       setEdges(edges => edges.map(edge => ({ ...edge, selected: true })));
     }
-  }, [nodes, edges, onDeleteElement, onDeleteConnection, setNodes, setEdges]);
+  }, [nodes, edges, onDeleteElement, onDeleteConnection, setNodes, setEdges, disableDeletion]);
 
   // Gestione menu contestuale
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
