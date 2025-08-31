@@ -2,16 +2,17 @@ import React, { useRef, useState } from 'react';
 import './MenuBar.css';
 
 interface MenuBarProps {
-  onSave: () => void;
-  onOpen: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onExportCode: () => void;
+  onSave: () => void | Promise<void>;
+  onOpen: (event: React.ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  onExportCode: () => void | Promise<void>;
   onShowSaveModal: () => void;
-  onExportXML: () => void;
-  onExportCSV: () => void;
+  onExportXML: () => void | Promise<void>;
+  onExportCSV: () => void | Promise<void>;
   onExportMatlab: () => void;
   onShowLLMConfig: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
+  onNewModel: () => void;
 }
 
 const MenuBar: React.FC<MenuBarProps> = ({ 
@@ -24,7 +25,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onExportMatlab,
   onShowLLMConfig,
   isDarkMode,
-  onToggleDarkMode
+  onToggleDarkMode,
+  onNewModel
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showFileMenu, setShowFileMenu] = useState(false);
@@ -44,19 +46,17 @@ const MenuBar: React.FC<MenuBarProps> = ({
     setShowFileMenu(false);
   };
 
-
-
   return (
     <div className={`menu-bar ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="menu-section">
         <span className="menu-title">🌳 Dynamic Fault Tree Editor</span>
         <div className="feature-notice">
-          <span>💡 Ora puoi scegliere la cartella per tutti i salvataggi!</span>
+          <span>💡 Salva sovrascrive il file corrente, Salva Come... apre il file explorer!</span>
         </div>
       </div>
       
       <div className="menu-section">
-        <div className="menu-dropdown">
+        <div className="menu-dropdown"> 
           <button 
             className="menu-button dropdown-toggle"
             onClick={() => setShowFileMenu(!showFileMenu)}
@@ -66,6 +66,9 @@ const MenuBar: React.FC<MenuBarProps> = ({
           
           {showFileMenu && (
             <div className="dropdown-menu">
+              <button className="dropdown-item" onClick={onNewModel}>
+                🆕 Nuovo
+              </button>
               <button className="dropdown-item" onClick={handleOpenClick}>
                 📂 Apri File (.json)
               </button>
@@ -98,7 +101,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
           📂 Apri
         </button>
         
-        <button className="menu-button primary" onClick={handleSaveClick}>
+        <button className="menu-button primary" onClick={onSave}>
           💾 Salva
         </button>
 

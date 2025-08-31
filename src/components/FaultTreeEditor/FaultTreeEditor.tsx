@@ -7,6 +7,7 @@ import ParameterModal from '../ParameterModal/ParameterModal';
 import SaveModal from '../SaveModal/SaveModal';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import MatlabExportModal from '../MatlabExportModal/MatlabExportModal';
+import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree';
 import { FaultTreeModification } from '../../types/ChatIntegration';
 import { FileService } from '../../services/file-service';
@@ -26,6 +27,7 @@ const FaultTreeEditor: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLLMConfigModal, setShowLLMConfigModal] = useState(false);
   const [showMatlabExportModal, setShowMatlabExportModal] = useState(false);
+  const [showNewModelConfirmation, setShowNewModelConfirmation] = useState(false);
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
   const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -465,6 +467,29 @@ const FaultTreeEditor: React.FC = () => {
     });
   }, [handleDeleteElement]);
 
+  // Gestione nuovo modello
+  const handleNewModel = useCallback(() => {
+    // Controlla se ci sono modifiche non salvate
+    if (faultTreeModel.events.length > 0 || faultTreeModel.gates.length > 0 || faultTreeModel.connections.length > 0) {
+      setShowNewModelConfirmation(true);
+    } else {
+      // Se non ci sono modifiche, crea direttamente un nuovo modello
+      createNewModel();
+    }
+  }, [faultTreeModel]);
+
+  // Crea un nuovo modello vuoto
+  const createNewModel = useCallback(() => {
+    setFaultTreeModel({
+      events: [],
+      gates: [],
+      connections: []
+    });
+    setSelectedElement(null);
+    setShowParameterModal(false);
+    setComponentToPlace(null);
+  }, []);
+
   return (
     <div className={`fault-tree-editor ${isDarkMode ? 'dark-mode' : ''}`}>
               <MenuBar
@@ -478,6 +503,7 @@ const FaultTreeEditor: React.FC = () => {
           onShowLLMConfig={handleShowLLMConfig}
           isDarkMode={isDarkMode}
           onToggleDarkMode={handleToggleDarkMode}
+          onNewModel={handleNewModel}
         />
       
       <div className={`editor-content ${isLeftPanelCollapsed ? 'left-panel-collapsed' : ''} ${isRightPanelCollapsed ? 'right-panel-collapsed' : ''}`}>
@@ -546,6 +572,17 @@ const FaultTreeEditor: React.FC = () => {
         onClose={() => setShowMatlabExportModal(false)}
         faultTreeModel={faultTreeModel}
         missionTime={missionTime}
+      />
+
+      <ConfirmationModal
+        isOpen={showNewModelConfirmation}
+        onClose={() => setShowNewModelConfirmation(false)}
+        onConfirm={createNewModel}
+        title="⚠️ Nuovo Modello"
+        message="Il modello esistente verrà perduto se non è stato salvato. Sei sicuro di voler continuare?"
+        confirmText="Sì, Nuovo Modello"
+        cancelText="Annulla"
+        confirmButtonClass="danger"
       />
     </div>
   );
