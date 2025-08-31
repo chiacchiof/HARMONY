@@ -36,6 +36,12 @@ const FaultTreeEditor: React.FC = () => {
     gateType?: GateType;
   } | null>(null);
 
+  // Stato per pannello sinistro collassato
+  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
+
+  // Stato per pannello destro collassato
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
+
   // Gestione aggiunta eventi base
   const handleAddBaseEvent = useCallback(() => {
     if (clickToPlaceMode) {
@@ -224,6 +230,16 @@ const FaultTreeEditor: React.FC = () => {
     setIsDarkMode(prev => !prev);
   }, []);
 
+  // Gestione toggle pannello sinistro
+  const handleToggleLeftPanel = useCallback(() => {
+    setIsLeftPanelCollapsed(prev => !prev);
+  }, []);
+
+  // Gestione toggle pannello destro
+  const handleToggleRightPanel = useCallback(() => {
+    setIsRightPanelCollapsed(prev => !prev);
+  }, []);
+
   // Gestione esportazione codice
   const handleExportCode = useCallback(() => {
     const codeStr = generateFaultTreeCode(faultTreeModel);
@@ -407,7 +423,7 @@ const FaultTreeEditor: React.FC = () => {
           onToggleDarkMode={handleToggleDarkMode}
         />
       
-      <div className="editor-content">
+      <div className={`editor-content ${isLeftPanelCollapsed ? 'left-panel-collapsed' : ''} ${isRightPanelCollapsed ? 'right-panel-collapsed' : ''}`}>
         <LeftPanel 
           onAddBaseEvent={handleAddBaseEvent}
           onAddGate={handleAddGate}
@@ -417,6 +433,8 @@ const FaultTreeEditor: React.FC = () => {
           missionTime={missionTime}
           onMissionTimeChange={handleMissionTimeChange}
           isDarkMode={isDarkMode}
+          isCollapsed={isLeftPanelCollapsed}
+          onToggleCollapse={handleToggleLeftPanel}
         />
         
         <CentralPanel 
@@ -436,6 +454,8 @@ const FaultTreeEditor: React.FC = () => {
           onModifyFaultTree={handleModifyFaultTree}
           currentFaultTree={faultTreeModel}
           isDarkMode={isDarkMode}
+          isCollapsed={isRightPanelCollapsed}
+          onToggleCollapse={handleToggleRightPanel}
         />
       </div>
 

@@ -8,13 +8,17 @@ import './RightPanel.css';
 
 interface RightPanelProps extends ChatIntegrationProps {
   isDarkMode: boolean;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ 
   onGenerateFaultTree,
   onModifyFaultTree,
   currentFaultTree,
-  isDarkMode
+  isDarkMode,
+  isCollapsed,
+  onToggleCollapse
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -275,9 +279,18 @@ const RightPanel: React.FC<RightPanelProps> = ({
   };
 
   return (
-    <div className={`right-panel ${isDarkMode ? 'dark-mode' : ''}`}>
+    <div className={`right-panel ${isDarkMode ? 'dark-mode' : ''} ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="panel-header">
-        <h3>🤖 Assistente Fault Tree</h3>
+        <div className="header-content">
+          <h3>🤖 Assistente Fault Tree</h3>
+          <button 
+            className="collapse-toggle"
+            onClick={onToggleCollapse}
+            title={isCollapsed ? "Mostra pannello" : "Nascondi pannello"}
+          >
+            {isCollapsed ? '◀' : '▶'}
+          </button>
+        </div>
         <div className="header-controls">
           <div className="provider-info">
             <span className="provider-label">Provider:</span>
@@ -318,104 +331,108 @@ const RightPanel: React.FC<RightPanelProps> = ({
         </div>
       </div>
 
-      <div className="chat-container">
-        <div className="messages">
-          {messages.map((message) => (
-            <div key={message.id} className={`message ${message.sender}`}>
-              <div className="message-content">
-                <strong className="message-prefix">
-                  {message.sender === 'user' ? 'Tu: ' : 'AFT: '}
-                </strong>
-                {message.text.split('\n').map((line, index) => (
-                  <React.Fragment key={index}>
-                    {line}
-                    {index < message.text.split('\n').length - 1 && <br />}
-                  </React.Fragment>
-                ))}
-              </div>
-              <div className="message-time">
-                {message.timestamp.toLocaleTimeString()}
-              </div>
-            </div>
-          ))}
-          
-          {isTyping && (
-            <div className="message bot typing">
-              <div className="message-content">
-                <div className="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
+      {!isCollapsed && (
+        <>
+          <div className="chat-container">
+            <div className="messages">
+              {messages.map((message) => (
+                <div key={message.id} className={`message ${message.sender}`}>
+                  <div className="message-content">
+                    <strong className="message-prefix">
+                      {message.sender === 'user' ? 'Tu: ' : 'AFT: '}
+                    </strong>
+                    {message.text.split('\n').map((line, index) => (
+                      <React.Fragment key={index}>
+                        {line}
+                        {index < message.text.split('\n').length - 1 && <br />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  <div className="message-time">
+                    {message.timestamp.toLocaleTimeString()}
+                  </div>
                 </div>
+              ))}
+              
+              {isTyping && (
+                <div className="message bot typing">
+                  <div className="message-content">
+                    <div className="typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+            
+            <div className="quick-examples">
+              <div className="quick-examples-title">🚀 Esempi di Generazione:</div>
+              <div className="quick-buttons">
+                <button 
+                  className="quick-button"
+                  onClick={() => handleQuickExample('Genera un fault tree per un sistema di alimentazione elettrica con ridondanza')}
+                >
+                  🔌 Sistema Elettrico
+                </button>
+                <button 
+                  className="quick-button"
+                  onClick={() => handleQuickExample('Crea fault tree per sistema frenante automotive con ABS')}
+                >
+                  🚗 Sistema Frenante
+                </button>
+                <button 
+                  className="quick-button"
+                  onClick={() => handleQuickExample('Modella fault tree per sistema di controllo industriale PLC')}
+                >
+                  🏭 Sistema Controllo
+                </button>
               </div>
             </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-        
-        <div className="quick-examples">
-          <div className="quick-examples-title">🚀 Esempi di Generazione:</div>
-          <div className="quick-buttons">
-            <button 
-              className="quick-button"
-              onClick={() => handleQuickExample('Genera un fault tree per un sistema di alimentazione elettrica con ridondanza')}
-            >
-              🔌 Sistema Elettrico
-            </button>
-            <button 
-              className="quick-button"
-              onClick={() => handleQuickExample('Crea fault tree per sistema frenante automotive con ABS')}
-            >
-              🚗 Sistema Frenante
-            </button>
-            <button 
-              className="quick-button"
-              onClick={() => handleQuickExample('Modella fault tree per sistema di controllo industriale PLC')}
-            >
-              🏭 Sistema Controllo
-            </button>
+
+            <div className="input-area">
+              <textarea
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
+                placeholder="Scrivi 'genera fault tree per...' o usa gli esempi sopra!"
+                className="message-input"
+                rows={3}
+                autoFocus={false}
+                spellCheck={false}
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={!inputMessage.trim() || isTyping}
+                className="send-button"
+              >
+                📤
+              </button>
+            </div>
+
+            {generationStatus.isGenerating && (
+              <div className="generation-status">
+                <div className="generation-spinner">⚙️</div>
+                <span>{generationStatus.message || 'Generazione in corso...'}</span>
+              </div>
+            )}
           </div>
-        </div>
 
-        <div className="input-area">
-          <textarea
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            onKeyDown={handleKeyDown}
-            placeholder="Scrivi 'genera fault tree per...' o usa gli esempi sopra!"
-            className="message-input"
-            rows={3}
-            autoFocus={false}
-            spellCheck={false}
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isTyping}
-            className="send-button"
-          >
-            📤
-          </button>
-        </div>
-
-        {generationStatus.isGenerating && (
-          <div className="generation-status">
-            <div className="generation-spinner">⚙️</div>
-            <span>{generationStatus.message || 'Generazione in corso...'}</span>
+          <div className="help-section">
+            <h4>💡 Suggerimenti</h4>
+            <div className="help-items">
+              <div className="help-item">🔧 Genera fault tree automaticamente</div>
+              <div className="help-item">❓ Chiedi informazioni sui tipi di porte</div>
+              <div className="help-item">📊 Richiedi consigli sulla modellazione</div>
+              <div className="help-item">🎯 Analizza il tuo modello corrente</div>
+            </div>
           </div>
-        )}
-      </div>
-
-      <div className="help-section">
-        <h4>💡 Suggerimenti</h4>
-        <div className="help-items">
-          <div className="help-item">🔧 Genera fault tree automaticamente</div>
-          <div className="help-item">❓ Chiedi informazioni sui tipi di porte</div>
-          <div className="help-item">📊 Richiedi consigli sulla modellazione</div>
-          <div className="help-item">🎯 Analizza il tuo modello corrente</div>
-        </div>
-      </div>
+        </>
+      )}
 
       {showConfigModal && (
         <LLMConfigModal

@@ -15,6 +15,20 @@
   display: flex;
   height: calc(100vh - 50px);
   margin-right: 350px; /* Spazio per il pannello destro fisso */
+  transition: margin-left 0.3s ease;
+}
+
+.editor-content.left-panel-collapsed {
+  margin-left: 60px; /* Spazio per il pannello sinistro collassato */
+}
+
+.editor-content.right-panel-collapsed {
+  margin-right: 60px; /* Spazio per il pannello destro collassato */
+}
+
+.editor-content.left-panel-collapsed.right-panel-collapsed {
+  margin-left: 60px;
+  margin-right: 60px;
 }
 
 .editor-content > * {

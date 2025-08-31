@@ -12,6 +12,17 @@
   transition: all 0.3s ease;
 }
 
+.right-panel.collapsed {
+  width: 60px;
+  min-width: 60px;
+  overflow: hidden;
+}
+
+.right-panel.collapsed .chat-container,
+.right-panel.collapsed .help-section {
+  display: none;
+}
+
 .right-panel.dark-mode {
   background-color: var(--bg-secondary-dark);
   border-left-color: var(--border-dark);
@@ -27,9 +38,66 @@
   transition: all 0.3s ease;
 }
 
+.right-panel.collapsed .panel-header {
+  padding: 15px 10px;
+  border-bottom: none;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.right-panel.collapsed .header-content {
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.right-panel.collapsed .header-content h3 {
+  font-size: 14px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  margin: 0;
+  white-space: nowrap;
+}
+
 .right-panel.dark-mode .panel-header {
   border-bottom-color: var(--border-dark);
   background-color: var(--bg-tertiary-dark);
+}
+
+.collapse-toggle {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  color: var(--text-secondary-light);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+}
+
+.right-panel.dark-mode .collapse-toggle {
+  color: var(--text-secondary-dark);
+}
+
+.collapse-toggle:hover {
+  background-color: var(--hover-light);
+  color: var(--accent-light);
+}
+
+.right-panel.dark-mode .collapse-toggle:hover {
+  background-color: var(--hover-dark);
+  color: var(--accent-dark);
 }
 
 .right-panel .panel-header h3 {
