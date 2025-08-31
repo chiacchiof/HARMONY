@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -20,7 +20,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import { FaultTreeModel, BaseEvent, Gate } from '../../types/FaultTree';
+import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree';
 import EventNode from './nodes/EventNode';
 import GateNode from './nodes/GateNode';
 import DeleteButtonEdge from './edges/DeleteButtonEdge';
@@ -35,10 +35,11 @@ interface CentralPanelProps {
   onPanelClick: (position: { x: number; y: number }) => void;
   componentToPlace: {
     type: 'event' | 'gate';
-    gateType?: string;
+    gateType?: GateType;
   } | null;
   isDarkMode: boolean;
   disableDeletion?: boolean;
+  onReorganizeComponents: () => void;
 }
 
 const nodeTypes = {
@@ -60,8 +61,9 @@ const ReactFlowComponent: React.FC<{
   nodeTypes: any;
   edgeTypes: any;
   onPanelClick: (position: { x: number; y: number }) => void;
-  componentToPlace: { type: 'event' | 'gate'; gateType?: string } | null;
+  componentToPlace: { type: 'event' | 'gate'; gateType?: GateType } | null;
   isDarkMode: boolean;
+  onReorganizeComponents: () => void;
 }> = ({
   nodes,
   edges,
@@ -72,9 +74,11 @@ const ReactFlowComponent: React.FC<{
   edgeTypes,
   onPanelClick,
   componentToPlace,
-  isDarkMode
+  isDarkMode,
+  onReorganizeComponents
 }) => {
   const reactFlowInstance = useReactFlow();
+  const [isLocked, setIsLocked] = useState(false);
 
   // Gestione click sul background per posizionare componenti
   const handlePaneClick = useCallback((event: React.MouseEvent) => {
@@ -108,35 +112,73 @@ const ReactFlowComponent: React.FC<{
   }, [componentToPlace, onPanelClick, reactFlowInstance]);
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      fitView
-      attributionPosition="bottom-left"
-      deleteKeyCode={null}
-      selectionOnDrag={!componentToPlace}
-      panOnDrag={componentToPlace ? false : [1, 2]}
-      selectionMode={SelectionMode.Partial}
-      multiSelectionKeyCode="Control"
-      onPaneClick={componentToPlace ? handlePaneClick : undefined}
-    >
-      <Controls />
-      <MiniMap 
-        nodeColor="#3498db"
-        maskColor="rgba(0, 0, 0, 0.1)"
-        position="top-right"
-      />
-      <Background 
-        variant={BackgroundVariant.Dots} 
-        gap={20} 
-        size={1}
-        color={isDarkMode ? "#404040" : "#e0e0e0"}
-      />
+         <ReactFlow
+       nodes={nodes}
+       edges={edges}
+       onNodesChange={onNodesChange}
+       onEdgesChange={onEdgesChange}
+       onConnect={onConnect}
+       nodeTypes={nodeTypes}
+       edgeTypes={edgeTypes}
+       fitView
+       attributionPosition="bottom-left"
+       deleteKeyCode={null}
+       selectionOnDrag={!componentToPlace && !isLocked}
+       panOnDrag={componentToPlace || isLocked ? false : [1, 2]}
+       selectionMode={SelectionMode.Partial}
+       multiSelectionKeyCode="Control"
+       onPaneClick={componentToPlace ? handlePaneClick : undefined}
+     >
+             {/* Controlli personalizzati che includono il pulsante Riorganizza */}
+       <div className="react-flow__panel react-flow__controls bottom left">
+         <button
+           className="react-flow__controls-button"
+           onClick={() => reactFlowInstance.zoomIn()}
+           title="Zoom In (+)"
+         >
+           +
+         </button>
+         <button
+           className="react-flow__controls-button"
+           onClick={() => reactFlowInstance.zoomOut()}
+           title="Zoom Out (-)"
+         >
+           -
+         </button>
+         <button
+           className="react-flow__controls-button"
+           onClick={() => reactFlowInstance.fitView()}
+           title="Fit View"
+         >
+           ⊞
+         </button>
+         <button
+           className="react-flow__controls-button"
+           onClick={() => setIsLocked(!isLocked)}
+           title={isLocked ? "Sblocca Vista" : "Blocca Vista"}
+         >
+           {isLocked ? "🔓" : "🔒"}
+         </button>
+         <button
+           className="react-flow__controls-button"
+           onClick={onReorganizeComponents}
+           title="Riorganizza tutti i componenti al centro"
+         >
+           🔧
+         </button>
+       </div>
+       
+       <MiniMap 
+         nodeColor="#3498db"
+         maskColor="rgba(0, 0, 0, 0.1)"
+         position="top-right"
+       />
+       <Background 
+         variant={BackgroundVariant.Dots} 
+         gap={20} 
+         size={1}
+         color={isDarkMode ? "#404040" : "#e0e0e0"}
+       />
     </ReactFlow>
   );
 };
@@ -150,7 +192,8 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   onPanelClick,
   componentToPlace,
   isDarkMode,
-  disableDeletion = false
+  disableDeletion = false,
+  onReorganizeComponents
 }) => {
   // Converti il modello in nodi e edge di React Flow
   const initialNodes: Node[] = useMemo(() => {
@@ -455,18 +498,19 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
         onContextMenu={handleContextMenu}
       >
         <ReactFlowProvider>
-          <ReactFlowComponent
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChangeWithDelete}
-            onEdgesChange={handleEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            onPanelClick={onPanelClick}
-            componentToPlace={componentToPlace}
-            isDarkMode={isDarkMode}
-          />
+                     <ReactFlowComponent
+             nodes={nodes}
+             edges={edges}
+             onNodesChange={handleNodesChangeWithDelete}
+             onEdgesChange={handleEdgesChange}
+             onConnect={onConnect}
+             nodeTypes={nodeTypes}
+             edgeTypes={edgeTypes}
+             onPanelClick={onPanelClick}
+             componentToPlace={componentToPlace}
+             isDarkMode={isDarkMode}
+             onReorganizeComponents={onReorganizeComponents}
+           />
         </ReactFlowProvider>
         
         {/* Menu contestuale */}

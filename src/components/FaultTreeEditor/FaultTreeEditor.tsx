@@ -346,6 +346,44 @@ const FaultTreeEditor: React.FC = () => {
     }));
   }, [faultTreeModel]);
 
+  // Funzione per riorganizzare tutti i componenti al centro
+  const handleReorganizeComponents = useCallback(() => {
+    const allElements = [...faultTreeModel.events, ...faultTreeModel.gates];
+    if (allElements.length === 0) return;
+
+    // Calcola il centro dello schermo (considerando che il pannello centrale è il focus)
+    const centerX = 400; // Centro approssimativo del pannello centrale
+    const centerY = 300;
+    
+    // Spaziatura tra componenti
+    const spacing = 120;
+    
+    // Calcola la griglia ottimale
+    const cols = Math.ceil(Math.sqrt(allElements.length));
+    const rows = Math.ceil(allElements.length / cols);
+    
+    // Posiziona ogni elemento in una griglia ordinata
+    const updatedElements = allElements.map((element, index) => {
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      
+      const newX = centerX + (col - (cols - 1) / 2) * spacing;
+      const newY = centerY + (row - (rows - 1) / 2) * spacing;
+      
+      return {
+        ...element,
+        position: { x: newX, y: newY }
+      };
+    });
+
+    // Aggiorna il modello
+    setFaultTreeModel(prev => ({
+      ...prev,
+      events: updatedElements.filter(el => el.type === 'basic-event') as BaseEvent[],
+      gates: updatedElements.filter(el => el.type === 'gate') as Gate[]
+    }));
+  }, [faultTreeModel]);
+
   // Gestione generazione fault tree dal chatbot
   const handleGenerateFaultTree = useCallback((generatedModel: FaultTreeModel) => {
     console.log('FaultTreeEditor - Modello generato ricevuto:', {
@@ -463,6 +501,7 @@ const FaultTreeEditor: React.FC = () => {
           componentToPlace={componentToPlace}
           isDarkMode={isDarkMode}
           disableDeletion={showParameterModal}
+          onReorganizeComponents={handleReorganizeComponents}
         />
         
         <RightPanel 
