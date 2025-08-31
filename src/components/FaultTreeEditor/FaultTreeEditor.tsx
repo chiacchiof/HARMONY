@@ -180,15 +180,12 @@ const FaultTreeEditor: React.FC = () => {
   }, []);
 
   // Gestione salvataggio file
-  const handleSaveFile = useCallback(() => {
-    const dataStr = JSON.stringify(faultTreeModel, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'fault-tree.json';
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleSaveFile = useCallback(async () => {
+    try {
+      await FileService.saveFaultTree(faultTreeModel);
+    } catch (error) {
+      alert(`Errore durante il salvataggio: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    }
   }, [faultTreeModel]);
 
   // Gestione apertura file
@@ -206,13 +203,21 @@ const FaultTreeEditor: React.FC = () => {
   }, []);
 
   // Gestione esportazione XML
-  const handleExportXML = useCallback(() => {
-    FileService.exportToXML(faultTreeModel);
+  const handleExportXML = useCallback(async () => {
+    try {
+      await FileService.exportToXML(faultTreeModel);
+    } catch (error) {
+      alert(`Errore durante l'esportazione XML: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    }
   }, [faultTreeModel]);
 
   // Gestione esportazione CSV
-  const handleExportCSV = useCallback(() => {
-    FileService.exportToCSV(faultTreeModel);
+  const handleExportCSV = useCallback(async () => {
+    try {
+      await FileService.exportToCSV(faultTreeModel);
+    } catch (error) {
+      alert(`Errore durante l'esportazione CSV: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    }
   }, [faultTreeModel]);
 
   // Gestione apertura SaveModal
@@ -257,15 +262,13 @@ const FaultTreeEditor: React.FC = () => {
   }, []);
 
   // Gestione esportazione codice
-  const handleExportCode = useCallback(() => {
-    const codeStr = generateFaultTreeCode(faultTreeModel);
-    const dataBlob = new Blob([codeStr], { type: 'text/plain' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'fault-tree-code.txt';
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleExportCode = useCallback(async () => {
+    try {
+      const codeStr = generateFaultTreeCode(faultTreeModel);
+      await FileService.exportCode(codeStr);
+    } catch (error) {
+      alert(`Errore durante l'esportazione del codice: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    }
   }, [faultTreeModel]);
 
   // Funzione per trovare tutti gli elementi collegati a una gate (ricorsiva)

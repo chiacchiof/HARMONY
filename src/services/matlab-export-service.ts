@@ -10,9 +10,35 @@ export class MatlabExportService {
   /**
    * Exports fault tree to MATLAB format with bottom-up ordering
    */
-  static exportToMatlab(model: FaultTreeModel, options: MatlabExportOptions): void {
+  static async exportToMatlab(model: FaultTreeModel, options: MatlabExportOptions): Promise<void> {
     const matlabCode = this.generateMatlabCode(model, options);
     const dataBlob = new Blob([matlabCode], { type: 'text/plain' });
+    
+    // Prova a utilizzare l'API File System Access se disponibile
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const defaultName = options.filename || `fault-tree-${new Date().toISOString().split('T')[0]}.m`;
+        const fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'MATLAB Files',
+            accept: {
+              'text/plain': ['.m']
+            }
+          }]
+        });
+        
+        const writable = await fileHandle.createWritable();
+        await writable.write(dataBlob);
+        await writable.close();
+        return;
+      } catch (error) {
+        // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
+        console.log('File System Access non disponibile o annullato, uso fallback:', error);
+      }
+    }
+    
+    // Fallback al metodo tradizionale
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;

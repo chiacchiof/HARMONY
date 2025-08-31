@@ -33,18 +33,18 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, faultTreeModel }
         return;
       }
 
-      // Salvataggio in base al formato
-      switch (format) {
-        case 'json':
-          FileService.saveFaultTree(faultTreeModel, `${filename}.json`);
-          break;
-        case 'xml':
-          FileService.exportToXML(faultTreeModel, `${filename}.xml`);
-          break;
-        case 'csv':
-          FileService.exportToCSV(faultTreeModel, `${filename}.csv`);
-          break;
-      }
+              // Salvataggio in base al formato
+        switch (format) {
+          case 'json':
+            await FileService.saveFaultTree(faultTreeModel, `${filename}.json`);
+            break;
+          case 'xml':
+            await FileService.exportToXML(faultTreeModel, `${filename}.xml`);
+            break;
+          case 'csv':
+            await FileService.exportToCSV(faultTreeModel, `${filename}.csv`);
+            break;
+        }
 
       alert('File salvato con successo!');
       onClose();
@@ -55,9 +55,13 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, faultTreeModel }
     }
   };
 
-  const handleQuickSave = () => {
-    FileService.saveFaultTree(faultTreeModel);
-    onClose();
+  const handleQuickSave = async () => {
+    try {
+      await FileService.saveFaultTree(faultTreeModel);
+      onClose();
+    } catch (error) {
+      alert(`Errore durante il salvataggio rapido: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    }
   };
 
   return (
@@ -69,6 +73,10 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, faultTreeModel }
         </div>
 
         <div className="save-modal-content">
+          <div className="info-message">
+            <p>💡 <strong>Nuovo!</strong> Ora puoi scegliere la cartella di destinazione e modificare il nome file per tutti i tipi di salvataggio.</p>
+          </div>
+
           <div className="form-group">
             <label htmlFor="filename">Nome File:</label>
             <input

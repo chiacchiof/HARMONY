@@ -50,6 +50,9 @@ const MenuBar: React.FC<MenuBarProps> = ({
     <div className={`menu-bar ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="menu-section">
         <span className="menu-title">🌳 Dynamic Fault Tree Editor</span>
+        <div className="feature-notice">
+          <span>💡 Ora puoi scegliere la cartella per tutti i salvataggi!</span>
+        </div>
       </div>
       
       <div className="menu-section">

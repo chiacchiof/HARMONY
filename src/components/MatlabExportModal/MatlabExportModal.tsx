@@ -43,7 +43,7 @@ const MatlabExportModal: React.FC<MatlabExportModalProps> = ({
       }
 
       // Export to MATLAB
-      MatlabExportService.exportToMatlab(faultTreeModel, {
+      await MatlabExportService.exportToMatlab(faultTreeModel, {
         missionTime: tm,
         filename: filename.endsWith('.m') ? filename : `${filename}.m`
       });

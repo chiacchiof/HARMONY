@@ -9,11 +9,37 @@ export interface FileExportOptions {
 export class FileService {
   
   /**
-   * Salva il fault tree in formato JSON
+   * Salva il fault tree in formato JSON con selezione cartella
    */
-  static saveFaultTree(model: FaultTreeModel, filename?: string): void {
+  static async saveFaultTree(model: FaultTreeModel, filename?: string): Promise<void> {
     const dataStr = JSON.stringify(model, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    // Prova a utilizzare l'API File System Access se disponibile
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const defaultName = filename || `fault-tree-${new Date().toISOString().split('T')[0]}.json`;
+        const fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'JSON Files',
+            accept: {
+              'application/json': ['.json']
+            }
+          }]
+        });
+        
+        const writable = await fileHandle.createWritable();
+        await writable.write(dataBlob);
+        await writable.close();
+        return;
+      } catch (error) {
+        // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
+        console.log('File System Access non disponibile o annullato, uso fallback:', error);
+      }
+    }
+    
+    // Fallback al metodo tradizionale
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
@@ -54,11 +80,37 @@ export class FileService {
   }
 
   /**
-   * Esporta in formato XML
+   * Esporta in formato XML con selezione cartella
    */
-  static exportToXML(model: FaultTreeModel, filename?: string): void {
+  static async exportToXML(model: FaultTreeModel, filename?: string): Promise<void> {
     const xmlContent = this.generateXML(model);
     const dataBlob = new Blob([xmlContent], { type: 'application/xml' });
+    
+    // Prova a utilizzare l'API File System Access se disponibile
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const defaultName = filename || `fault-tree-${new Date().toISOString().split('T')[0]}.xml`;
+        const fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'XML Files',
+            accept: {
+              'application/xml': ['.xml']
+            }
+          }]
+        });
+        
+        const writable = await fileHandle.createWritable();
+        await writable.write(dataBlob);
+        await writable.close();
+        return;
+      } catch (error) {
+        // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
+        console.log('File System Access non disponibile o annullato, uso fallback:', error);
+      }
+    }
+    
+    // Fallback al metodo tradizionale
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
@@ -68,15 +120,80 @@ export class FileService {
   }
 
   /**
-   * Esporta in formato CSV
+   * Esporta in formato CSV con selezione cartella
    */
-  static exportToCSV(model: FaultTreeModel, filename?: string): void {
+  static async exportToCSV(model: FaultTreeModel, filename?: string): Promise<void> {
     const csvContent = this.generateCSV(model);
     const dataBlob = new Blob([csvContent], { type: 'text/csv' });
+    
+    // Prova a utilizzare l'API File System Access se disponibile
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const defaultName = filename || `fault-tree-${new Date().toISOString().split('T')[0]}.csv`;
+        const fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'CSV Files',
+            accept: {
+              'text/csv': ['.csv']
+            }
+          }]
+        });
+        
+        const writable = await fileHandle.createWritable();
+        await writable.write(dataBlob);
+        await writable.close();
+        return;
+      } catch (error) {
+        // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
+        console.log('File System Access non disponibile o annullato, uso fallback:', error);
+      }
+    }
+    
+    // Fallback al metodo tradizionale
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
     link.download = filename || `fault-tree-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Esporta codice in formato testo con selezione cartella
+   */
+  static async exportCode(codeContent: string, filename?: string): Promise<void> {
+    const dataBlob = new Blob([codeContent], { type: 'text/plain' });
+    
+    // Prova a utilizzare l'API File System Access se disponibile
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const defaultName = filename || `fault-tree-code-${new Date().toISOString().split('T')[0]}.txt`;
+        const fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'Text Files',
+            accept: {
+              'text/plain': ['.txt']
+            }
+          }]
+        });
+        
+        const writable = await fileHandle.createWritable();
+        await writable.write(dataBlob);
+        await writable.close();
+        return;
+      } catch (error) {
+        // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
+        console.log('File System Access non disponibile o annullato, uso fallback:', error);
+      }
+    }
+    
+    // Fallback al metodo tradizionale
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || `fault-tree-code-${new Date().toISOString().split('T')[0]}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   }
