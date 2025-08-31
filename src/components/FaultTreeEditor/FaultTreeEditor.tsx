@@ -566,7 +566,6 @@ const FaultTreeEditor: React.FC = () => {
     <div className={`fault-tree-editor ${isDarkMode ? 'dark-mode' : ''}`}>
               <MenuBar
           onSave={handleSaveFile}
-          onOpen={handleOpenFile}
           onOpenWithFileSystem={handleOpenFileWithFileSystem}
           onExportCode={handleExportCode}
           onShowSaveModal={handleShowSaveModal}

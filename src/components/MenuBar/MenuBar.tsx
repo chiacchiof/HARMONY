@@ -3,7 +3,6 @@ import './MenuBar.css';
 
 interface MenuBarProps {
   onSave: () => void | Promise<void>;
-  onOpen: (event: React.ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   onOpenWithFileSystem: () => void | Promise<void>;
   onExportCode: () => void | Promise<void>;
   onShowSaveModal: () => void;
@@ -19,7 +18,6 @@ interface MenuBarProps {
 
 const MenuBar: React.FC<MenuBarProps> = ({ 
   onSave, 
-  onOpen, 
   onOpenWithFileSystem,
   onExportCode, 
   onShowSaveModal,
@@ -32,13 +30,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onNewModel,
   openedFile
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showFileMenu, setShowFileMenu] = useState(false);
-
-  const handleOpenClick = () => {
-    fileInputRef.current?.click();
-    setShowFileMenu(false);
-  };
 
   const handleSaveClick = () => {
     onShowSaveModal();
@@ -54,15 +46,9 @@ const MenuBar: React.FC<MenuBarProps> = ({
     <div className={`menu-bar ${isDarkMode ? 'dark-mode' : ''}`}>
               <div className="menu-section">
           <span className="menu-title">🌳 Dynamic Fault Tree Editor</span>
-          <div className="feature-notice">
-            <span>💡 <strong>Apri (File System)</strong>: Sovrascrittura diretta | <strong>Apri (Tradizionale)</strong>: File explorer | <strong>Salva</strong>: Sovrascrive se file aperto, altrimenti file explorer</span>
-          </div>
           {openedFile && (
             <div className="file-info">
               <span>📁 File aperto: {openedFile.filename}</span>
-              {openedFile.fileHandle && (
-                <span className="save-mode-indicator">💾 Modalità Sovrascrittura</span>
-              )}
             </div>
           )}
         </div>
@@ -81,9 +67,9 @@ const MenuBar: React.FC<MenuBarProps> = ({
               <button className="dropdown-item" onClick={onNewModel}>
                 🆕 Nuovo
               </button>
-              <button className="dropdown-item" onClick={handleOpenClick}>
-                📂 Apri File (.json)
-              </button>
+                             <button className="dropdown-item" onClick={onOpenWithFileSystem}>
+                 📂 Apri File (.json)
+               </button>
               <div className="dropdown-divider"></div>
               <button className="dropdown-item" onClick={handleQuickSave}>
                 💾 Salvataggio Rapido (JSON)
@@ -109,12 +95,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
           )}
         </div>
 
-        <button className="menu-button" onClick={handleOpenClick}>
-          📂 Apri (Tradizionale)
-        </button>
-        
         <button className="menu-button" onClick={onOpenWithFileSystem}>
-          🔓 Apri (File System)
+          🔓 Apri
         </button>
         
         <button className="menu-button primary" onClick={onSave}>
@@ -130,13 +112,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
         </button>
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json,.xml,.csv"
-        onChange={onOpen}
-        style={{ display: 'none' }}
-      />
+      
     </div>
   );
 };

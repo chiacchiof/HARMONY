@@ -222,42 +222,31 @@
 }
 
 .file-info {
-  background: rgba(0, 123, 255, 0.1);
-  border: 1px solid rgba(0, 123, 255, 0.3);
-  border-radius: 4px;
-  padding: 4px 8px;
-  margin-top: 4px;
-  font-size: 0.85em;
-  color: #007bff;
-  display: flex;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 2px 6px;
+  font-size: 0.8em;
+  color: rgb(15, 13, 13);
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
+  gap: 6px;
+  height: 28px;
+  line-height: 1;
+  border-radius: 4px;
+  margin-left: 12px;
+  align-self: center;
+  z-index: 105;
+  
 }
 
 .file-info span {
   font-weight: 500;
-}
-
-.save-mode-indicator {
-  background: rgba(40, 167, 69, 0.2);
-  border: 1px solid rgba(40, 167, 69, 0.4);
-  border-radius: 3px;
-  padding: 2px 6px;
-  color: #28a745;
-  font-size: 0.8em;
+  white-space: nowrap;
 }
 
 .dark-mode .file-info {
-  background: rgba(0, 123, 255, 0.2);
-  border-color: rgba(0, 123, 255, 0.5);
-  color: #4da6ff;
-}
-
-.dark-mode .save-mode-indicator {
-  background: rgba(40, 167, 69, 0.3);
-  border-color: rgba(40, 167, 69, 0.6);
-  color: #5cb85c;
+  color: rgb(15, 13, 13);
 }
 
 /* Responsive */
