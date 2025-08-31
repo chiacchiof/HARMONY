@@ -4,6 +4,7 @@ import './MenuBar.css';
 interface MenuBarProps {
   onSave: () => void | Promise<void>;
   onOpen: (event: React.ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  onOpenWithFileSystem: () => void | Promise<void>;
   onExportCode: () => void | Promise<void>;
   onShowSaveModal: () => void;
   onExportXML: () => void | Promise<void>;
@@ -13,11 +14,13 @@ interface MenuBarProps {
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
   onNewModel: () => void;
+  openedFile?: { filename: string; fileHandle?: FileSystemFileHandle } | null;
 }
 
 const MenuBar: React.FC<MenuBarProps> = ({ 
   onSave, 
   onOpen, 
+  onOpenWithFileSystem,
   onExportCode, 
   onShowSaveModal,
   onExportXML,
@@ -26,7 +29,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onShowLLMConfig,
   isDarkMode,
   onToggleDarkMode,
-  onNewModel
+  onNewModel,
+  openedFile
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showFileMenu, setShowFileMenu] = useState(false);
@@ -48,12 +52,20 @@ const MenuBar: React.FC<MenuBarProps> = ({
 
   return (
     <div className={`menu-bar ${isDarkMode ? 'dark-mode' : ''}`}>
-      <div className="menu-section">
-        <span className="menu-title">🌳 Dynamic Fault Tree Editor</span>
-        <div className="feature-notice">
-          <span>💡 Salva sovrascrive il file corrente, Salva Come... apre il file explorer!</span>
+              <div className="menu-section">
+          <span className="menu-title">🌳 Dynamic Fault Tree Editor</span>
+          <div className="feature-notice">
+            <span>💡 <strong>Apri (File System)</strong>: Sovrascrittura diretta | <strong>Apri (Tradizionale)</strong>: File explorer | <strong>Salva</strong>: Sovrascrive se file aperto, altrimenti file explorer</span>
+          </div>
+          {openedFile && (
+            <div className="file-info">
+              <span>📁 File aperto: {openedFile.filename}</span>
+              {openedFile.fileHandle && (
+                <span className="save-mode-indicator">💾 Modalità Sovrascrittura</span>
+              )}
+            </div>
+          )}
         </div>
-      </div>
       
       <div className="menu-section">
         <div className="menu-dropdown"> 
@@ -74,10 +86,10 @@ const MenuBar: React.FC<MenuBarProps> = ({
               </button>
               <div className="dropdown-divider"></div>
               <button className="dropdown-item" onClick={handleQuickSave}>
-                💾 Salvataggio Rapido
+                💾 Salvataggio Rapido (JSON)
               </button>
               <button className="dropdown-item" onClick={handleSaveClick}>
-                💾 Salva Come...
+                💾 Salva Come... (Nuovo File)
               </button>
               <div className="dropdown-divider"></div>
               <button className="dropdown-item" onClick={onExportXML}>
@@ -98,11 +110,15 @@ const MenuBar: React.FC<MenuBarProps> = ({
         </div>
 
         <button className="menu-button" onClick={handleOpenClick}>
-          📂 Apri
+          📂 Apri (Tradizionale)
+        </button>
+        
+        <button className="menu-button" onClick={onOpenWithFileSystem}>
+          🔓 Apri (File System)
         </button>
         
         <button className="menu-button primary" onClick={onSave}>
-          💾 Salva
+          💾 Salva {openedFile?.fileHandle ? '(Sovrascrivi)' : '(Nuovo File)'}
         </button>
 
         <button className="menu-button config" onClick={onShowLLMConfig}>

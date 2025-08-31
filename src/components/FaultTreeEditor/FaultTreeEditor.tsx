@@ -32,6 +32,13 @@ const FaultTreeEditor: React.FC = () => {
   const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
   const [isDarkMode, setIsDarkMode] = useState(false);
   
+  // Stato per tenere traccia del file aperto
+  const [openedFile, setOpenedFile] = useState<{
+    url: string;
+    filename: string;
+    fileHandle?: FileSystemFileHandle;
+  } | null>(null);
+  
   // Rilevamento automatico del dispositivo
   const deviceType = useDeviceType();
   
@@ -183,12 +190,19 @@ const FaultTreeEditor: React.FC = () => {
 
   // Gestione salvataggio file
   const handleSaveFile = useCallback(async () => {
-    try {
-      await FileService.saveFaultTree(faultTreeModel);
-    } catch (error) {
-      alert(`Errore durante il salvataggio: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    // Modalità 1: Se abbiamo un file aperto con fileHandle, sovrascriviamo quello
+    if (openedFile && openedFile.fileHandle) {
+      try {
+        await FileService.overwriteExistingFile(faultTreeModel, openedFile.fileHandle);
+        alert('File sovrascritto con successo!');
+      } catch (error) {
+        alert(`Errore durante la sovrascrittura: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+      }
+    } else {
+      // Modalità 2: Nuovo file o file aperto senza fileHandle, apri il file explorer
+      setShowSaveModal(true);
     }
-  }, [faultTreeModel]);
+  }, [faultTreeModel, openedFile]);
 
   // Gestione apertura file
   const handleOpenFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,12 +211,69 @@ const FaultTreeEditor: React.FC = () => {
       try {
         const model = await FileService.openFaultTree(file);
         setFaultTreeModel(model);
+        
+        // Salva le informazioni del file aperto (senza fileHandle per il fallback)
+        setOpenedFile({
+          url: URL.createObjectURL(file),
+          filename: file.name
+          // Nota: senza fileHandle, il salvataggio userà il file explorer
+        });
+        
         alert('File caricato con successo!');
       } catch (error) {
         alert(`Errore nel caricamento del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
       }
     }
   }, []);
+
+  // Gestione apertura file con File System Access (per sovrascrittura)
+  const handleOpenFileWithFileSystem = useCallback(async () => {
+    if (typeof window !== 'undefined' && 'showOpenFilePicker' in window) {
+      try {
+        const [fileHandle] = await (window as any).showOpenFilePicker({
+          types: [{
+            description: 'JSON Files',
+            accept: {
+              'application/json': ['.json']
+            }
+          }]
+        });
+        
+        const file = await fileHandle.getFile();
+        const model = await FileService.openFaultTree(file);
+        setFaultTreeModel(model);
+        
+        // Salva le informazioni del file aperto con il fileHandle per la sovrascrittura
+        setOpenedFile({
+          url: URL.createObjectURL(file),
+          filename: file.name,
+          fileHandle: fileHandle
+        });
+        
+        alert('File caricato con successo!');
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // L'utente ha annullato la selezione
+          return;
+        }
+        if (error instanceof Error && error.name === 'NotAllowedError') {
+          // L'utente ha negato i permessi
+          alert('Permessi negati per l\'accesso ai file. Usa il pulsante "Apri" per selezionare manualmente un file.');
+          return;
+        }
+        // Se c'è un errore diverso dall'annullamento o permessi negati, mostra l'errore ma non aprire il fallback
+        console.error('Errore durante l\'apertura del file:', error);
+        alert(`Errore durante l'apertura del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+      }
+    } else {
+      // Fallback al metodo tradizionale solo se l'API non è supportata
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.json,.xml,.csv';
+      fileInput.onchange = (e) => handleOpenFile(e as any);
+      fileInput.click();
+    }
+  }, [handleOpenFile]);
 
   // Gestione esportazione XML
   const handleExportXML = useCallback(async () => {
@@ -488,6 +559,7 @@ const FaultTreeEditor: React.FC = () => {
     setSelectedElement(null);
     setShowParameterModal(false);
     setComponentToPlace(null);
+    setOpenedFile(null); // Reset del file aperto
   }, []);
 
   return (
@@ -495,6 +567,7 @@ const FaultTreeEditor: React.FC = () => {
               <MenuBar
           onSave={handleSaveFile}
           onOpen={handleOpenFile}
+          onOpenWithFileSystem={handleOpenFileWithFileSystem}
           onExportCode={handleExportCode}
           onShowSaveModal={handleShowSaveModal}
           onExportXML={handleExportXML}
@@ -504,6 +577,7 @@ const FaultTreeEditor: React.FC = () => {
           isDarkMode={isDarkMode}
           onToggleDarkMode={handleToggleDarkMode}
           onNewModel={handleNewModel}
+          openedFile={openedFile}
         />
       
       <div className={`editor-content ${isLeftPanelCollapsed ? 'left-panel-collapsed' : ''} ${isRightPanelCollapsed ? 'right-panel-collapsed' : ''}`}>

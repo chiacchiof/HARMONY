@@ -33,18 +33,18 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, faultTreeModel }
         return;
       }
 
-              // Salvataggio in base al formato
-        switch (format) {
-          case 'json':
-            await FileService.saveFaultTree(faultTreeModel, `${filename}.json`);
-            break;
-          case 'xml':
-            await FileService.exportToXML(faultTreeModel, `${filename}.xml`);
-            break;
-          case 'csv':
-            await FileService.exportToCSV(faultTreeModel, `${filename}.csv`);
-            break;
-        }
+      // Salvataggio in base al formato
+      switch (format) {
+        case 'json':
+          await FileService.saveFaultTree(faultTreeModel, `${filename}.json`);
+          break;
+        case 'xml':
+          await FileService.exportToXML(faultTreeModel, `${filename}.xml`);
+          break;
+        case 'csv':
+          await FileService.exportToCSV(faultTreeModel, `${filename}.csv`);
+          break;
+      }
 
       alert('File salvato con successo!');
       onClose();
@@ -64,12 +64,21 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, faultTreeModel }
     }
   };
 
+  const handleClose = () => {
+    // Reset dello stato quando si chiude il modal
+    setFilename(FileService.generateDefaultFilename());
+    setFormat('json');
+    setIncludeMetadata(true);
+    setIsSaving(false);
+    onClose();
+  };
+
   return (
-    <div className="save-modal-overlay" onClick={onClose}>
+    <div className="save-modal-overlay" onClick={handleClose}>
       <div className="save-modal" onClick={(e) => e.stopPropagation()}>
         <div className="save-modal-header">
           <h2>💾 Salva Fault Tree</h2>
-          <button className="close-button" onClick={onClose}>×</button>
+          <button className="close-button" onClick={handleClose}>×</button>
         </div>
 
         <div className="save-modal-content">
@@ -144,7 +153,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, faultTreeModel }
           
           <button 
             className="cancel-button" 
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isSaving}
           >
             ❌ Annulla

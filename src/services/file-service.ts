@@ -29,9 +29,20 @@ export class FileService {
           }]
         });
         
-        const writable = await fileHandle.createWritable();
-        await writable.write(dataBlob);
-        await writable.close();
+        // Utilizza l'API corretta per la scrittura
+        if ('createWritable' in fileHandle) {
+          const writable = await (fileHandle as any).createWritable();
+          await writable.write(dataBlob);
+          await writable.close();
+        } else if ('createSyncAccessHandle' in fileHandle) {
+          const accessHandle = await (fileHandle as any).createSyncAccessHandle();
+          const buffer = await dataBlob.arrayBuffer();
+          accessHandle.write(buffer, { at: 0 });
+          accessHandle.close();
+        } else {
+          // Fallback per browser non supportati
+          throw new Error('API File System Access non supportata');
+        }
         return;
       } catch (error) {
         // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
@@ -46,6 +57,48 @@ export class FileService {
     link.download = filename || `fault-tree-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Sovrascrive un file esistente usando l'API File System Access
+   */
+  static async overwriteExistingFile(model: FaultTreeModel, fileHandle: FileSystemFileHandle): Promise<void> {
+    const dataStr = JSON.stringify(model, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    try {
+      // Utilizza l'API corretta per la scrittura
+      if ('createWritable' in fileHandle) {
+        // API moderna (Chrome 86+)
+        const writable = await (fileHandle as any).createWritable();
+        await writable.write(dataBlob);
+        await writable.close();
+      } else if ('createSyncAccessHandle' in fileHandle) {
+        // API alternativa per alcuni browser
+        const accessHandle = await (fileHandle as any).createSyncAccessHandle();
+        const buffer = await dataBlob.arrayBuffer();
+        accessHandle.write(buffer, { at: 0 });
+        accessHandle.close();
+      } else {
+        // Fallback: crea un nuovo file con lo stesso nome
+        const writable = await (fileHandle as any).createWritable();
+        await writable.write(dataBlob);
+        await writable.close();
+      }
+    } catch (error) {
+      // Se fallisce l'API File System Access, usa il metodo tradizionale
+      console.log('File System Access fallito, uso fallback:', error);
+      
+      // Fallback al metodo tradizionale
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `fault-tree-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      throw new Error(`Errore durante la sovrascrittura del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    }
   }
 
   /**
@@ -100,9 +153,20 @@ export class FileService {
           }]
         });
         
-        const writable = await fileHandle.createWritable();
-        await writable.write(dataBlob);
-        await writable.close();
+        // Utilizza l'API corretta per la scrittura
+        if ('createWritable' in fileHandle) {
+          const writable = await (fileHandle as any).createWritable();
+          await writable.write(dataBlob);
+          await writable.close();
+        } else if ('createSyncAccessHandle' in fileHandle) {
+          const accessHandle = await (fileHandle as any).createSyncAccessHandle();
+          const buffer = await dataBlob.arrayBuffer();
+          accessHandle.write(buffer, { at: 0 });
+          accessHandle.close();
+        } else {
+          // Fallback per browser non supportati
+          throw new Error('API File System Access non supportata');
+        }
         return;
       } catch (error) {
         // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
@@ -140,9 +204,20 @@ export class FileService {
           }]
         });
         
-        const writable = await fileHandle.createWritable();
-        await writable.write(dataBlob);
-        await writable.close();
+        // Utilizza l'API corretta per la scrittura
+        if ('createWritable' in fileHandle) {
+          const writable = await (fileHandle as any).createWritable();
+          await writable.write(dataBlob);
+          await writable.close();
+        } else if ('createSyncAccessHandle' in fileHandle) {
+          const accessHandle = await (fileHandle as any).createSyncAccessHandle();
+          const buffer = await dataBlob.arrayBuffer();
+          accessHandle.write(buffer, { at: 0 });
+          accessHandle.close();
+        } else {
+          // Fallback per browser non supportati
+          throw new Error('API File System Access non supportata');
+        }
         return;
       } catch (error) {
         // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
@@ -179,9 +254,20 @@ export class FileService {
           }]
         });
         
-        const writable = await fileHandle.createWritable();
-        await writable.write(dataBlob);
-        await writable.close();
+        // Utilizza l'API corretta per la scrittura
+        if ('createWritable' in fileHandle) {
+          const writable = await (fileHandle as any).createWritable();
+          await writable.write(dataBlob);
+          await writable.close();
+        } else if ('createSyncAccessHandle' in fileHandle) {
+          const accessHandle = await (fileHandle as any).createSyncAccessHandle();
+          const buffer = await dataBlob.arrayBuffer();
+          accessHandle.write(buffer, { at: 0 });
+          accessHandle.close();
+        } else {
+          // Fallback per browser non supportati
+          throw new Error('API File System Access non supportata');
+        }
         return;
       } catch (error) {
         // Se l'utente annulla o c'è un errore, fallback al metodo tradizionale
