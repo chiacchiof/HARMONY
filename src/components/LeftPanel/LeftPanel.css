@@ -6,6 +6,11 @@
   flex-direction: column;
   overflow-y: auto;
   transition: all 0.3s ease;
+  position: fixed;
+  left: 0;
+  top: 60px;
+  height: calc(100vh - 60px);
+  z-index: 10;
 }
 
 .left-panel.collapsed {

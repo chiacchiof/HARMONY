@@ -15,11 +15,12 @@
   display: flex;
   height: calc(100vh - 50px);
   margin-right: 350px; /* Spazio per il pannello destro fisso */
-  transition: margin-left 0.3s ease;
+  padding-left: 280px; /* Spazio per il pannello sinistro fisso */
+  transition: padding-left 0.3s ease;
 }
 
 .editor-content.left-panel-collapsed {
-  margin-left: 60px; /* Spazio per il pannello sinistro collassato */
+  padding-left: 60px; /* Spazio per il pannello sinistro collassato */
 }
 
 .editor-content.right-panel-collapsed {
@@ -27,7 +28,7 @@
 }
 
 .editor-content.left-panel-collapsed.right-panel-collapsed {
-  margin-left: 60px;
+  padding-left: 60px;
   margin-right: 60px;
 }
 
