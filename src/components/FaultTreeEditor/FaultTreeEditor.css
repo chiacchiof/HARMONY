@@ -44,3 +44,68 @@
 .editor-content > *:last-child {
   border-right: none;
 }
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Tablet Layout (768px - 1024px) */
+@media (max-width: 1024px) {
+  .editor-content {
+    flex-direction: column;
+    padding-left: 0;
+    margin-right: 0;
+    height: auto;
+    min-height: calc(100vh - 50px);
+  }
+
+  .editor-content.left-panel-collapsed,
+  .editor-content.right-panel-collapsed,
+  .editor-content.left-panel-collapsed.right-panel-collapsed {
+    padding-left: 0;
+    margin-right: 0;
+  }
+
+  .editor-content > * {
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+    width: 100%;
+    min-height: auto;
+  }
+
+  .editor-content > *:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Mobile Layout (< 768px) */
+@media (max-width: 767px) {
+  .fault-tree-editor {
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .editor-content {
+    flex-direction: column;
+    padding-left: 0;
+    margin-right: 0;
+    height: auto;
+    min-height: calc(100vh - 50px);
+  }
+
+  .editor-content.left-panel-collapsed,
+  .editor-content.right-panel-collapsed,
+  .editor-content.left-panel-collapsed.right-panel-collapsed {
+    padding-left: 0;
+    margin-right: 0;
+  }
+
+  .editor-content > * {
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+    width: 100%;
+    min-height: auto;
+  }
+
+  .editor-content > *:last-child {
+    border-bottom: none;
+  }
+}

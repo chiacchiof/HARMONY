@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import MenuBar from '../MenuBar/MenuBar';
 import LeftPanel from '../LeftPanel/LeftPanel';
 import CentralPanel from '../CentralPanel/CentralPanel';
@@ -11,6 +11,7 @@ import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree
 import { FaultTreeModification } from '../../types/ChatIntegration';
 import { FileService } from '../../services/file-service';
 import { LLMProviders, loadLLMConfig, saveLLMConfig } from '../../config/llm-config';
+import { useDeviceType } from '../../hooks/useDeviceType';
 import './FaultTreeEditor.css';
 
 const FaultTreeEditor: React.FC = () => {
@@ -29,6 +30,9 @@ const FaultTreeEditor: React.FC = () => {
   const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
   const [isDarkMode, setIsDarkMode] = useState(false);
   
+  // Rilevamento automatico del dispositivo
+  const deviceType = useDeviceType();
+  
   // Stato per modalità click-to-place
   const [clickToPlaceMode, setClickToPlaceMode] = useState(false);
   const [componentToPlace, setComponentToPlace] = useState<{
@@ -41,6 +45,18 @@ const FaultTreeEditor: React.FC = () => {
 
   // Stato per pannello destro collassato
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
+
+  // Auto-collapse pannelli su dispositivi mobili/tablet
+  useEffect(() => {
+    if (deviceType === 'mobile' || deviceType === 'tablet') {
+      setIsLeftPanelCollapsed(true);
+      setIsRightPanelCollapsed(true);
+    } else {
+      // Su desktop, mantieni lo stato precedente o espandi
+      setIsLeftPanelCollapsed(false);
+      setIsRightPanelCollapsed(false);
+    }
+  }, [deviceType]);
 
   // Gestione aggiunta eventi base
   const handleAddBaseEvent = useCallback(() => {
