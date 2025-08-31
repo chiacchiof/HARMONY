@@ -161,7 +161,13 @@ const ReactFlowComponent: React.FC<{
          </button>
          <button
            className="react-flow__controls-button"
-           onClick={onReorganizeComponents}
+           onClick={() => {
+             onReorganizeComponents();
+             // Dopo la riorganizzazione, chiama fit view
+             setTimeout(() => {
+               reactFlowInstance.fitView();
+             }, 100);
+           }}
            title="Riorganizza tutti i componenti al centro"
          >
            🔧
