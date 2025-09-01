@@ -6,7 +6,6 @@ import ReactFlow, {
   Connection,
   useNodesState,
   useEdgesState,
-  Controls,
   MiniMap,
   Background,
   BackgroundVariant,
@@ -104,9 +103,6 @@ const ReactFlowComponent: React.FC<{
       y: flowPosition.y - (size.height / 2)
     };
     
-    console.log('Mouse position:', { x: event.clientX, y: event.clientY });
-    console.log('Flow position:', flowPosition);
-    console.log('Centered position:', centeredPosition);
     
     onPanelClick(centeredPosition);
   }, [componentToPlace, onPanelClick, reactFlowInstance]);
@@ -205,17 +201,6 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   const initialNodes: Node[] = useMemo(() => {
     const nodes: Node[] = [];
     
-    // Debug: verifica Top Event
-    const topEventGate = faultTreeModel.gates.find(g => g.isTopEvent);
-    console.log('CentralPanel - Modello ricevuto:', {
-      eventsCount: faultTreeModel.events.length,
-      gatesCount: faultTreeModel.gates.length,
-      connectionsCount: faultTreeModel.connections.length,
-      topEvent: faultTreeModel.topEvent,
-      topEventGateName: topEventGate?.name,
-      topEventGateId: topEventGate?.id,
-      topEventGateFlag: topEventGate?.isTopEvent
-    });
     
     // Aggiungi eventi base
     faultTreeModel.events.forEach(event => {
@@ -338,7 +323,7 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
         onDelete: onDeleteConnection
       }
     }, eds));
-  }, [faultTreeModel, onModelChange, setEdges, isDarkMode]);
+  }, [faultTreeModel, onModelChange, onDeleteConnection, setEdges, isDarkMode]);
 
   // Gestione spostamento nodi
   const handleNodesChange = useCallback((changes: NodeChange[]) => {

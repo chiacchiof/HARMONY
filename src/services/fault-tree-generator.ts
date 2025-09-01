@@ -107,8 +107,6 @@ export class FaultTreeGenerator {
    * - Ensure connections and topEvent reference the new names/ids
    */
   private static prettifyLLMResult(result: FaultTreeGenerationResult): FaultTreeGenerationResult {
-    console.log('=== PRETTIFY LLM RESULT START ===');
-    console.log('Input result:', result);
     
     const beCount = { value: 0 };
     const gateCounts: Record<string, number> = {};
@@ -123,8 +121,6 @@ export class FaultTreeGenerator {
         const newId = el.id && el.id.length > 0 ? el.id : newName;
         nameToId.set(el.name, newId);
         nameToId.set(newName, newId);
-        
-        console.log(`Event renamed: ${el.name} -> ${newName} (ID: ${newId})`);
 
         return {
           ...el,
@@ -140,8 +136,6 @@ export class FaultTreeGenerator {
         const newId = el.id && el.id.length > 0 ? el.id : newName;
         nameToId.set(el.name, newId);
         nameToId.set(newName, newId);
-        
-        console.log(`Gate renamed: ${el.name} -> ${newName} (ID: ${newId})`);
 
         return {
           ...el,
@@ -152,43 +146,34 @@ export class FaultTreeGenerator {
       }
     });
 
-    console.log('Name to ID mapping:', Object.fromEntries(nameToId));
-    console.log('New elements:', newElements);
 
     // Remap connections to use new ids if possible
     const newConnections = result.connections.map(conn => {
       const sourceId = nameToId.get(conn.source) || conn.source;
       const targetId = nameToId.get(conn.target) || conn.target;
-      console.log(`Connection remap: ${conn.source}->${conn.target} -> ${sourceId}->${targetId}`);
       return { source: sourceId, target: targetId };
     }).filter(c => c.source && c.target);
 
-    console.log('New connections:', newConnections);
 
     // Remap/decide topEvent
     let newTopEvent: string | undefined = undefined;
     if (result.topEvent) {
       newTopEvent = nameToId.get(result.topEvent) || nameToId.get(result.topEvent?.toString().toLowerCase() || '') || result.topEvent;
-      console.log(`TopEvent remapped: ${result.topEvent} -> ${newTopEvent}`);
     }
 
     // If topEvent not provided by LLM, infer it: choose a gate that is not target of any connection
     if (!newTopEvent) {
       const gateElements = newElements.filter(e => e.type === 'gate');
       const connectionTargets = new Set(newConnections.map(c => c.target));
-      console.log('Gate elements:', gateElements.map(g => ({ name: g.name, id: g.id })));
-      console.log('Connection targets:', Array.from(connectionTargets));
       
       const candidate = gateElements.find(g => g.id && !connectionTargets.has(g.id));
       if (candidate) {
         newTopEvent = candidate.id;
-        console.log('Top Event inferito automaticamente:', candidate.name, '->', candidate.id);
       } else {
         // Fallback: prendi la prima gate disponibile
         const firstGate = gateElements.find(g => g.id);
         if (firstGate) {
           newTopEvent = firstGate.id;
-          console.log('Top Event fallback - prima gate disponibile:', firstGate.name, '->', firstGate.id);
         }
       }
     }
@@ -197,35 +182,27 @@ export class FaultTreeGenerator {
     if (newTopEvent) {
       const topEventElement = newElements.find(e => e.id === newTopEvent);
       if (topEventElement && topEventElement.type === 'event') {
-        console.warn('Top Event è un evento base, cercando di inferire una gate...');
         const gateElements = newElements.filter(e => e.type === 'gate');
         const connectionTargets = new Set(newConnections.map(c => c.target));
         
         const candidate = gateElements.find(g => g.id && !connectionTargets.has(g.id));
         if (candidate) {
           newTopEvent = candidate.id;
-          console.log('Top Event corretto automaticamente:', candidate.name, '->', candidate.id);
         } else {
           const firstGate = gateElements.find(g => g.id);
           if (firstGate) {
             newTopEvent = firstGate.id;
-            console.log('Top Event corretto con fallback:', firstGate.name, '->', firstGate.id);
           }
         }
       }
     }
 
-    const prettifiedResult = {
+    return {
       ...result,
       elements: newElements,
       connections: newConnections,
       topEvent: newTopEvent
     };
-    
-    console.log('=== PRETTIFY LLM RESULT END ===');
-    console.log('Output result:', prettifiedResult);
-    
-    return prettifiedResult;
   }
 
   /**
@@ -310,13 +287,8 @@ export class FaultTreeGenerator {
     generationResult: FaultTreeGenerationResult,
     startPosition: { x: number; y: number } = { x: 100, y: 100 }
   ): FaultTreeModel {
-    console.log('=== GENERATE FAULT TREE MODEL START ===');
-    console.log('Input generationResult:', generationResult);
-    
     // Normalizza e rende i nomi compatibili con il SW prima di creare il modello
     generationResult = this.prettifyLLMResult(generationResult);
-    
-    console.log('After prettify:', generationResult);
     const events: BaseEvent[] = [];
     const gates: Gate[] = [];
     const connections: Connection[] = [];
@@ -407,51 +379,25 @@ export class FaultTreeGenerator {
       });
 
     // Crea connessioni — supporta sia names che ids nel risultato LLM
-    console.log('=== DEBUG CONNECTION CREATION ===');
-    console.log('Element IDs map:', Object.fromEntries(elementIds));
-    console.log('Available events:', events.map(e => ({ id: e.id, name: e.name })));
-    console.log('Available gates:', gates.map(g => ({ id: g.id, name: g.name })));
-    console.log('Connections to process:', generationResult.connections);
-    
     generationResult.connections.forEach((conn, index) => {
-      console.log(`\n--- Processing connection ${index} ---`);
-      console.log('Raw connection:', conn);
-      
       // Skip malformed connection entries
       if (!conn || !conn.source || !conn.target) {
-        console.warn('Skipping malformed connection from LLM:', conn, 'index:', index);
         return;
       }
 
       // Risolvi source/target cercando prima la mappa per id/nome, poi con chiave normalizzata
       const resolvedSource = elementIds.get(conn.source) || elementIds.get(normalizeKey(conn.source));
       const resolvedTarget = elementIds.get(conn.target) || elementIds.get(normalizeKey(conn.target));
-      
-      console.log('Source resolution:', { 
-        original: conn.source, 
-        normalized: normalizeKey(conn.source), 
-        resolved: resolvedSource 
-      });
-      console.log('Target resolution:', { 
-        original: conn.target, 
-        normalized: normalizeKey(conn.target), 
-        resolved: resolvedTarget 
-      });
 
       // Use resolved ids if available, otherwise fall back to the raw values
       const sourceId = resolvedSource || conn.source;
       const targetId = resolvedTarget || conn.target;
-      
-      console.log('Final IDs:', { sourceId, targetId });
 
       // Verify that resolved IDs correspond to actual created elements (events or gates)
       const sourceExists = events.some(e => e.id === sourceId) || gates.some(g => g.id === sourceId);
       const targetExists = events.some(e => e.id === targetId) || gates.some(g => g.id === targetId);
-      
-      console.log('Element existence:', { sourceExists, targetExists });
 
       if (!sourceExists || !targetExists) {
-        console.warn('Skipping connection with unresolved endpoints:', { conn, sourceId, targetId });
         return;
       }
 
@@ -461,19 +407,13 @@ export class FaultTreeGenerator {
         target: targetId,
         type: 'connection'
       });
-      
-      console.log('Connection created successfully');
 
       // Aggiorna inputs della gate target
       const targetGate = gates.find(g => g.id === targetId);
       if (targetGate && !targetGate.inputs.includes(sourceId)) {
         targetGate.inputs.push(sourceId);
-        console.log(`Added ${sourceId} to inputs of gate ${targetGate.name}`);
       }
     });
-    
-    console.log('=== END CONNECTION CREATION ===');
-    console.log('Final connections:', connections);
 
     // Risolvi topEvent se fornito come name o come id
     let resolvedTopEvent: string | undefined;
@@ -486,15 +426,11 @@ export class FaultTreeGenerator {
       const gateWithNoIncoming = gates.find(g => !connections.some(conn => conn.target === g.id));
       if (gateWithNoIncoming) {
         resolvedTopEvent = gateWithNoIncoming.id;
-        console.warn('Top Event non fornito dalla LLM — inferito come gate senza incoming connections:', gateWithNoIncoming.name);
       } else {
         // Fallback: prendi la prima gate disponibile
         const firstGate = gates.find(g => g.id);
         if (firstGate) {
           resolvedTopEvent = firstGate.id;
-          console.warn('Top Event non fornito dalla LLM — fallback su prima gate disponibile:', firstGate.name);
-        } else {
-          console.warn('Top Event non fornito dalla LLM e non è stato possibile inferirlo automaticamente');
         }
       }
     }
@@ -504,39 +440,14 @@ export class FaultTreeGenerator {
       gates.forEach(g => {
         g.isTopEvent = g.id === resolvedTopEvent;
       });
-      console.log('Top Event impostato:', resolvedTopEvent, 'su gate:', gates.find(g => g.isTopEvent)?.name);
     }
 
-    const finalModel = {
+    return {
       events,
       gates,
       connections,
       topEvent: resolvedTopEvent
     };
-
-    // Log finale per debug
-    const topEventGate = gates.find(g => g.isTopEvent);
-    console.log('=== GENERATE FAULT TREE MODEL END ===');
-    console.log('Modello finale generato:', {
-      eventsCount: events.length,
-      gatesCount: gates.length,
-      connectionsCount: connections.length,
-      topEvent: resolvedTopEvent,
-      topEventGateName: topEventGate?.name,
-      topEventGateId: topEventGate?.id
-    });
-    
-    console.log('All gates with isTopEvent flag:');
-    gates.forEach(g => {
-      console.log(`- ${g.name} (${g.id}): isTopEvent = ${g.isTopEvent}`);
-    });
-    
-    console.log('All connections:');
-    connections.forEach(c => {
-      console.log(`- ${c.source} -> ${c.target}`);
-    });
-
-    return finalModel;
   }
 
   /**
@@ -553,7 +464,6 @@ export class FaultTreeGenerator {
 
     const events = generationResult.elements.filter(el => el.type === 'event');
     const gates = generationResult.elements.filter(el => el.type === 'gate');
-    const connections = generationResult.connections;
 
     // Usa layout semplificato e robusto
     const simpleLayout = this.calculateSimpleLayout(events, gates, startPosition);

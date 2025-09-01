@@ -1,4 +1,4 @@
-import { FaultTreeModel, BaseEvent, Gate, ProbabilityDistribution } from '../types/FaultTree';
+import { FaultTreeModel, BaseEvent, Gate } from '../types/FaultTree';
 
 export interface MatlabExportOptions {
   missionTime: number; // Tm in hours

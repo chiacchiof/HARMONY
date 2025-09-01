@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileService, FileExportOptions } from '../../services/file-service';
+import { FileService } from '../../services/file-service';
 import { FaultTreeModel } from '../../types/FaultTree';
 import './SaveModal.css';
 

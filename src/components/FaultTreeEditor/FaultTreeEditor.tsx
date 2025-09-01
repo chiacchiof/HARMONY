@@ -29,7 +29,7 @@ const FaultTreeEditor: React.FC = () => {
   const [showMatlabExportModal, setShowMatlabExportModal] = useState(false);
   const [showNewModelConfirmation, setShowNewModelConfirmation] = useState(false);
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
-  const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
+  const [, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
   const [isDarkMode, setIsDarkMode] = useState(false);
   
   // Stato per tenere traccia del file aperto
@@ -462,14 +462,6 @@ const FaultTreeEditor: React.FC = () => {
 
   // Gestione generazione fault tree dal chatbot
   const handleGenerateFaultTree = useCallback((generatedModel: FaultTreeModel) => {
-    console.log('FaultTreeEditor - Modello generato ricevuto:', {
-      eventsCount: generatedModel.events.length,
-      gatesCount: generatedModel.gates.length,
-      connectionsCount: generatedModel.connections.length,
-      topEvent: generatedModel.topEvent,
-      topEventGate: generatedModel.gates.find(g => g.isTopEvent)
-    });
-
     // Merge del modello generato con quello esistente
     setFaultTreeModel(prev => ({
       events: [...prev.events, ...generatedModel.events],
@@ -538,17 +530,6 @@ const FaultTreeEditor: React.FC = () => {
     });
   }, [handleDeleteElement]);
 
-  // Gestione nuovo modello
-  const handleNewModel = useCallback(() => {
-    // Controlla se ci sono modifiche non salvate
-    if (faultTreeModel.events.length > 0 || faultTreeModel.gates.length > 0 || faultTreeModel.connections.length > 0) {
-      setShowNewModelConfirmation(true);
-    } else {
-      // Se non ci sono modifiche, crea direttamente un nuovo modello
-      createNewModel();
-    }
-  }, [faultTreeModel]);
-
   // Crea un nuovo modello vuoto
   const createNewModel = useCallback(() => {
     setFaultTreeModel({
@@ -561,6 +542,17 @@ const FaultTreeEditor: React.FC = () => {
     setComponentToPlace(null);
     setOpenedFile(null); // Reset del file aperto
   }, []);
+
+  // Gestione nuovo modello
+  const handleNewModel = useCallback(() => {
+    // Controlla se ci sono modifiche non salvate
+    if (faultTreeModel.events.length > 0 || faultTreeModel.gates.length > 0 || faultTreeModel.connections.length > 0) {
+      setShowNewModelConfirmation(true);
+    } else {
+      // Se non ci sono modifiche, crea direttamente un nuovo modello
+      createNewModel();
+    }
+  }, [faultTreeModel, createNewModel]);
 
   return (
     <div className={`fault-tree-editor ${isDarkMode ? 'dark-mode' : ''}`}>
