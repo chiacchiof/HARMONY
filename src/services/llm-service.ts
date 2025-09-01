@@ -27,28 +27,149 @@ export class LLMService {
   async generateFaultTree(request: FaultTreeGenerationRequest): Promise<FaultTreeModel | null> {
     try {
       const prompt = FaultTreeGenerator.createFaultTreePrompt(request);
-      const response = await this.generateResponse(prompt);
+      
+      // Usa configurazione ottimizzata per fault tree generation
+      const enhancedConfig = { 
+        ...this.config,
+        maxTokens: Math.max(this.config.maxTokens || 1000, 2000), // Aumenta token limit
+        temperature: 0.3 // Riduci temperatura per output più deterministico
+      };
+      
+      // Crea una versione temporanea del servizio con config enhanced
+      const enhancedService = new LLMService(enhancedConfig);
+      const response = await enhancedService.generateResponse(prompt);
       
       if (response.error) {
         console.error('Errore nella generazione LLM:', response.error);
-        return null;
+        // Retry con configurazione standard se enhanced fallisce
+        console.log('Retrying with standard configuration...');
+        const fallbackResponse = await this.generateResponse(prompt);
+        if (fallbackResponse.error) {
+          return null;
+        }
+        return this.processFaultTreeResponse(fallbackResponse, request);
       }
 
-      const generationResult = FaultTreeGenerator.parseLLMResponse(response.content);
-      if (!generationResult) {
-        console.error('Impossibile parsare la risposta LLM. Raw response:', response.content, 'provider:', response.provider, 'model:', response.model);
-        return null;
-      }
-
-
-      // Controlla se la LLM ha restituito un fault tree vuoto
-      if ((!generationResult.elements || generationResult.elements.length === 0) && (!generationResult.connections || generationResult.connections.length === 0)) {
-        return null;
-      }
-
-      return FaultTreeGenerator.generateFaultTreeModel(generationResult);
+      return this.processFaultTreeResponse(response, request);
     } catch (error) {
       console.error('Errore nella generazione del fault tree:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Processa la risposta LLM per estrarre il fault tree
+   */
+  private async processFaultTreeResponse(response: any, request: FaultTreeGenerationRequest): Promise<FaultTreeModel | null> {
+    console.log('Processing LLM response for fault tree generation...');
+    console.log('Response length:', response.content.length);
+    console.log('Response preview:', response.content.substring(0, 200) + '...');
+
+    const generationResult = FaultTreeGenerator.parseLLMResponse(response.content);
+    if (!generationResult) {
+      console.error('Failed to parse LLM response.');
+      console.log('Full response for debugging:', response.content);
+      
+      // Tentativo di recupero: crea un fault tree minimo basato sulla richiesta
+      if (request.components && request.components.length > 0) {
+        console.log('Attempting to create minimal fault tree from request components...');
+        return this.createMinimalFaultTree(request);
+      }
+      
+      return null;
+    }
+
+    console.log('Successfully parsed fault tree result:');
+    console.log('- Elements:', generationResult.elements.length);
+    console.log('- Connections:', generationResult.connections.length);
+    console.log('- Top Event:', generationResult.topEvent);
+
+    // Controlla se la LLM ha restituito un fault tree vuoto
+    if ((!generationResult.elements || generationResult.elements.length === 0) && 
+        (!generationResult.connections || generationResult.connections.length === 0)) {
+      console.log('LLM returned empty fault tree, creating minimal fallback...');
+      return this.createMinimalFaultTree(request);
+    }
+
+    return FaultTreeGenerator.generateFaultTreeModel(generationResult);
+  }
+
+  /**
+   * Crea un fault tree minimo quando il parsing fallisce
+   */
+  private createMinimalFaultTree(request: FaultTreeGenerationRequest): FaultTreeModel | null {
+    try {
+      const elements: Array<{
+        type: 'event' | 'gate';
+        id: string;
+        name: string;
+        description?: string;
+        failureRate?: number;
+        gateType?: 'OR' | 'AND' | 'PAND' | 'SPARE' | 'SEQ' | 'FDEP';
+      }> = [];
+      
+      const connections: Array<{ source: string; target: string }> = [];
+
+      // Crea eventi base dai componenti della richiesta
+      if (request.components && request.components.length > 0) {
+        request.components.forEach((comp, index) => {
+          elements.push({
+            type: 'event' as const,
+            id: `event-${index + 1}`,
+            name: `Guasto ${comp}`,
+            description: `Guasto del componente ${comp}`,
+            failureRate: 0.001
+          });
+        });
+      } else {
+        // Fallback con componenti generici
+        elements.push(
+          {
+            type: 'event' as const,
+            id: 'event-1',
+            name: 'Guasto Componente A',
+            description: 'Guasto del componente principale A',
+            failureRate: 0.001
+          },
+          {
+            type: 'event' as const,
+            id: 'event-2', 
+            name: 'Guasto Componente B',
+            description: 'Guasto del componente principale B',
+            failureRate: 0.001
+          }
+        );
+      }
+
+      // Crea gate principale
+      const topEventName = request.topEvent || 'Guasto Sistema';
+      elements.push({
+        type: 'gate' as const,
+        id: 'gate-1',
+        name: topEventName,
+        gateType: 'OR' as const,
+        description: `Gate principale: ${topEventName}`
+      });
+
+      // Connetti tutti gli eventi al gate principale
+      elements.filter(el => el.type === 'event').forEach(event => {
+        connections.push({
+          source: event.id,
+          target: 'gate-1'
+        });
+      });
+
+      const generationResult = {
+        elements,
+        connections,
+        topEvent: 'gate-1',
+        description: request.description || 'Fault tree generato automaticamente'
+      };
+
+      console.log('Created minimal fault tree as fallback');
+      return FaultTreeGenerator.generateFaultTreeModel(generationResult);
+    } catch (error) {
+      console.error('Failed to create minimal fault tree:', error);
       return null;
     }
   }

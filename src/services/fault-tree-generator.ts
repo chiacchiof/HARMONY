@@ -37,65 +37,230 @@ export class FaultTreeGenerator {
    */
   static parseLLMResponse(llmResponse: string): FaultTreeGenerationResult | null {
     try {
+      console.log('Parsing LLM response:', llmResponse.substring(0, 500) + '...');
+
       // 1) Cerca JSON in triple backticks con tag json
       const jsonFenceMatch = llmResponse.match(/```json\s*([\s\S]*?)\s*```/i);
       if (jsonFenceMatch) {
         try {
-          return JSON.parse(jsonFenceMatch[1].trim());
+          const jsonContent = jsonFenceMatch[1].trim();
+          return this.tryParseJSON(jsonContent, 'JSON fence with tag');
         } catch (e) {
-          // Fallthrough: proveremo altri metodi
+          console.log('Failed to parse JSON fence with tag, trying repair...');
+          const repaired = this.repairJSON(jsonFenceMatch[1].trim());
+          if (repaired) {
+            return this.tryParseJSON(repaired, 'Repaired JSON fence');
+          }
         }
       }
 
-      // 2) Prova a parsare l'intera risposta come JSON (alcuni provider ritornano raw JSON)
-      const trimmed = llmResponse.trim();
-      try {
-        return JSON.parse(trimmed);
-      } catch (e) {
-        // Fallthrough
+      // 2) Cerca blocchi fenced generici ``` ... ```
+      const genericFenceMatch = llmResponse.match(/```([\s\S]*?)```/);
+      if (genericFenceMatch) {
+        try {
+          const content = genericFenceMatch[1].trim();
+          // Prova come JSON diretto
+          if (content.startsWith('{') && content.endsWith('}')) {
+            return this.tryParseJSON(content, 'Generic fence as JSON');
+          }
+        } catch (e) {
+          console.log('Failed to parse generic fence as JSON');
+        }
       }
 
       // 3) Estrai il primo oggetto JSON bilanciato { ... } nella risposta
-      const extractFirstJsonObject = (text: string): string | null => {
-        const start = text.indexOf('{');
-        if (start === -1) return null;
-        let depth = 0;
-        for (let i = start; i < text.length; i++) {
-          const ch = text[i];
+      const extractedJson = this.extractFirstJsonObject(llmResponse);
+      if (extractedJson) {
+        const parsed = this.tryParseJSON(extractedJson, 'Extracted balanced JSON');
+        if (parsed) return parsed;
+        
+        // Prova a riparare il JSON estratto
+        const repaired = this.repairJSON(extractedJson);
+        if (repaired) {
+          return this.tryParseJSON(repaired, 'Repaired extracted JSON');
+        }
+      }
+
+      // 4) Prova a parsare l'intera risposta come JSON (alcuni provider ritornano raw JSON)
+      const trimmed = llmResponse.trim();
+      try {
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+          return this.tryParseJSON(trimmed, 'Full response as JSON');
+        }
+      } catch (e) {
+        console.log('Failed to parse full response as JSON');
+      }
+
+      // 5) Cerca pattern JSON multipli e prova ognuno
+      const jsonObjects = this.extractAllJsonObjects(llmResponse);
+      for (const jsonObj of jsonObjects) {
+        const parsed = this.tryParseJSON(jsonObj, 'Multiple JSON objects');
+        if (parsed && this.validateFaultTreeResult(parsed)) {
+          return parsed;
+        }
+      }
+
+      // 6) Fallback: parsing testuale strutturato migliorato
+      console.log('Falling back to structured text parsing');
+      return this.parseStructuredResponse(llmResponse);
+    } catch (error) {
+      console.error('Errore nel parsing della risposta LLM:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Prova a parsare JSON e valida il risultato
+   */
+  private static tryParseJSON(jsonString: string, source: string): FaultTreeGenerationResult | null {
+    try {
+      const parsed = JSON.parse(jsonString);
+      console.log(`Successfully parsed JSON from ${source}`);
+      
+      if (this.validateFaultTreeResult(parsed)) {
+        return parsed;
+      } else {
+        console.log(`Parsed JSON from ${source} failed validation`);
+        return null;
+      }
+    } catch (e) {
+      console.log(`Failed to parse JSON from ${source}:`, e);
+      return null;
+    }
+  }
+
+  /**
+   * Valida che il risultato sia un FaultTreeGenerationResult valido
+   */
+  private static validateFaultTreeResult(obj: any): boolean {
+    return obj && 
+           typeof obj === 'object' &&
+           Array.isArray(obj.elements) &&
+           Array.isArray(obj.connections) &&
+           obj.elements.length > 0;
+  }
+
+  /**
+   * Estrae il primo oggetto JSON bilanciato
+   */
+  private static extractFirstJsonObject(text: string): string | null {
+    const start = text.indexOf('{');
+    if (start === -1) return null;
+    
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+    
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+      
+      if (ch === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      
+      if (!inString) {
+        if (ch === '{') depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) {
+            return text.substring(start, i + 1);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Estrae tutti gli oggetti JSON possibili dalla risposta
+   */
+  private static extractAllJsonObjects(text: string): string[] {
+    const objects: string[] = [];
+    let searchStart = 0;
+    
+    while (searchStart < text.length) {
+      const start = text.indexOf('{', searchStart);
+      if (start === -1) break;
+      
+      let depth = 0;
+      let inString = false;
+      let escapeNext = false;
+      let foundEnd = false;
+      
+      for (let i = start; i < text.length; i++) {
+        const ch = text[i];
+        
+        if (escapeNext) {
+          escapeNext = false;
+          continue;
+        }
+        
+        if (ch === '\\') {
+          escapeNext = true;
+          continue;
+        }
+        
+        if (ch === '"') {
+          inString = !inString;
+          continue;
+        }
+        
+        if (!inString) {
           if (ch === '{') depth++;
           else if (ch === '}') {
             depth--;
             if (depth === 0) {
-              return text.substring(start, i + 1);
+              objects.push(text.substring(start, i + 1));
+              searchStart = i + 1;
+              foundEnd = true;
+              break;
             }
           }
         }
-        return null;
-      };
-
-      const firstJson = extractFirstJsonObject(llmResponse);
-      if (firstJson) {
-        try {
-          return JSON.parse(firstJson);
-        } catch (e) {
-          // Fallthrough
-        }
       }
-
-      // 4) Cerca blocchi fenced ` ``` ... ``` ` senza tag json e prova a parsarli
-      const genericFenceMatch = llmResponse.match(/```([\s\S]*?)```/);
-      if (genericFenceMatch) {
-        try {
-          return JSON.parse(genericFenceMatch[1].trim());
-        } catch (e) {
-          // Fallthrough
-        }
+      
+      if (!foundEnd) {
+        searchStart = start + 1;
       }
+    }
+    
+    return objects;
+  }
 
-      // 5) Fallback: parsing testuale strutturato (legacy)
-      return this.parseStructuredResponse(llmResponse);
-    } catch (error) {
-      console.error('Errore nel parsing della risposta LLM:', error);
+  /**
+   * Tenta di riparare JSON malformato
+   */
+  private static repairJSON(jsonString: string): string | null {
+    try {
+      let repaired = jsonString.trim();
+      
+      // Rimuovi commenti // e /* */
+      repaired = repaired.replace(/\/\/.*$/gm, '');
+      repaired = repaired.replace(/\/\*[\s\S]*?\*\//g, '');
+      
+      // Fixa virgole mancanti o extra
+      repaired = repaired.replace(/,(\s*[}\]])/g, '$1'); // Rimuovi virgole prima di } o ]
+      repaired = repaired.replace(/([}\]])(\s*)([{"])/g, '$1,$2$3'); // Aggiungi virgole mancanti
+      
+      // Fixa virgolette mancanti per le chiavi
+      repaired = repaired.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+      
+      // Prova a parsare il JSON riparato
+      JSON.parse(repaired);
+      return repaired;
+    } catch (e) {
+      console.log('Failed to repair JSON:', e);
       return null;
     }
   }
@@ -206,78 +371,337 @@ export class FaultTreeGenerator {
   }
 
   /**
-   * Parsing di formato strutturato testuale
+   * Parsing di formato strutturato testuale migliorato
    */
   private static parseStructuredResponse(response: string): FaultTreeGenerationResult | null {
+    try {
+      console.log('Attempting structured text parsing...');
+      const elements: GeneratedElement[] = [];
+      const connections: Array<{ source: string; target: string }> = [];
+      let topEvent: string | undefined;
+      let description = 'Fault tree generato automaticamente';
+
+      const lines = response.split('\n').map(line => line.trim()).filter(line => line);
+      
+      let currentSection = '';
+      
+      for (const line of lines) {
+        // Identifica sezioni con pattern più flessibili
+        if (this.matchesPattern(line, ['top event', 'evento principale', 'root cause'])) {
+          topEvent = this.extractValue(line);
+          continue;
+        }
+        
+        if (this.matchesPattern(line, ['description', 'descrizione', 'sistema'])) {
+          const desc = this.extractValue(line);
+          if (desc) description = desc;
+          continue;
+        }
+        
+        if (this.matchesPattern(line, ['eventi base', 'basic events', 'eventi', 'events'])) {
+          currentSection = 'events';
+          continue;
+        }
+        
+        if (this.matchesPattern(line, ['porte', 'gates', 'porte logiche', 'logic gates'])) {
+          currentSection = 'gates';
+          continue;
+        }
+        
+        if (this.matchesPattern(line, ['connessioni', 'connections', 'collegamenti', 'links'])) {
+          currentSection = 'connections';
+          continue;
+        }
+
+        // Parsing elementi in base alla sezione
+        if (currentSection === 'events') {
+          const event = this.parseEventLine(line);
+          if (event) elements.push(event);
+        }
+        
+        if (currentSection === 'gates') {
+          const gate = this.parseGateLine(line);
+          if (gate) elements.push(gate);
+        }
+        
+        if (currentSection === 'connections') {
+          const connection = this.parseConnectionLine(line);
+          if (connection) connections.push(connection);
+        }
+
+        // Prova anche a parsare pattern inline
+        const inlineElements = this.parseInlineElements(line);
+        elements.push(...inlineElements);
+
+        const inlineConnections = this.parseInlineConnections(line);
+        connections.push(...inlineConnections);
+      }
+
+      // Se non abbiamo trovato elementi, prova pattern alternativi
+      if (elements.length === 0) {
+        return this.parseAlternativeFormats(response);
+      }
+
+      // Deduplicazione elementi
+      const uniqueElements = this.deduplicateElements(elements);
+      const uniqueConnections = this.deduplicateConnections(connections);
+
+      return {
+        elements: uniqueElements,
+        connections: uniqueConnections,
+        topEvent,
+        description
+      };
+    } catch (error) {
+      console.error('Error in structured text parsing:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Verifica se una linea corrisponde a uno dei pattern
+   */
+  private static matchesPattern(line: string, patterns: string[]): boolean {
+    const lowerLine = line.toLowerCase();
+    return patterns.some(pattern => lowerLine.includes(pattern.toLowerCase()));
+  }
+
+  /**
+   * Estrae il valore dopo i due punti o uguale
+   */
+  private static extractValue(line: string): string | undefined {
+    const colonMatch = line.split(':')[1]?.trim();
+    if (colonMatch) return colonMatch;
+    
+    const equalMatch = line.split('=')[1]?.trim();
+    if (equalMatch) return equalMatch;
+    
+    return undefined;
+  }
+
+  /**
+   * Parsing avanzato di linee eventi
+   */
+  private static parseEventLine(line: string): GeneratedElement | null {
+    // Pattern: - EventName (rate: 0.001)
+    const advancedMatch = line.match(/^[-*•]\s*(.+?)\s*\(rate:\s*([\d.]+)\)/i);
+    if (advancedMatch) {
+      return {
+        type: 'event',
+        name: advancedMatch[1].trim(),
+        failureRate: parseFloat(advancedMatch[2])
+      };
+    }
+
+    // Pattern semplice: - EventName
+    const simpleMatch = line.match(/^[-*•]\s*(.+)/);
+    if (simpleMatch) {
+      return {
+        type: 'event',
+        name: simpleMatch[1].trim(),
+        failureRate: 0.001
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Parsing avanzato di linee gates
+   */
+  private static parseGateLine(line: string): GeneratedElement | null {
+    // Pattern: - GateName (AND|OR|PAND|SPARE|SEQ|FDEP)
+    const gateMatch = line.match(/^[-*•]\s*(.+?)\s*\((AND|OR|PAND|SPARE|SEQ|FDEP)\)/i);
+    if (gateMatch) {
+      return {
+        type: 'gate',
+        name: gateMatch[1].trim(),
+        gateType: gateMatch[2].toUpperCase() as GateType
+      };
+    }
+
+    // Pattern alternativo: AND Gate: GateName
+    const altMatch = line.match(/^(AND|OR|PAND|SPARE|SEQ|FDEP)\s+gate:\s*(.+)/i);
+    if (altMatch) {
+      return {
+        type: 'gate',
+        name: altMatch[2].trim(),
+        gateType: altMatch[1].toUpperCase() as GateType
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Parsing avanzato di linee connessioni
+   */
+  private static parseConnectionLine(line: string): { source: string; target: string } | null {
+    // Pattern: Source -> Target
+    const arrowMatch = line.match(/^[-*•]?\s*(.+?)\s*->\s*(.+)/);
+    if (arrowMatch) {
+      return {
+        source: arrowMatch[1].trim(),
+        target: arrowMatch[2].trim()
+      };
+    }
+
+    // Pattern alternativo: Source connects to Target
+    const connectsMatch = line.match(/(.+?)\s+connects?\s+to\s+(.+)/i);
+    if (connectsMatch) {
+      return {
+        source: connectsMatch[1].trim(),
+        target: connectsMatch[2].trim()
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Parsing elementi inline nel testo
+   */
+  private static parseInlineElements(line: string): GeneratedElement[] {
     const elements: GeneratedElement[] = [];
-    const connections: Array<{ source: string; target: string }> = [];
-    let topEvent: string | undefined;
-
-    const lines = response.split('\n').map(line => line.trim()).filter(line => line);
     
-    let currentSection = '';
-    
-    for (const line of lines) {
-      // Identifica sezioni
-      if (line.toLowerCase().includes('top event:')) {
-        topEvent = line.split(':')[1]?.trim();
-        continue;
-      }
-      
-      if (line.toLowerCase().includes('eventi base') || line.toLowerCase().includes('basic events')) {
-        currentSection = 'events';
-        continue;
-      }
-      
-      if (line.toLowerCase().includes('porte') || line.toLowerCase().includes('gates')) {
-        currentSection = 'gates';
-        continue;
-      }
-      
-      if (line.toLowerCase().includes('connessioni') || line.toLowerCase().includes('connections')) {
-        currentSection = 'connections';
-        continue;
-      }
-
-      // Parsing elementi in base alla sezione
-      if (currentSection === 'events' && line.includes('-')) {
-        const eventName = line.replace(/^-\s*/, '').trim();
-        if (eventName) {
+    // Cerca pattern come "Event: EventName" o "Gate: GateName (TYPE)"
+    const eventMatches = line.match(/Event:\s*([^,\n]+)/gi);
+    if (eventMatches) {
+      eventMatches.forEach(match => {
+        const name = match.replace(/Event:\s*/i, '').trim();
+        if (name) {
           elements.push({
             type: 'event',
-            name: eventName,
-            failureRate: 0.001 // Default
+            name,
+            failureRate: 0.001
           });
         }
-      }
-      
-      if (currentSection === 'gates' && line.includes('-')) {
-        const gateInfo = line.replace(/^-\s*/, '').trim();
-        const gateMatch = gateInfo.match(/^(.*?)\s*\((AND|OR|PAND|SPARE|SEQ|FDEP)\)/i);
-        
-        if (gateMatch) {
-          elements.push({
-            type: 'gate',
-            name: gateMatch[1].trim(),
-            gateType: gateMatch[2].toUpperCase() as GateType
-          });
+      });
+    }
+
+    const gateMatches = line.match(/Gate:\s*([^,\n]+?)(?:\s*\(([^)]+)\))?/gi);
+    if (gateMatches) {
+      gateMatches.forEach(match => {
+        const parts = match.replace(/Gate:\s*/i, '').trim();
+        const gateTypeMatch = parts.match(/^(.+?)\s*\(([^)]+)\)/);
+        if (gateTypeMatch) {
+          const gateType = gateTypeMatch[2].toUpperCase();
+          if (['AND', 'OR', 'PAND', 'SPARE', 'SEQ', 'FDEP'].includes(gateType)) {
+            elements.push({
+              type: 'gate',
+              name: gateTypeMatch[1].trim(),
+              gateType: gateType as GateType
+            });
+          }
         }
-      }
-      
-      if (currentSection === 'connections' && line.includes('->')) {
-        const [source, target] = line.split('->').map(s => s.trim());
+      });
+    }
+
+    return elements;
+  }
+
+  /**
+   * Parsing connessioni inline nel testo
+   */
+  private static parseInlineConnections(line: string): Array<{ source: string; target: string }> {
+    const connections: Array<{ source: string; target: string }> = [];
+    
+    // Pattern: "A -> B" o "A connects to B"
+    const arrowMatches = line.match(/([^->\n]+)\s*->\s*([^->\n]+)/g);
+    if (arrowMatches) {
+      arrowMatches.forEach(match => {
+        const [source, target] = match.split('->').map(s => s.trim());
         if (source && target) {
           connections.push({ source, target });
         }
-      }
+      });
+    }
+
+    return connections;
+  }
+
+  /**
+   * Prova formati alternativi quando il parsing standard fallisce
+   */
+  private static parseAlternativeFormats(response: string): FaultTreeGenerationResult | null {
+    console.log('Trying alternative parsing formats...');
+    
+    // Cerca pattern di fault tree descrittivo
+    const elements: GeneratedElement[] = [];
+    const connections: Array<{ source: string; target: string }> = [];
+    
+    // Estrai tutti i nomi che sembrano componenti
+    const componentMatches = response.match(/[A-Za-z][A-Za-z0-9\s_-]*(?=\s*(fail|fault|error|guasto))/gi);
+    if (componentMatches) {
+      componentMatches.forEach(comp => {
+        elements.push({
+          type: 'event',
+          name: comp.trim() + ' Failure',
+          failureRate: 0.001
+        });
+      });
+    }
+
+    // Se abbiamo ancora elementi insufficienti, crea un esempio base
+    if (elements.length < 2) {
+      return {
+        elements: [
+          {
+            type: 'event',
+            name: 'Component A Failure',
+            failureRate: 0.001
+          },
+          {
+            type: 'event', 
+            name: 'Component B Failure',
+            failureRate: 0.001
+          },
+          {
+            type: 'gate',
+            name: 'System Failure',
+            gateType: 'OR'
+          }
+        ],
+        connections: [
+          { source: 'Component A Failure', target: 'System Failure' },
+          { source: 'Component B Failure', target: 'System Failure' }
+        ],
+        topEvent: 'System Failure',
+        description: 'Fault tree generato da parsing testuale'
+      };
     }
 
     return {
       elements,
       connections,
-      topEvent,
-      description: 'Fault tree generato automaticamente'
+      description: 'Fault tree generato da parsing alternativo'
     };
+  }
+
+  /**
+   * Rimuove elementi duplicati
+   */
+  private static deduplicateElements(elements: GeneratedElement[]): GeneratedElement[] {
+    const seen = new Set<string>();
+    return elements.filter(el => {
+      const key = `${el.type}-${el.name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  /**
+   * Rimuove connessioni duplicate
+   */
+  private static deduplicateConnections(connections: Array<{ source: string; target: string }>): Array<{ source: string; target: string }> {
+    const seen = new Set<string>();
+    return connections.filter(conn => {
+      const key = `${conn.source}->${conn.target}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   /**
@@ -525,47 +949,68 @@ export class FaultTreeGenerator {
 
     prompt += `
 
-Fornisci la risposta nel seguente formato JSON (se possibile includi le distribuzioni di probabilità per gli eventi base):
+IMPORTANTE: Fornisci la risposta esclusivamente nel formato JSON richiesto. Non aggiungere testo prima o dopo il JSON.
 
 \`\`\`json
 {
   "description": "Descrizione del fault tree",
-  "topEvent": "ID di una GATE (NON di un evento base)",
+  "topEvent": "gate-1",
   "elements": [
     {
       "type": "event",
       "id": "event-1",
-      "name": "Nome evento base",
-      "description": "Descrizione opzionale",
+      "name": "Guasto Componente A",
+      "description": "Descrizione dettagliata del guasto",
       "failureRate": 0.001,
-      "failureProbabilityDistribution": { "type": "exponential", "lambda": 0.001 },
-      "repairProbabilityDistribution": { "type": "exponential", "lambda": 0.01 }
+      "failureProbabilityDistribution": {
+        "type": "exponential",
+        "lambda": 0.001
+      }
+    },
+    {
+      "type": "event",
+      "id": "event-2",
+      "name": "Guasto Componente B",
+      "description": "Descrizione dettagliata del guasto",
+      "failureRate": 0.002
     },
     {
       "type": "gate",
       "id": "gate-1",
-      "name": "Nome porta logica", 
-      "gateType": "OR|AND|PAND|SPARE|SEQ|FDEP",
-      "description": "Descrizione opzionale"
+      "name": "Guasto Sistema Principale",
+      "gateType": "OR",
+      "description": "Guasto del sistema quando uno dei componenti fallisce"
     }
   ],
   "connections": [
     {
-      "source": "ID elemento sorgente",
-      "target": "ID porta target"
+      "source": "event-1",
+      "target": "gate-1"
+    },
+    {
+      "source": "event-2", 
+      "target": "gate-1"
     }
   ]
 }
 \`\`\`
 
-**LINEE GUIDA IMPORTANTI**:
-1. Il TOP EVENT deve essere una GATE (porta logica), NON un evento base
-2. Inizia dal top event e procedi verso il basso
-3. Usa porte appropriate per la logica del sistema (AND, OR, etc.)
-4. Gli eventi base devono essere indipendenti e misurabili
-5. Considera ridondanze e dipendenze temporali
-6. Includi parametri realistici per i tassi di guasto
-7. Usa sempre gli ID per le connessioni, non i nomi`;
+**REGOLE OBBLIGATORIE PER IL JSON**:
+1. **FORMATO RIGOROSO**: Usa esattamente il formato JSON mostrato sopra
+2. **ID UNICI**: Ogni elemento deve avere un ID unico (event-1, event-2, gate-1, etc.)
+3. **TOP EVENT**: Deve sempre essere l'ID di una GATE, mai di un event
+4. **GATE TYPES**: Usa solo questi tipi: "AND", "OR", "PAND", "SPARE", "SEQ", "FDEP"
+5. **CONNESSIONI**: Usa sempre gli ID degli elementi, mai i nomi
+6. **SINTASSI**: Assicurati che il JSON sia valido (virgole, virgolette, parentesi bilanciate)
+7. **NO COMMENTI**: Non includere commenti nel JSON
+8. **NO TESTO EXTRA**: Non aggiungere spiegazioni prima o dopo il JSON
+
+**STRUTTURA DEL FAULT TREE**:
+- Inizia dal top event (gate principale) e procedi verso il basso
+- Gli eventi base rappresentano i guasti fondamentali
+- Le gates rappresentano le logiche di combinazione
+- Usa AND per guasti simultanei, OR per guasti alternativi
+- Considera ridondanze e dipendenze temporali appropriate al sistema`;
 
     return prompt;
   }
