@@ -329,33 +329,77 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
     onNodesChange(changes);
     
-    // Aggiorna le posizioni nel modello
-    changes.forEach(change => {
-      if (change.type === 'position' && change.position) {
-        const updatedModel = { ...faultTreeModel };
-        
-        // Trova e aggiorna evento base
-        const eventIndex = updatedModel.events.findIndex(e => e.id === change.id);
-        if (eventIndex !== -1) {
-          updatedModel.events[eventIndex] = {
-            ...updatedModel.events[eventIndex],
-            position: change.position
-          };
-          onModelChange(updatedModel);
-          return;
-        }
+    // Filtra solo i cambiamenti di posizione
+    const positionChanges = changes.filter(change => 
+      change.type === 'position' && change.position
+    );
+    
+    if (positionChanges.length === 0) return;
+    
+    // Aggiorna tutte le posizioni in una singola operazione per evitare race conditions
+    const updatedModel = {
+      ...faultTreeModel,
+      // Deep clone degli array per evitare mutazioni accidentali
+      events: [...faultTreeModel.events],
+      gates: [...faultTreeModel.gates],
+      connections: [...faultTreeModel.connections]
+    };
+    
+    let hasChanges = false;
+    
+    positionChanges.forEach(change => {
+      // Type guard: sappiamo che è un NodePositionChange perché filtrato
+      if (change.type !== 'position') return;
+      
+      // Validazione della posizione - evita NaN o valori invalidi
+      const position = change.position;
+      if (!position || 
+          typeof position.x !== 'number' || 
+          typeof position.y !== 'number' ||
+          !Number.isFinite(position.x) ||
+          !Number.isFinite(position.y)) {
+        console.warn('Invalid position detected, skipping update:', position);
+        return;
+      }
+      
+      // Trova e aggiorna evento base
+      const eventIndex = updatedModel.events.findIndex(e => e.id === change.id);
+      if (eventIndex !== -1) {
+        updatedModel.events[eventIndex] = {
+          ...updatedModel.events[eventIndex],
+          position
+        };
+        hasChanges = true;
+        return;
+      }
 
-        // Trova e aggiorna porta
-        const gateIndex = updatedModel.gates.findIndex(g => g.id === change.id);
-        if (gateIndex !== -1) {
-          updatedModel.gates[gateIndex] = {
-            ...updatedModel.gates[gateIndex],
-            position: change.position
-          };
-          onModelChange(updatedModel);
-        }
+      // Trova e aggiorna porta
+      const gateIndex = updatedModel.gates.findIndex(g => g.id === change.id);
+      if (gateIndex !== -1) {
+        updatedModel.gates[gateIndex] = {
+          ...updatedModel.gates[gateIndex],
+          position
+        };
+        hasChanges = true;
       }
     });
+    
+    // Chiama onModelChange una sola volta con tutti i cambiamenti
+    if (hasChanges) {
+      // Debug logging per tracciare eventuali problemi
+      const totalElements = updatedModel.events.length + updatedModel.gates.length;
+      if (totalElements === 0) {
+        console.error('⚠️ WARNING: All elements disappeared during drag operation!', {
+          originalEvents: faultTreeModel.events.length,
+          originalGates: faultTreeModel.gates.length,
+          updatedEvents: updatedModel.events.length,
+          updatedGates: updatedModel.gates.length,
+          changes: positionChanges
+        });
+      }
+      
+      onModelChange(updatedModel);
+    }
   }, [onNodesChange, faultTreeModel, onModelChange]);
 
   // Gestione eliminazione edge
