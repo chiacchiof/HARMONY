@@ -41,6 +41,31 @@ const FaultTreeEditor: React.FC = () => {
   
   // Rilevamento automatico del dispositivo
   const deviceType = useDeviceType();
+
+  // Funzione helper per aggiornare i contatori basandosi sui nomi esistenti
+  const updateCountersFromModel = useCallback((model: FaultTreeModel) => {
+    // Trova il numero più alto negli eventi base (pattern BE_X)
+    let maxEventNumber = 0;
+    model.events.forEach(event => {
+      const match = event.name.match(/^BE_(\d+)$/);
+      if (match) {
+        maxEventNumber = Math.max(maxEventNumber, parseInt(match[1]));
+      }
+    });
+
+    // Trova il numero più alto nelle porte (pattern GATETYPE_X)
+    let maxGateNumber = 0;
+    model.gates.forEach(gate => {
+      const match = gate.name.match(/_(\d+)$/);
+      if (match) {
+        maxGateNumber = Math.max(maxGateNumber, parseInt(match[1]));
+      }
+    });
+
+    // Imposta i contatori al prossimo numero disponibile
+    setNextEventNumber(maxEventNumber + 1);
+    setNextGateNumber(maxGateNumber + 1);
+  }, []);
   
   // Stato per modalità click-to-place
   const [clickToPlaceMode, setClickToPlaceMode] = useState(false);
@@ -54,6 +79,10 @@ const FaultTreeEditor: React.FC = () => {
 
   // Stato per pannello destro collassato
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
+
+  // Contatori globali per nomi univoci (incrementali, non decrementano mai)
+  const [nextEventNumber, setNextEventNumber] = useState(1);
+  const [nextGateNumber, setNextGateNumber] = useState(1);
 
   // Auto-collapse pannelli su dispositivi mobili/tablet
   useEffect(() => {
@@ -77,7 +106,7 @@ const FaultTreeEditor: React.FC = () => {
       const newEvent: BaseEvent = {
         id: `event-${Date.now()}`,
         type: 'basic-event',
-        name: `BE_${faultTreeModel.events.length + 1}`,
+        name: `BE_${nextEventNumber}`,
         position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
         parameters: {},
         failureProbabilityDistribution: { type: 'exponential', lambda: 0.01 }
@@ -87,8 +116,9 @@ const FaultTreeEditor: React.FC = () => {
         ...prev,
         events: [...prev.events, newEvent]
       }));
+      setNextEventNumber(prev => prev + 1);
     }
-  }, [clickToPlaceMode, faultTreeModel.events.length]);
+  }, [clickToPlaceMode, nextEventNumber]);
 
   // Gestione aggiunta porte
   const handleAddGate = useCallback((gateType: GateType) => {
@@ -101,7 +131,7 @@ const FaultTreeEditor: React.FC = () => {
         id: `gate-${Date.now()}`,
         type: 'gate',
         gateType,
-        name: `${gateType}_${faultTreeModel.gates.length + 1}`,
+        name: `${gateType}_${nextGateNumber}`,
         position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
         inputs: [],
         isFailureGate: false,
@@ -112,8 +142,9 @@ const FaultTreeEditor: React.FC = () => {
         ...prev,
         gates: [...prev.gates, newGate]
       }));
+      setNextGateNumber(prev => prev + 1);
     }
-  }, [clickToPlaceMode, faultTreeModel.gates.length]);
+  }, [clickToPlaceMode, nextGateNumber]);
 
   // Gestione click su elemento per aprire parametri
   const handleElementClick = useCallback((element: BaseEvent | Gate) => {
@@ -129,7 +160,7 @@ const FaultTreeEditor: React.FC = () => {
       const newEvent: BaseEvent = {
         id: `event-${Date.now()}`,
         type: 'basic-event',
-        name: `BE_${faultTreeModel.events.length + 1}`,
+        name: `BE_${nextEventNumber}`,
         position,
         parameters: {},
         failureProbabilityDistribution: { type: 'exponential', lambda: 0.01 }
@@ -139,12 +170,13 @@ const FaultTreeEditor: React.FC = () => {
         ...prev,
         events: [...prev.events, newEvent]
       }));
+      setNextEventNumber(prev => prev + 1);
     } else if (componentToPlace.type === 'gate' && componentToPlace.gateType) {
       const newGate: Gate = {
         id: `gate-${Date.now()}`,
         type: 'gate',
         gateType: componentToPlace.gateType,
-        name: `Porta ${componentToPlace.gateType} ${faultTreeModel.gates.length + 1}`,
+        name: `${componentToPlace.gateType}_${nextGateNumber}`,
         position,
         inputs: [],
         isFailureGate: false,
@@ -155,11 +187,12 @@ const FaultTreeEditor: React.FC = () => {
         ...prev,
         gates: [...prev.gates, newGate]
       }));
+      setNextGateNumber(prev => prev + 1);
     }
 
     // NON resettare componentToPlace - mantieni la selezione per posizionamenti multipli
     // setComponentToPlace(null); // Rimosso
-  }, [componentToPlace, faultTreeModel.events.length, faultTreeModel.gates.length]);
+  }, [componentToPlace, nextEventNumber, nextGateNumber]);
 
   // Toggle modalità click-to-place
   const handleToggleClickToPlace = useCallback(() => {
@@ -211,6 +244,7 @@ const FaultTreeEditor: React.FC = () => {
       try {
         const model = await FileService.openFaultTree(file);
         setFaultTreeModel(model);
+        updateCountersFromModel(model); // Aggiorna i contatori
         
         // Salva le informazioni del file aperto (senza fileHandle per il fallback)
         setOpenedFile({
@@ -224,7 +258,7 @@ const FaultTreeEditor: React.FC = () => {
         alert(`Errore nel caricamento del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
       }
     }
-  }, []);
+  }, [updateCountersFromModel]);
 
   // Gestione apertura file con File System Access (per sovrascrittura)
   const handleOpenFileWithFileSystem = useCallback(async () => {
@@ -242,6 +276,7 @@ const FaultTreeEditor: React.FC = () => {
         const file = await fileHandle.getFile();
         const model = await FileService.openFaultTree(file);
         setFaultTreeModel(model);
+        updateCountersFromModel(model); // Aggiorna i contatori
         
         // Salva le informazioni del file aperto con il fileHandle per la sovrascrittura
         setOpenedFile({
@@ -273,7 +308,7 @@ const FaultTreeEditor: React.FC = () => {
       fileInput.onchange = (e) => handleOpenFile(e as any);
       fileInput.click();
     }
-  }, [handleOpenFile]);
+  }, [handleOpenFile, updateCountersFromModel]);
 
   // Gestione esportazione XML
   const handleExportXML = useCallback(async () => {
@@ -463,13 +498,16 @@ const FaultTreeEditor: React.FC = () => {
   // Gestione generazione fault tree dal chatbot
   const handleGenerateFaultTree = useCallback((generatedModel: FaultTreeModel) => {
     // Merge del modello generato con quello esistente
-    setFaultTreeModel(prev => ({
-      events: [...prev.events, ...generatedModel.events],
-      gates: [...prev.gates, ...generatedModel.gates],
-      connections: [...prev.connections, ...generatedModel.connections],
-      topEvent: generatedModel.topEvent || prev.topEvent
-    }));
-  }, []);
+    const mergedModel = {
+      events: [...faultTreeModel.events, ...generatedModel.events],
+      gates: [...faultTreeModel.gates, ...generatedModel.gates],
+      connections: [...faultTreeModel.connections, ...generatedModel.connections],
+      topEvent: generatedModel.topEvent || faultTreeModel.topEvent
+    };
+    
+    setFaultTreeModel(mergedModel);
+    updateCountersFromModel(mergedModel); // Aggiorna i contatori
+  }, [faultTreeModel, updateCountersFromModel]);
 
   // Gestione modifiche fault tree dal chatbot
   const handleModifyFaultTree = useCallback((modifications: FaultTreeModification[]) => {
@@ -541,6 +579,8 @@ const FaultTreeEditor: React.FC = () => {
     setShowParameterModal(false);
     setComponentToPlace(null);
     setOpenedFile(null); // Reset del file aperto
+    setNextEventNumber(1); // Reset contatore eventi
+    setNextGateNumber(1); // Reset contatore porte
   }, []);
 
   // Gestione nuovo modello
