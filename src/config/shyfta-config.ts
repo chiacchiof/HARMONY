@@ -76,7 +76,7 @@ export class SHyFTAConfig {
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const seconds = now.getSeconds().toString().padStart(2, '0');
     
-    return `initFaultTree_${day}${month}${year}_${hours}:${minutes}:${seconds}.m`;
+    return `initFaultTree_${day}${month}${year}_${hours}_${minutes}_${seconds}.m`;
   }
 
   /**

@@ -213,7 +213,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                 type="text"
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value)}
-                placeholder="initFaultTree_ddmmaaaa_hh:mm:ss.m"
+                placeholder="initFaultTree_ddmmaaaa_hh_mm_ss.m"
                 disabled={isRunning}
               />
             </div>
