@@ -37,13 +37,29 @@ cd dynamic-fault-tree-editor
 npm install
 ```
 
-### Avvio Sviluppo
+### Avvio Completo (Frontend + Backend)
+
+**Per utilizzare tutte le funzionalità incluse le simulazioni SHyFTA/MATLAB:**
+
+**Terminal 1 - Backend Server:**
 ```bash
-# Avvia il server di sviluppo
+node backend-server.js
+```
+✅ Backend MATLAB in esecuzione su `http://localhost:3001`
+
+**Terminal 2 - Frontend React:**
+```bash
+npm start
+```
+✅ Frontend disponibile su `http://localhost:3000`
+
+### Solo Frontend (Sviluppo UI)
+```bash
+# Se lavori solo sull'interfaccia senza simulazioni MATLAB
 npm start
 ```
 
-L'applicazione sarà disponibile su `http://localhost:3000`
+L'applicazione si aprirà automaticamente su `http://localhost:3000`
 
 ### Build per Produzione
 ```bash
@@ -130,6 +146,51 @@ Se nessun LLM esterno è configurato o disponibile, il chatbot utilizza un siste
 - Consigli sulla struttura del fault tree
 - Best practices per la modellazione
 - Interpretazione dei risultati
+
+## 🧪 Simulazioni SHyFTA/MATLAB
+
+### Prerequisiti Aggiuntivi
+- **MATLAB** (versione R2019b o superiore)
+- **SHyFTALib** - Libreria MATLAB per simulazioni dynamic fault tree
+
+### Configurazione SHyFTA
+1. Scarica e installa la libreria SHyFTALib per MATLAB
+2. Estrai in una cartella (es: `C:\Users\Utente\Documents\MATLAB\SHyFTALib`)
+3. Nell'applicazione, clicca "SHyFTA Simulation"
+4. Inserisci il percorso completo della cartella SHyFTALib
+5. Configura parametri (iterazioni, confidenza, mission time)
+6. Clicca "Run SHyFTA"
+
+### Funzionalità Simulazione
+- **Generazione Automatica**: Crea automaticamente file MATLAB dal fault tree
+- **Progress Real-time**: Monitor avanzamento simulazione in tempo reale
+- **Gestione File**: Crea `ZFTAMain.m`, `runSHyFTA.bat` configurati automaticamente
+- **Risultati**: Salva output in `output/results.mat`
+
+### Controllo Simulazioni
+- **Stop Sicuro**: Pulsante per fermare simulazioni in corso
+- **Log Dettagliato**: Output completo MATLAB in tempo reale
+- **Gestione Errori**: Handling robusto per errori MATLAB
+
+## ⚠️ Risoluzione Problemi
+
+### Backend/Frontend
+- **Porta occupata**: Verifica che le porte 3000 (frontend) e 3001 (backend) siano libere
+- **Dipendenze mancanti**: Esegui `npm install` nella directory principale
+- **Node.js versione**: Richiede Node.js 16.0 o superiore
+
+### Simulazioni MATLAB
+- **MATLAB non trovato**: Verifica che MATLAB sia nel PATH di sistema
+- **SHyFTALib non trovata**: Controlla il percorso assoluto della libreria
+- **Simulazione non si ferma**: 
+  - ✅ **Risolto**: Il sistema ora termina correttamente l'intero albero dei processi MATLAB
+  - Usa `taskkill /t /f` su Windows per terminare tutti i processi figli
+  - **Fallback**: Se persiste, terminare manualmente `MATLAB.exe` dal Task Manager
+
+### Problemi Comuni
+- **Errore permessi file**: Esegui come amministratore se necessario
+- **Firewall**: Permettere connessioni per Node.js sulla porta 3001
+- **Antivirus**: Escludere la cartella progetto da scansioni real-time
 
 ## Struttura del Progetto
 

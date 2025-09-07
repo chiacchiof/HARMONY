@@ -106,10 +106,12 @@ function executeMatlabSimulation(shyftaPath, outputDir, res) {
   console.log(`🚀 Starting MATLAB execution: ${batPath}`);
   console.log(`📊 Will monitor output directory: ${outputDir}`);
   
-  // Spawn the MATLAB process
+  // Spawn the MATLAB process with detached: false to ensure child processes are killed
   const matlabProcess = spawn('cmd', ['/c', batPath], {
     cwd: shyftaPath,
-    stdio: ['pipe', 'pipe', 'pipe']
+    stdio: ['pipe', 'pipe', 'pipe'],
+    detached: false,  // Ensure child processes are killed with parent
+    shell: true       // Use shell for better process tree management
   });
 
   // Track the current process globally for stop functionality
@@ -241,12 +243,25 @@ function executeMatlabSimulation(shyftaPath, outputDir, res) {
   res.req.on('close', () => {
     console.log('👋 Client disconnected - terminating MATLAB process if running');
     if (matlabProcess && !matlabProcess.killed) {
-      matlabProcess.kill('SIGTERM');
+      const pid = matlabProcess.pid;
+      console.log(`🔪 Client disconnect: Killing process tree for PID: ${pid}`);
+      
+      // Kill the entire process tree on Windows
+      const { spawn } = require('child_process');
+      const killProcess = spawn('taskkill', ['/pid', pid, '/t', '/f'], {
+        stdio: 'inherit'
+      });
+      
+      killProcess.on('close', (code) => {
+        console.log(`🏁 Client disconnect kill completed with code: ${code}`);
+      });
+      
+      // Fallback standard kill
       setTimeout(() => {
         if (!matlabProcess.killed) {
           matlabProcess.kill('SIGKILL');
         }
-      }, 5000);
+      }, 2000);
     }
   });
 }
@@ -265,16 +280,27 @@ app.post('/api/matlab/stop', (req, res) => {
     console.log(`🔪 Terminating MATLAB process PID: ${currentMatlabProcess.pid}`);
     
     try {
-      // Try graceful termination first
-      currentMatlabProcess.kill('SIGTERM');
+      // On Windows, we need to kill the entire process tree to stop MATLAB
+      const pid = currentMatlabProcess.pid;
+      console.log(`🔪 Killing process tree for PID: ${pid}`);
       
-      // Force kill after 3 seconds if still running
+      // Kill the entire process tree on Windows using taskkill
+      const { spawn } = require('child_process');
+      const killProcess = spawn('taskkill', ['/pid', pid, '/t', '/f'], {
+        stdio: 'inherit'
+      });
+      
+      killProcess.on('close', (code) => {
+        console.log(`🏁 Process tree kill completed with code: ${code}`);
+      });
+      
+      // Also try the standard kill as fallback
       setTimeout(() => {
         if (currentMatlabProcess && !currentMatlabProcess.killed) {
-          console.log('💀 Force killing MATLAB process');
+          console.log('💀 Fallback: Force killing main process');
           currentMatlabProcess.kill('SIGKILL');
         }
-      }, 3000);
+      }, 2000);
       
       res.json({ 
         success: true, 

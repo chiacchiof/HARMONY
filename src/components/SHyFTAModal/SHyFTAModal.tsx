@@ -34,6 +34,9 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   
   // State for stop confirmation
   const [showStopConfirmation, setShowStopConfirmation] = useState(false);
+  
+  // Track if model name has been initialized to prevent auto-regeneration
+  const [modelNameInitialized, setModelNameInitialized] = useState(false);
 
   // Load saved configuration and setup progress callback
   useEffect(() => {
@@ -49,9 +52,10 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       setConfidence(savedSettings.defaultConfidence);
       setConfidenceToggle(savedSettings.defaultConfidenceToggle);
       
-      // Generate new model name or use saved pattern
-      if (!modelName) {
+      // Generate new model name only on initial open, not when user clears it
+      if (!modelNameInitialized) {
         setModelName(SHyFTAConfigService.generateDefaultModelName());
+        setModelNameInitialized(true);
       }
       
       // Setup progress callback
@@ -68,7 +72,14 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       // Cleanup on unmount
       SHyFTAService.setProgressCallback(() => {});
     };
-  }, [isOpen, modelName]);
+  }, [isOpen]);
+
+  // Reset model name initialization flag when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setModelNameInitialized(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -206,7 +217,9 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   value={shyftaLibFolder}
                   onChange={(e) => {
                     setShyftaLibFolder(e.target.value);
-                    // Auto-save when user types
+                  }}
+                  onBlur={(e) => {
+                    // Auto-save only when user finishes typing (on blur)
                     if (e.target.value.trim()) {
                       SHyFTAConfigService.updateSetting('shyftaLibFolder', e.target.value);
                     }
