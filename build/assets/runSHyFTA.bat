@@ -13,7 +13,7 @@ echo Nome Modello: %MODEL_NAME%
 echo.
 
 REM Change to SHyFTA directory
-cd /d %SHYFTA_PATH%
+cd /d "%SHYFTA_PATH%"
 if %errorlevel% neq 0 (
     echo ERRORE: Impossibile accedere alla cartella "%SHYFTA_PATH%"
     pause

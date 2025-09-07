@@ -345,11 +345,36 @@ input:focus + .toggle-slider {
   margin-top: 16px;
 }
 
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .log-output h4 {
-  margin: 0 0 8px 0;
+  margin: 0;
   font-size: 1rem;
   color: #92400e;
   font-weight: 600;
+}
+
+.close-log-button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-log-button:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
 .log-output textarea {
@@ -568,4 +593,12 @@ input:focus + .toggle-slider {
   background: #451a03;
   color: #fed7aa;
   border-color: #92400e;
+}
+
+.dark-mode .close-log-button {
+  background: #ef4444;
+}
+
+.dark-mode .close-log-button:hover {
+  background: #dc2626;
 }

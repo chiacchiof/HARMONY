@@ -28,6 +28,7 @@ async function updateBatchFile(shyftaPath, modelName, res) {
     
     if (fs.existsSync(templatePath)) {
       batContent = fs.readFileSync(templatePath, 'utf8');
+      console.log(`✅ Using existing template: ${templatePath}`);
     } else {
       // Fallback template if file doesn't exist
       batContent = `@echo off
@@ -43,7 +44,7 @@ echo Cartella SHyFTA: %SHYFTA_PATH%
 echo Nome Modello: %MODEL_NAME%
 echo.
 
-cd /d "%SHYFTA_PATH%"
+cd /d %SHYFTA_PATH%
 if %errorlevel% neq 0 (
     echo ERRORE: Impossibile accedere alla cartella "%SHYFTA_PATH%"
     pause
@@ -81,10 +82,11 @@ echo.
 pause`;
     }
     
-    // Replace placeholders - no extra quotes since template already handles them
+    // Replace placeholders in the template
+    const modelNameWithoutExt = modelName.replace(/\.m$/, '');
     batContent = batContent
       .replace(/set SHYFTA_PATH=.*/, `set SHYFTA_PATH=${shyftaPath}`)
-      .replace(/set MODEL_NAME=.*/, `set MODEL_NAME=${modelName.replace(/\.m$/, '')}`);
+      .replace(/set MODEL_NAME=.*/, `set MODEL_NAME=${modelNameWithoutExt}`);
     
     // Save updated batch file
     const batPath = path.join(shyftaPath, 'runSHyFTA.bat');
@@ -114,8 +116,9 @@ function executeMatlabSimulation(shyftaPath, outputDir, res) {
   currentMatlabProcess = matlabProcess;
 
   let outputBuffer = '';
-  let currentProgress = 0;
+  let currentProgress = 0; // Start from 0, only MATLAB progress counts
   let lastUpdateTime = Date.now();
+  let matlabStarted = false;
 
   console.log(`🎬 MATLAB process started with PID: ${matlabProcess.pid}`);
 
@@ -133,19 +136,21 @@ function executeMatlabSimulation(shyftaPath, outputDir, res) {
       const progressMatch = lastMatch.match(/Avanzamento:\s*(\d+\.?\d*)%/);
       if (progressMatch) {
         const progress = parseFloat(progressMatch[1]);
+        
+        // Update progress only if MATLAB reports higher progress
         if (progress > currentProgress) {
           currentProgress = progress;
           
           const progressData = {
             success: false,
-            progress: progress, // Use real MATLAB progress
+            progress: currentProgress,
             output: `MATLAB: ${progress.toFixed(2)}%\n${outputBuffer.slice(-800)}`
           };
           
           res.write(`data: ${JSON.stringify(progressData)}\n\n`);
           lastUpdateTime = Date.now();
           
-          console.log(`📈 MATLAB Progress: ${progress.toFixed(2)}%`);
+          console.log(`📈 MATLAB Progress: ${currentProgress.toFixed(2)}%`);
         }
       }
     }
@@ -332,7 +337,7 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
     
     res.write(`data: ${JSON.stringify({ 
       success: false, 
-      progress: 10, 
+      progress: 0, 
       output: 'Directory SHyFTALib verificata...' 
     })}\n\n`);
 
@@ -347,7 +352,7 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
     
     res.write(`data: ${JSON.stringify({ 
       success: false, 
-      progress: 20, 
+      progress: 0, 
       output: 'Cartella output preparata...' 
     })}\n\n`);
 
@@ -358,7 +363,7 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
     
     res.write(`data: ${JSON.stringify({ 
       success: false, 
-      progress: 30, 
+      progress: 0, 
       output: `File modello copiato: ${path.basename(modelFilePath)}` 
     })}\n\n`);
 
@@ -369,7 +374,7 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
     
     res.write(`data: ${JSON.stringify({ 
       success: false, 
-      progress: 40, 
+      progress: 0, 
       output: 'ZFTAMain.m configurato e copiato...' 
     })}\n\n`);
 
@@ -378,7 +383,7 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
     
     res.write(`data: ${JSON.stringify({ 
       success: false, 
-      progress: 50, 
+      progress: 0, 
       output: 'File batch aggiornato, avvio MATLAB...' 
     })}\n\n`);
 

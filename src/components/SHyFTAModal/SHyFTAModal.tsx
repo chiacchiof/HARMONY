@@ -27,6 +27,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   
   // State for simulation
   const [isRunning, setIsRunning] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
   const [logOutput, setLogOutput] = useState('');
@@ -59,6 +60,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
         setCurrentStep(progressData.currentStep);
         setLogOutput(prev => prev + progressData.logOutput);
         setIsRunning(progressData.isRunning);
+        setIsCompleted(progressData.isCompleted || false);
       });
     }
     
@@ -152,13 +154,14 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     
     // Reset progress state
     setIsRunning(true);
+    setIsCompleted(false);
     setProgress(0);
     setLogOutput('');
     setCurrentStep('Inizializzazione...');
 
     try {
       await SHyFTAService.runSimulation(faultTreeModel, config);
-      alert('🎯 Sistema SHyFTA pronto!\n\nFile creati nella cartella SHyFTALib:\n• ' + modelName + ' (fault tree model)\n• ZFTAMain.m (script configurato)\n• runSHyFTA.bat (launcher aggiornato)\n\n✅ Per avviare la simulazione:\nFai doppio clic su runSHyFTA.bat\n\n📊 I risultati appariranno in output/results.m');
+      // Non mostrare più l'alert automatico, lasciare che l'utente gestisca la chiusura tramite il log
     } catch (error) {
       alert(`Errore durante la simulazione: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     } finally {
@@ -284,12 +287,12 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
           </div>
 
           {/* Simulation Progress Section */}
-          {isRunning && (
+          {(isRunning || isCompleted) && (
             <div className="progress-section">
-              <h3>🔄 Simulazione Automatica in Corso</h3>
+              <h3>{isRunning ? '🔄 Simulazione Automatica in Corso' : '✅ Simulazione Completata'}</h3>
               
               <div className="progress-info">
-                <div className="current-step">{currentStep}</div>
+                <div className="current-step">{isCompleted ? 'Simulazione completata con successo!' : currentStep}</div>
                 <div className="progress-bar">
                   <div 
                     className="progress-fill" 
@@ -300,7 +303,22 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
               </div>
 
               <div className="log-output">
-                <h4>📝 Output Log:</h4>
+                <div className="log-header">
+                  <h4>📝 Output Log:</h4>
+                  {isCompleted && (
+                    <button 
+                      className="close-log-button"
+                      onClick={() => {
+                        setIsCompleted(false);
+                        setProgress(0);
+                        setCurrentStep('');
+                        setLogOutput('');
+                      }}
+                    >
+                      ✖️ Chiudi Log
+                    </button>
+                  )}
+                </div>
                 <textarea
                   value={logOutput}
                   readOnly
@@ -341,16 +359,32 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
             onClick={onClose}
             disabled={isRunning}
           >
-            {isRunning ? 'Chiudi quando completato' : 'Annulla'}
+            {isRunning ? 'Chiudi quando completato' : 'Chiudi'}
           </button>
           
-          {!isRunning && (
+          {!isRunning && !isCompleted && (
             <button 
               className="run-button primary" 
               onClick={handleRunSimulation}
               disabled={!shyftaLibFolder || !modelName}
             >
               🚀 Run SHyFTA
+            </button>
+          )}
+          
+          {!isRunning && isCompleted && (
+            <button 
+              className="run-button primary" 
+              onClick={() => {
+                setIsCompleted(false);
+                setProgress(0);
+                setCurrentStep('');
+                setLogOutput('');
+                handleRunSimulation();
+              }}
+              disabled={!shyftaLibFolder || !modelName}
+            >
+              🔄 Esegui Nuovamente
             </button>
           )}
           

@@ -1,6 +1,5 @@
 import { FaultTreeModel } from '../types/FaultTree';
 import { MatlabExportService } from './matlab-export-service';
-import { SHyFTAConfig as SHyFTAConfigService } from '../config/shyfta-config';
 
 export interface SHyFTAConfig {
   shyftaLibFolder: string;
@@ -16,6 +15,7 @@ export interface SHyFTAProgress {
   currentStep: string;
   logOutput: string;
   isRunning: boolean;
+  isCompleted?: boolean;
 }
 
 export class SHyFTAService {
@@ -39,7 +39,8 @@ export class SHyFTAService {
         progress,
         currentStep,
         logOutput,
-        isRunning: true
+        isRunning: progress < 100, // Set to false when progress is 100%
+        isCompleted: progress >= 100
       });
     }
   }
@@ -185,60 +186,18 @@ toc`;
   }
 
   /**
-   * Generate MATLAB model code (wrapper for MatlabExportService)
+   * Generate MATLAB model code using the proper MatlabExportService
    */
   private static async generateModelCode(faultTreeModel: FaultTreeModel, config: SHyFTAConfig): Promise<string> {
-    // This simulates the MATLAB code generation
-    // In production, this would call MatlabExportService directly and return the string content
-    
-    let code = "%% Define the Fault Tree Structure %%\n";
-    code += `Tm = ${config.missionTime}; %[h]\n\n`;
-
-    // Generate Basic Events
-    code += "%% Define BEs %%\n\n";
-    faultTreeModel.events.forEach(event => {
-      const name = this.sanitizeMatlabName(event.name);
-      code += `${name} = BasicEvent('${name}','exp','',${event.failureRate || 0.001},[]);\n`;
+    // Use the real MatlabExportService with proper bottom-up ordering and priority handling
+    const matlabCode = (MatlabExportService as any).generateMatlabCode(faultTreeModel, {
+      missionTime: config.missionTime,
+      filename: config.modelName
     });
-
-    // Generate Gates
-    code += "\n%% Define Gates %%\n";
-    faultTreeModel.gates.forEach(gate => {
-      const name = this.sanitizeMatlabName(gate.name);
-      const inputs = gate.inputs.map(inputId => {
-        const inputElement = [...faultTreeModel.events, ...faultTreeModel.gates]
-          .find(el => el.id === inputId);
-        return inputElement ? this.sanitizeMatlabName(inputElement.name) : 'unknown';
-      });
-      
-      code += `${name} = Gate('${name}', '${gate.gateType}', false, [${inputs.join(', ')}]);\n`;
-    });
-
-    // Find top event
-    const topGate = faultTreeModel.gates.find(g => !faultTreeModel.gates.some(other => 
-      other.inputs.includes(g.id)
-    ));
     
-    if (topGate) {
-      code += `\nTOP = ${this.sanitizeMatlabName(topGate.name)};\n`;
-    }
-
-    code += "\n%% Recall Matlab Script %%\n";
-    code += "createFTStructure\n";
-
-    return code;
+    return matlabCode;
   }
 
-  /**
-   * Sanitize names for MATLAB variable naming rules
-   */
-  private static sanitizeMatlabName(name: string): string {
-    let sanitized = name.replace(/[^a-zA-Z0-9_]/g, '_');
-    if (!/^[a-zA-Z]/.test(sanitized)) {
-      sanitized = 'E_' + sanitized;
-    }
-    return sanitized.replace(/_+/g, '_').replace(/_+$/, '');
-  }
 
 
 
@@ -268,16 +227,8 @@ toc`;
    * Simulate clearing output folder
    */
   static async clearOutputFolder(shyftaPath: string): Promise<void> {
-    return new Promise((resolve) => {
-      this.updateProgress(20, 'Cancellazione cartella output...');
-      console.log(`Clearing output folder at: ${shyftaPath}/output`);
-      
-      // Simulate operation
-      setTimeout(() => {
-        this.updateProgress(25, 'Cartella output cancellata');
-        resolve();
-      }, 1000);
-    });
+    console.log(`Clearing output folder at: ${shyftaPath}/output`);
+    return Promise.resolve();
   }
 
   /**
@@ -289,10 +240,6 @@ toc`;
       this.isRunning = true;
       
       try {
-        this.updateProgress(30, 'Preparazione simulazione via backend...');
-        
-        this.updateProgress(50, 'Invio files al backend e avvio MATLAB...');
-        
         // Instructions for the user
         const instructions = `
 🚀 Simulazione MATLAB pronta!
@@ -311,8 +258,6 @@ Per avviare la simulazione:
 Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
         `.trim();
         
-        this.updateProgress(60, 'Monitoraggio simulazione...');
-        
         // Start monitoring for results
         this.startSimulationMonitoring(shyftaPath, faultTreeModel, config, files, resolve, reject);
         
@@ -328,7 +273,7 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
    * Execute MATLAB via backend API or fallback to manual execution
    */
   static async startSimulationMonitoring(shyftaPath: string, faultTreeModel: FaultTreeModel, config: SHyFTAConfig, files: { modelContent: string; zftaContent: string }, resolve: Function, reject: Function): Promise<void> {
-    this.updateProgress(70, '🔧 Controllo backend API...', 'Verifico se posso lanciare MATLAB automaticamente...');
+    this.updateProgress(0, '🔧 Controllo backend e avvio MATLAB...', 'Verifico backend e preparo simulazione...');
     
     try {
       // Import the MATLAB execution service
@@ -338,7 +283,7 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
       const backendAvailable = await MatlabExecutionService.checkBackendAvailability();
       
       if (backendAvailable) {
-        this.updateProgress(75, '🚀 Lancio MATLAB via backend...', 'Backend API disponibile - avvio simulazione automatica...');
+        this.updateProgress(0, '🚀 Lancio MATLAB via backend...', 'Backend API disponibile - avvio simulazione automatica...');
         
         console.log('📦 Using prepared files for backend execution:');
         console.log(`   Model file: ${config.modelName} (${files.modelContent.length} chars)`);
@@ -374,7 +319,8 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
             progress: 100,
             currentStep: '🎉 Simulazione SHyFTA completata automaticamente!',
             logOutput: 'Simulazione eseguita dal backend.\nLog MATLAB visibili nella console del server.\n',
-            isRunning: false
+            isRunning: false,
+            isCompleted: true
           });
         }
         
@@ -396,7 +342,8 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
             progress: 0,
             currentStep: '❌ Backend non disponibile',
             logOutput: `${errorMessage}\n\nPer risolvere:\n1. Avvia il backend: node backend-server.js\n2. Verifica che sia raggiungibile su http://localhost:3001\n3. Riprova la simulazione\n`,
-            isRunning: false
+            isRunning: false,
+            isCompleted: false
           });
         }
         
@@ -415,7 +362,8 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
           progress: 0,
           currentStep: '❌ Errore backend',
           logOutput: `Errore durante l'esecuzione via backend:\n${error instanceof Error ? error.message : 'Errore sconosciuto'}\n\nVerifica che:\n1. Il backend sia avviato (node backend-server.js)\n2. Il percorso SHyFTALib sia corretto\n3. MATLAB sia installato e nel PATH\n`,
-          isRunning: false
+          isRunning: false,
+          isCompleted: false
         });
       }
       
@@ -477,21 +425,16 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
    */
   static async runSimulation(faultTreeModel: FaultTreeModel, config: SHyFTAConfig): Promise<void> {
     try {
-      this.updateProgress(0, 'Inizializzazione...');
-      
       // Step 1: Validate inputs
       const validationError = this.validateConfig(config, faultTreeModel);
       if (validationError) {
         throw new Error(validationError);
       }
       
-      this.updateProgress(10, 'Configurazione validata');
+      this.updateProgress(0, 'Preparazione simulazione...', 'Validazione configurazione e preparazione file...');
       
       // Step 2: Prepare MATLAB files for backend processing
-      this.updateProgress(15, 'Preparazione file per il backend...');
       const { modelContent, zftaContent } = await this.prepareFilesForBackend(faultTreeModel, config);
-      
-      this.updateProgress(25, 'File preparati per il backend');
       
       // Step 3: Clear output folder
       await this.clearOutputFolder(config.shyftaLibFolder);
@@ -506,7 +449,8 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
           progress: 0,
           currentStep: 'Errore durante la preparazione',
           logOutput: `Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}\n`,
-          isRunning: false
+          isRunning: false,
+          isCompleted: false
         });
       }
       throw error;
@@ -546,7 +490,8 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
           progress: 0,
           currentStep: '⏹️ Simulazione arrestata dall\'utente',
           logOutput: 'Simulazione interrotta manualmente.\n',
-          isRunning: false
+          isRunning: false,
+          isCompleted: false
         });
       }
     }
