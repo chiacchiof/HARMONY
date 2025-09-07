@@ -88,55 +88,22 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
         const dirHandle = await (window as any).showDirectoryPicker();
         
-        // Try to get the full path if possible
-        let fullPath = dirHandle.name;
-        
-        // In modern browsers, we can try to resolve the full path
-        try {
-          // This is experimental - in production you'd need a backend service
-          // to get the actual full path from the file handle
-          if (dirHandle.resolve) {
-            const pathSegments = await dirHandle.resolve();
-            if (pathSegments && pathSegments.length > 0) {
-              fullPath = pathSegments.join('/');
-            }
-          }
-          
-          // Fallback: create a more realistic path for demo
-          // In reality, this would come from a backend service or Electron main process
-          if (fullPath === dirHandle.name && !fullPath.includes('/') && !fullPath.includes('\\')) {
-            // Simulate a full path for demo purposes
-            fullPath = `C:\\Users\\User\\Documents\\MATLAB\\${dirHandle.name}`;
-          }
-          
-        } catch (resolveError) {
-          console.log('Could not resolve full path, using folder name');
-          // For demo, let's create a plausible full path
-          fullPath = `C:\\Users\\User\\Documents\\MATLAB\\${dirHandle.name}`;
-        }
-        
-        setShyftaLibFolder(fullPath);
+        // Imposta solo il nome della cartella
+        setShyftaLibFolder(dirHandle.name);
         
         // Save to persistent config
-        SHyFTAConfigService.updateSetting('shyftaLibFolder', fullPath);
+        SHyFTAConfigService.updateSetting('shyftaLibFolder', dirHandle.name);
+        
       } else {
-        // Fallback: ask user to input path manually
-        const path = prompt('Inserisci il percorso completo della cartella SHyFTALib:\n(esempio: C:\\Users\\NomeUtente\\Documents\\MATLAB\\SHyFTALib)');
-        if (path) {
-          setShyftaLibFolder(path);
-          // Save to persistent config
-          SHyFTAConfigService.updateSetting('shyftaLibFolder', path);
+        // Fallback: ask user to input folder name manually
+        const folderName = prompt('Inserisci il nome della cartella SHyFTALib:\n(esempio: SHyFTALib)');
+        if (folderName && folderName.trim()) {
+          setShyftaLibFolder(folderName.trim());
+          SHyFTAConfigService.updateSetting('shyftaLibFolder', folderName.trim());
         }
       }
     } catch (error) {
       console.error('Error selecting folder:', error);
-      // Fallback: ask user to input path manually
-      const path = prompt('Inserisci il percorso completo della cartella SHyFTALib:\n(esempio: C:\\Users\\NomeUtente\\Documents\\MATLAB\\SHyFTALib)');
-      if (path) {
-        setShyftaLibFolder(path);
-        // Save to persistent config
-        SHyFTAConfigService.updateSetting('shyftaLibFolder', path);
-      }
     }
   };
 
@@ -210,23 +177,18 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
             <h3>⚙️ Configurazione</h3>
             
             <div className="form-group">
-              <label>📁 Cartella SHyFTALib (percorso completo):</label>
+              <label>📁 Cartella SHyFTALib:</label>
               <div className="folder-input">
                 <input
                   type="text"
                   value={shyftaLibFolder}
                   onChange={(e) => {
                     setShyftaLibFolder(e.target.value);
+                    SHyFTAConfigService.updateSetting('shyftaLibFolder', e.target.value);
                   }}
-                  onBlur={(e) => {
-                    // Auto-save only when user finishes typing (on blur)
-                    if (e.target.value.trim()) {
-                      SHyFTAConfigService.updateSetting('shyftaLibFolder', e.target.value);
-                    }
-                  }}
-                  placeholder="C:\Users\NomeUtente\Documents\MATLAB\SHyFTALib"
+                  placeholder="SHyFTALib"
                   disabled={isRunning}
-                  className="full-path-input"
+                  className="folder-name-input"
                 />
                 <button 
                   type="button" 
@@ -238,9 +200,10 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   📂 Sfoglia
                 </button>
               </div>
+              
               <small className="folder-help">
-                💡 Inserisci il percorso completo della cartella SHyFTALib<br/>
-                ℹ️ Verrà creato un file .bat per lanciare automaticamente MATLAB nella cartella specificata.
+                💡 Seleziona la cartella SHyFTALib usando il pulsante Sfoglia<br/>
+                🔧 Verrà creato un file .bat per lanciare automaticamente MATLAB nella cartella specificata.
               </small>
             </div>
 

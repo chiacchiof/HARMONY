@@ -382,8 +382,24 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
       output: 'Cartella output preparata...' 
     })}\n\n`);
 
-    // Step 3: Copy model file to SHyFTALib
+    // Step 3: Copy model file to SHyFTALib (always overwrite to handle model name changes)
     const modelFilePath = path.join(shyftaPath, modelName.endsWith('.m') ? modelName : `${modelName}.m`);
+    
+    // Remove any existing model files with different names to avoid conflicts
+    try {
+      const existingFiles = fs.readdirSync(shyftaPath);
+      const matlabFiles = existingFiles.filter(file => file.startsWith('initFaultTree_') && file.endsWith('.m'));
+      for (const oldFile of matlabFiles) {
+        const oldFilePath = path.join(shyftaPath, oldFile);
+        if (oldFilePath !== modelFilePath) {
+          fs.unlinkSync(oldFilePath);
+          console.log(`🗑️ Removed old model file: ${oldFile}`);
+        }
+      }
+    } catch (cleanupError) {
+      console.warn('⚠️ Could not clean up old model files:', cleanupError.message);
+    }
+    
     fs.writeFileSync(modelFilePath, modelContent, 'utf8');
     console.log(`📄 Model file copied: ${modelFilePath}`);
     

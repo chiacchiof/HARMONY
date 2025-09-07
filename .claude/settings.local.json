@@ -4,7 +4,8 @@
       "Bash(npm run build:*)",
       "Bash(node:*)",
       "Bash(npm install:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Read(//c/Users/ferdinando/Downloads/**)"
     ],
     "deny": [],
     "ask": []
