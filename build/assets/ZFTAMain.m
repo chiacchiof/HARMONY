@@ -79,5 +79,5 @@ for counter_i=2:iter
     end
 end
 toc
-save('output\results.mat');
-
+resultsFile = fullfile(pwd, 'output\results.mat');
+save(resultsFile);

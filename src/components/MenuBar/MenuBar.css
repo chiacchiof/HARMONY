@@ -113,6 +113,17 @@
   box-shadow: 0 6px 16px rgba(17, 153, 142, 0.4);
 }
 
+.menu-button.shyfta {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.menu-button.shyfta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
 .menu-button.dark-toggle {
   background: linear-gradient(135deg, #ffa726 0%, #ff7043 100%);
   border-color: transparent;

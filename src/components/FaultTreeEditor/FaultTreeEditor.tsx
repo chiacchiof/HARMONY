@@ -7,6 +7,7 @@ import ParameterModal from '../ParameterModal/ParameterModal';
 import SaveModal from '../SaveModal/SaveModal';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import MatlabExportModal from '../MatlabExportModal/MatlabExportModal';
+import SHyFTAModal from '../SHyFTAModal/SHyFTAModal';
 import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree';
 import { FaultTreeModification } from '../../types/ChatIntegration';
@@ -27,6 +28,7 @@ const FaultTreeEditor: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLLMConfigModal, setShowLLMConfigModal] = useState(false);
   const [showMatlabExportModal, setShowMatlabExportModal] = useState(false);
+  const [showSHyFTAModal, setShowSHyFTAModal] = useState(false);
   const [showNewModelConfirmation, setShowNewModelConfirmation] = useState(false);
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
   const [, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
@@ -343,6 +345,11 @@ const FaultTreeEditor: React.FC = () => {
     setShowMatlabExportModal(true);
   }, []);
 
+  // Gestione apertura SHyFTA Modal
+  const handleShowSHyFTA = useCallback(() => {
+    setShowSHyFTAModal(true);
+  }, []);
+
   // Gestione cambio mission time
   const handleMissionTimeChange = useCallback((value: number) => {
     setMissionTime(value);
@@ -605,6 +612,7 @@ const FaultTreeEditor: React.FC = () => {
           onExportCSV={handleExportCSV}
           onExportMatlab={handleShowMatlabExport}
           onShowLLMConfig={handleShowLLMConfig}
+          onShowSHyFTA={handleShowSHyFTA}
           isDarkMode={isDarkMode}
           onToggleDarkMode={handleToggleDarkMode}
           onNewModel={handleNewModel}
@@ -675,6 +683,13 @@ const FaultTreeEditor: React.FC = () => {
       <MatlabExportModal
         isOpen={showMatlabExportModal}
         onClose={() => setShowMatlabExportModal(false)}
+        faultTreeModel={faultTreeModel}
+        missionTime={missionTime}
+      />
+
+      <SHyFTAModal
+        isOpen={showSHyFTAModal}
+        onClose={() => setShowSHyFTAModal(false)}
         faultTreeModel={faultTreeModel}
         missionTime={missionTime}
       />

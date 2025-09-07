@@ -10,6 +10,7 @@ interface MenuBarProps {
   onExportCSV: () => void | Promise<void>;
   onExportMatlab: () => void;
   onShowLLMConfig: () => void;
+  onShowSHyFTA: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
   onNewModel: () => void;
@@ -25,6 +26,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onExportCSV,
   onExportMatlab,
   onShowLLMConfig,
+  onShowSHyFTA,
   isDarkMode,
   onToggleDarkMode,
   onNewModel,
@@ -105,6 +107,10 @@ const MenuBar: React.FC<MenuBarProps> = ({
 
         <button className="menu-button config" onClick={onShowLLMConfig}>
           ⚙️ LLM
+        </button>
+
+        <button className="menu-button shyfta" onClick={onShowSHyFTA}>
+          🔬 SHyFTA
         </button>
 
         <button className="menu-button dark-toggle" onClick={onToggleDarkMode}>

@@ -72,38 +72,37 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                 className="mission-time-input"
               />
             </div>
-          </div>
 
-          <div className="panel-header">
             {/* Toggle per modalità click-to-place */}
             <div className="placement-mode-toggle">
               <label className="toggle-container">
-                <input
-                  type="checkbox"
-                  checked={clickToPlaceMode}
-                  onChange={onToggleClickToPlace}
-                />
-                <span className="toggle-slider"></span>
                 <span className="toggle-label">
                   {clickToPlaceMode ? '📍 Click to Place' : '🎯 Instant Add'}
                 </span>
+                <div className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={clickToPlaceMode}
+                    onChange={onToggleClickToPlace}
+                  />
+                  <span className="toggle-slider"></span>
+                </div>
               </label>
-            </div>
 
-            
-            {/* Feedback componente selezionato */}
-            {componentToPlace && (
-              <div className="component-selected">
-                <span>🎯 Selezionato: </span>
-                <strong>
-                  {componentToPlace.type === 'event' 
-                    ? 'Evento Base' 
-                    : `Porta ${componentToPlace.gateType}`}
-                </strong>
-                <br />
-                <small>Clicca sul diagramma per posizionare (rimane selezionato)</small>
-              </div>
-            )}
+              {/* Feedback componente selezionato */}
+              {componentToPlace && (
+                <div className="component-selected">
+                  <span>🎯 Selezionato: </span>
+                  <strong>
+                    {componentToPlace.type === 'event' 
+                      ? 'Evento Base' 
+                      : `Porta ${componentToPlace.gateType}`}
+                  </strong>
+                  <br />
+                  <small>Clicca sul diagramma per posizionare (rimane selezionato)</small>
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="component-section">
