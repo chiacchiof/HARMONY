@@ -327,14 +327,27 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
 
   // Gestione spostamento nodi
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    // Prima applica i cambiamenti a React Flow
     onNodesChange(changes);
     
-    // Filtra solo i cambiamenti di posizione
+    // Filtra solo i cambiamenti di posizione validi
     const positionChanges = changes.filter(change => 
-      change.type === 'position' && change.position
+      change.type === 'position' && 
+      change.position &&
+      typeof change.position.x === 'number' && 
+      typeof change.position.y === 'number' &&
+      Number.isFinite(change.position.x) &&
+      Number.isFinite(change.position.y)
     );
     
     if (positionChanges.length === 0) return;
+    
+    // Verifica che non stiamo perdendo elementi durante l'aggiornamento
+    const currentTotalElements = faultTreeModel.events.length + faultTreeModel.gates.length;
+    if (currentTotalElements === 0) {
+      console.warn('⚠️ Skipping position update: no elements in model');
+      return;
+    }
     
     // Aggiorna tutte le posizioni in una singola operazione per evitare race conditions
     const updatedModel = {
@@ -349,18 +362,9 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     
     positionChanges.forEach(change => {
       // Type guard: sappiamo che è un NodePositionChange perché filtrato
-      if (change.type !== 'position') return;
+      if (change.type !== 'position' || !change.position) return;
       
-      // Validazione della posizione - evita NaN o valori invalidi
       const position = change.position;
-      if (!position || 
-          typeof position.x !== 'number' || 
-          typeof position.y !== 'number' ||
-          !Number.isFinite(position.x) ||
-          !Number.isFinite(position.y)) {
-        console.warn('Invalid position detected, skipping update:', position);
-        return;
-      }
       
       // Trova e aggiorna evento base
       const eventIndex = updatedModel.events.findIndex(e => e.id === change.id);
@@ -384,20 +388,19 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       }
     });
     
-    // Chiama onModelChange una sola volta con tutti i cambiamenti
+    // Verifica finale: non aggiornare se abbiamo perso elementi
+    const finalTotalElements = updatedModel.events.length + updatedModel.gates.length;
+    if (finalTotalElements !== currentTotalElements) {
+      console.error('⚠️ Element count mismatch! Skipping update', {
+        original: currentTotalElements,
+        updated: finalTotalElements,
+        changes: positionChanges
+      });
+      return;
+    }
+    
+    // Chiama onModelChange solo se ci sono stati cambiamenti validi
     if (hasChanges) {
-      // Debug logging per tracciare eventuali problemi
-      const totalElements = updatedModel.events.length + updatedModel.gates.length;
-      if (totalElements === 0) {
-        console.error('⚠️ WARNING: All elements disappeared during drag operation!', {
-          originalEvents: faultTreeModel.events.length,
-          originalGates: faultTreeModel.gates.length,
-          updatedEvents: updatedModel.events.length,
-          updatedGates: updatedModel.gates.length,
-          changes: positionChanges
-        });
-      }
-      
       onModelChange(updatedModel);
     }
   }, [onNodesChange, faultTreeModel, onModelChange]);
