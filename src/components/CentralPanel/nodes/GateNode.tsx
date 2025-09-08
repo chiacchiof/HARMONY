@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Gate, GateType } from '../../../types/FaultTree';
+import { MatlabResultsService } from '../../../services/matlab-results-service';
 import './GateNode.css';
 
 interface GateNodeData {
@@ -49,6 +50,29 @@ const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
     };
     return colors[gateType];
   };
+
+  // State per forzare re-render quando i risultati sono caricati
+  const [, forceUpdate] = useState({});
+  
+  // Listener per aggiornamenti dei risultati
+  useEffect(() => {
+    const handleResultsLoaded = () => {
+      console.log(`🔄 [GateNode] Results loaded event received for ${gate.name}`);
+      forceUpdate({}); // Forza re-render
+    };
+    
+    window.addEventListener('simulationResultsLoaded', handleResultsLoaded);
+    return () => window.removeEventListener('simulationResultsLoaded', handleResultsLoaded);
+  }, [gate.name]);
+
+  // Ottieni risultati di simulazione per questo componente
+  const simulationResults = MatlabResultsService.getComponentResults(gate.id);
+  const hasSimulationResults = MatlabResultsService.hasSimulationResults();
+  
+  // Debug logging
+  if (hasSimulationResults) {
+    console.log(`📋 [GateNode] ${gate.name} has results:`, simulationResults);
+  }
 
   return (
     <div 
@@ -112,6 +136,15 @@ const GateNode: React.FC<NodeProps<GateNodeData>> = ({ data }) => {
           <div className="gate-inputs">
             Inputs: {gate.inputs.length}
           </div>
+          {/* Show simulation reliability if available */}
+          {hasSimulationResults && simulationResults && (
+            <div className="gate-reliability">
+              <span className="reliability-icon">📊</span>
+              <span className="reliability-value">
+                R = {(simulationResults.reliability * 100).toFixed(1)}%
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

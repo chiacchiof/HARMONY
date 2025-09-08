@@ -443,6 +443,233 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
   }
 });
 
+// Parse results.mat file for reliability data
+app.get('/api/results/parse', async (req, res) => {
+  const { resultsPath, components, iterations, missionTime, timestep = 1, binCount = 100 } = req.query;
+  let responseSent = false; // Flag to prevent double responses
+  
+  console.log(`📈 Results parsing requested:`);
+  console.log(`   📁 Results file: ${resultsPath}`);
+  console.log(`   🧩 Components: ${components}`);
+  console.log(`   🔄 Iterations: ${iterations}`);
+  console.log(`   ⏱️ Mission time: ${missionTime}h`);
+  console.log(`   📊 Config: timestep=${timestep}h, bins=${binCount}`);
+  
+  if (!resultsPath || !fs.existsSync(resultsPath)) {
+    const error = `Results file not found: ${resultsPath}`;
+    console.error(`❌ ${error}`);
+    return res.status(404).json({ success: false, error });
+  }
+  
+  try {
+    // For now, we'll create a MATLAB script to read the .mat file and export data as JSON
+    // This is a workaround since reading .mat files in Node.js requires special libraries
+    const matlabScript = `
+% Script to extract data from results.mat and save as JSON
+try
+    % Load the results file
+    load('${resultsPath.replace(/\\/g, '/')}');
+    
+    % Initialize results structure
+    results = struct();
+    results.success = true;
+    results.components = {};
+    
+    % Parse component names from query
+    componentNames = split('${components}', ',');
+    
+    % Extract data for each component using _tfail variables
+    fprintf('Looking for _tfail variables for each component...\\n');
+    
+    for i = 1:length(componentNames)
+        compName = strtrim(componentNames{i});
+        if ~isempty(compName)
+            % Look for the corresponding _tfail variable
+            tfailVarName = [compName '_tfail'];
+            
+            if exist(tfailVarName, 'var')
+                % Get failure times array
+                failureTimes = eval(tfailVarName);
+                
+                % Count actual failures (finite values)
+                nFailures = sum(isfinite(failureTimes));
+                validTimes = failureTimes(isfinite(failureTimes));
+                
+                % Extract component data
+                compData = struct();
+                compData.componentId = compName;
+                compData.componentName = compName;
+                compData.componentType = 'Component';
+                compData.nFailures = nFailures;
+                compData.reliability = (${iterations} - nFailures) / ${iterations};
+                compData.unreliability = nFailures / ${iterations};
+                compData.totalIterations = ${iterations};
+                compData.timeOfFailureArray = failureTimes;
+                
+                fprintf(' Processed component: %s (NFailure=%d)\\n', compName, nFailures);
+                
+                % Calculate CDF from failure times
+                timePoints = 0:${timestep}:${missionTime};
+                cdfData = zeros(1, length(timePoints));
+                
+                if ~isempty(validTimes)
+                    % CDF calculation for actual failures
+                    for t = 1:length(timePoints)
+                        cdfData(t) = sum(validTimes <= timePoints(t)) / ${iterations};
+                    end
+                end
+                
+                compData.cdfData = struct('time', timePoints, 'probability', cdfData);
+                
+                % PDF calculation using histogram
+                if ~isempty(validTimes) && length(validTimes) > 1
+                    [counts, centers] = hist(validTimes, ${binCount});
+                    binWidth = (max(validTimes) - min(validTimes)) / ${binCount};
+                    if binWidth > 0
+                        densities = counts / (${iterations} * binWidth);
+                        compData.pdfData = struct('time', centers, 'density', densities);
+                    else
+                        compData.pdfData = struct('time', [], 'density', []);
+                    end
+                else
+                    compData.pdfData = struct('time', [], 'density', []);
+                end
+                
+                results.components.(compName) = compData;
+            else
+                % Component _tfail variable not found, create empty result
+                compData = struct();
+                compData.componentId = compName;
+                compData.componentName = compName;
+                compData.componentType = 'Component';
+                compData.nFailures = 0;
+                compData.reliability = 1.0;
+                compData.unreliability = 0.0;
+                compData.totalIterations = ${iterations};
+                compData.timeOfFailureArray = [];
+                compData.cdfData = struct('time', [], 'probability', []);
+                compData.pdfData = struct('time', [], 'density', []);
+                results.components.(compName) = compData;
+                
+                fprintf(' Component %s: _tfail variable not found, using defaults\\n', compName);
+            end
+        end
+    end
+    
+    % Save results as JSON
+    jsonStr = jsonencode(results);
+    fid = fopen('temp_results.json', 'w');
+    fprintf(fid, '%s', jsonStr);
+    fclose(fid);
+    
+    fprintf('✅ Results extracted successfully\\n');
+    
+catch ME
+    fprintf('❌ Error: %s\\n', ME.message);
+    results = struct();
+    results.success = false;
+    results.error = ME.message;
+    
+    jsonStr = jsonencode(results);
+    fid = fopen('temp_results.json', 'w');
+    fprintf(fid, '%s', jsonStr);
+    fclose(fid);
+end
+exit;
+`;
+    
+    // Write the MATLAB script
+    const scriptPath = path.join(path.dirname(resultsPath), 'extract_results.m');
+    const jsonPath = path.join(path.dirname(resultsPath), 'temp_results.json');
+    
+    fs.writeFileSync(scriptPath, matlabScript);
+    console.log(`📝 MATLAB extraction script created: ${scriptPath}`);
+    
+    // Execute MATLAB script
+    const matlabProcess = spawn('matlab', [
+      '-batch', 
+      `cd('${path.dirname(resultsPath).replace(/\\/g, '/')}'); extract_results`
+    ], {
+      cwd: path.dirname(resultsPath),
+      stdio: 'pipe'
+    });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    matlabProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    matlabProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+    
+    matlabProcess.on('close', (code) => {
+      if (responseSent) return; // Prevent double responses
+      
+      console.log(`📊 MATLAB extraction completed with code: ${code}`);
+      console.log(`📝 MATLAB output:`, stdout);
+      
+      if (stderr) console.log(`⚠️ MATLAB stderr:`, stderr);
+      
+      try {
+        // Read the generated JSON file
+        if (fs.existsSync(jsonPath)) {
+          const jsonData = fs.readFileSync(jsonPath, 'utf8');
+          const results = JSON.parse(jsonData);
+          
+          // Cleanup temporary files
+          try {
+            fs.unlinkSync(scriptPath);
+            fs.unlinkSync(jsonPath);
+          } catch (cleanupError) {
+            console.warn('⚠️ Could not clean up temp files:', cleanupError.message);
+          }
+          
+          console.log(`✅ Successfully parsed results for ${Object.keys(results.components).length} components`);
+          responseSent = true;
+          res.json(results);
+        } else {
+          throw new Error('JSON results file not created by MATLAB');
+        }
+      } catch (parseError) {
+        console.error('❌ Error parsing results:', parseError);
+        responseSent = true;
+        res.status(500).json({ 
+          success: false, 
+          error: `Failed to parse results: ${parseError.message}`,
+          matlabOutput: stdout,
+          matlabError: stderr
+        });
+      }
+    });
+    
+    // Handle timeout
+    setTimeout(() => {
+      if (!matlabProcess.killed && !responseSent) {
+        console.log('⏰ MATLAB extraction timeout, killing process');
+        matlabProcess.kill('SIGKILL');
+        responseSent = true;
+        res.status(408).json({ 
+          success: false, 
+          error: 'MATLAB extraction timeout' 
+        });
+      }
+    }, 30000); // 30 second timeout
+    
+  } catch (error) {
+    if (!responseSent) {
+      console.error('❌ Error setting up results parsing:', error);
+      responseSent = true;
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`🚀 MATLAB Backend Server running on http://localhost:${PORT}`);

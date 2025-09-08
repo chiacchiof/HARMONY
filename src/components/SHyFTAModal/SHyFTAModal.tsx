@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaultTreeModel } from '../../types/FaultTree';
 import { SHyFTAService, SHyFTAConfig, SHyFTAProgress } from '../../services/shyfta-service';
 import { SHyFTAConfig as SHyFTAConfigService, SHyFTASettings } from '../../config/shyfta-config';
+import { MatlabResultsService } from '../../services/matlab-results-service';
 import StopConfirmationModal from '../StopConfirmationModal/StopConfirmationModal';
 import './SHyFTAModal.css';
 
@@ -23,6 +24,8 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   const [iterations, setIterations] = useState(1000);
   const [confidence, setConfidence] = useState(0.95);
   const [confidenceToggle, setConfidenceToggle] = useState(true);
+  const [resultsTimestep, setResultsTimestep] = useState(1.0);
+  const [resultsBinCount, setResultsBinCount] = useState(100);
   
   // State for simulation
   const [isRunning, setIsRunning] = useState(false);
@@ -33,6 +36,9 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   
   // State for stop confirmation
   const [showStopConfirmation, setShowStopConfirmation] = useState(false);
+  
+  // State for retrieve results loading
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
 
   // Load saved configuration and setup progress callback
   useEffect(() => {
@@ -47,6 +53,8 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       setIterations(savedSettings.defaultIterations);
       setConfidence(savedSettings.defaultConfidence);
       setConfidenceToggle(savedSettings.defaultConfidenceToggle);
+      setResultsTimestep(savedSettings.resultsTimestep);
+      setResultsBinCount(savedSettings.resultsBinCount);
       
       // Setup progress callback
       SHyFTAService.setProgressCallback((progressData: SHyFTAProgress) => {
@@ -66,6 +74,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
 
   if (!isOpen) return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSelectFolder = async () => {
     try {
       if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
@@ -109,7 +118,9 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       defaultIterations: iterations,
       defaultConfidence: confidence,
       defaultConfidenceToggle: confidenceToggle,
-      lastUsedModelName: 'ZFTATree.m'
+      lastUsedModelName: 'ZFTATree.m',
+      resultsTimestep,
+      resultsBinCount
     };
     SHyFTAConfigService.saveSettings(currentSettings);
     
@@ -139,6 +150,44 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     setShowStopConfirmation(false);
   };
 
+  // Debug function to test results loading  
+  const handleTestResultsLoading = async () => {
+    console.log('🧪 [DEBUG] Testing results loading manually...');
+    
+    // Set loading state
+    setIsLoadingResults(true);
+    
+    // Test with your actual results.mat path
+    const testPath = 'C:/SHyFTOO/output/results.mat';
+    console.log(`📁 Testing with path: ${testPath}`);
+    
+    try {
+      const success = await MatlabResultsService.loadResultsAfterSimulation(
+        'C:/SHyFTOO', // Use your actual SHyFTA path
+        faultTreeModel.events,
+        faultTreeModel.gates,
+        missionTime,
+        iterations,
+        {
+          timestep: resultsTimestep,
+          binCount: resultsBinCount
+        }
+      );
+      
+      if (success) {
+        alert('✅ Real results loaded from results.mat! Check console and components for actual data.');
+      } else {
+        alert('❌ Failed to load results - check console for details.');
+      }
+    } catch (error) {
+      console.error('Error during test:', error);
+      alert(`❌ Error: ${error}`);
+    } finally {
+      setIsLoadingResults(false);
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleResetSimulation = () => {
     SHyFTAService.resetSimulation();
     setProgress(0);
@@ -269,6 +318,42 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
             </div>
           )}
 
+          {/* Results Analysis Configuration */}
+          <div className="config-section">
+            <h3>📊 Configurazione Analisi Risultati</h3>
+            <div className="form-row">
+              <div className="form-group">
+                <label>⏱️ Timestep Analisi:</label>
+                <input
+                  type="number"
+                  value={resultsTimestep}
+                  onChange={(e) => setResultsTimestep(Number(e.target.value))}
+                  min="0.01"
+                  step="0.1"
+                  disabled={isRunning}
+                />
+                <small className="help-text">
+                  Delta temporale per calcoli PDF/CDF (ore)
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label>📈 Numero Bin PDF:</label>
+                <input
+                  type="number"
+                  value={resultsBinCount}
+                  onChange={(e) => setResultsBinCount(Number(e.target.value))}
+                  min="10"
+                  max="1000"
+                  disabled={isRunning}
+                />
+                <small className="help-text">
+                  Numero di intervalli per istogramma PDF
+                </small>
+              </div>
+            </div>
+          </div>
+
           {/* Model Info */}
           <div className="model-info">
             <h3>📋 Informazioni Modello</h3>
@@ -301,6 +386,22 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
           >
             {isRunning ? 'Chiudi quando completato' : 'Chiudi'}
           </button>
+          
+          {/* Debug button to test results loading */}
+          {!isRunning && (
+            <button 
+              className="test-button"
+              onClick={handleTestResultsLoading}
+              title="Test caricamento risultati (usa dati mock)"
+              disabled={isLoadingResults}
+            >
+              {isLoadingResults ? (
+                <span>⏳ Loading...</span>
+              ) : (
+                <span>🔍 Retrieve Results</span>
+              )}
+            </button>
+          )}
           
           {!isRunning && !isCompleted && (
             <button 

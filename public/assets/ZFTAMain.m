@@ -79,5 +79,7 @@ for counter_i=2:iter
     end
 end
 toc
+createTimeToFailureBasicEvents;
+createTimeToFailureGates;
 resultsFile = fullfile(pwd, 'output\results.mat');
 save(resultsFile);

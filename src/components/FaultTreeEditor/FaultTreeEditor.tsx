@@ -4,6 +4,7 @@ import LeftPanel from '../LeftPanel/LeftPanel';
 import CentralPanel from '../CentralPanel/CentralPanel';
 import RightPanel from '../RightPanel/RightPanel';
 import ParameterModal from '../ParameterModal/ParameterModal';
+import ComponentResultsModal from '../ComponentResultsModal/ComponentResultsModal';
 import SaveModal from '../SaveModal/SaveModal';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import MatlabExportModal from '../MatlabExportModal/MatlabExportModal';
@@ -30,6 +31,8 @@ const FaultTreeEditor: React.FC = () => {
   const [showMatlabExportModal, setShowMatlabExportModal] = useState(false);
   const [showSHyFTAModal, setShowSHyFTAModal] = useState(false);
   const [showNewModelConfirmation, setShowNewModelConfirmation] = useState(false);
+  const [showComponentResultsModal, setShowComponentResultsModal] = useState(false);
+  const [selectedResultsElementId, setSelectedResultsElementId] = useState<string | null>(null);
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
   const [, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -221,6 +224,13 @@ const FaultTreeEditor: React.FC = () => {
     }
     setShowParameterModal(false);
     setSelectedElement(null);
+  }, []);
+
+  // Gestione visualizzazione risultati simulazione
+  const handleShowResults = useCallback((elementId: string) => {
+    setSelectedResultsElementId(elementId);
+    setShowComponentResultsModal(true);
+    setShowParameterModal(false); // Chiudi il modal dei parametri
   }, []);
 
   // Gestione salvataggio file
@@ -665,6 +675,7 @@ const FaultTreeEditor: React.FC = () => {
             setSelectedElement(null);
           }}
           faultTreeModel={faultTreeModel}
+          onShowResults={handleShowResults}
         />
       )}
 
@@ -703,6 +714,15 @@ const FaultTreeEditor: React.FC = () => {
         confirmText="Sì, Nuovo Modello"
         cancelText="Annulla"
         confirmButtonClass="danger"
+      />
+
+      <ComponentResultsModal
+        isOpen={showComponentResultsModal}
+        onClose={() => {
+          setShowComponentResultsModal(false);
+          setSelectedResultsElementId(null);
+        }}
+        elementId={selectedResultsElementId}
       />
     </div>
   );

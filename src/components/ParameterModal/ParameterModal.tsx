@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BaseEvent, Gate, GateType, ProbabilityDistribution, DistributionType } from '../../types/FaultTree';
+import { MatlabResultsService } from '../../services/matlab-results-service';
 import './ParameterModal.css';
 
 interface ParameterModalProps {
@@ -7,9 +8,10 @@ interface ParameterModalProps {
   onSave: (element: BaseEvent | Gate) => void;
   onClose: () => void;
   faultTreeModel?: { events: BaseEvent[], gates: Gate[] }; // Per ottenere i nomi degli elementi collegati
+  onShowResults?: (elementId: string) => void; // Callback per mostrare i risultati della simulazione
 }
 
-const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClose, faultTreeModel }) => {
+const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClose, faultTreeModel, onShowResults }) => {
   const [formData, setFormData] = useState({
     name: element.name,
     description: element.description || '',
@@ -45,6 +47,10 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
   const [isFailureGate, setIsFailureGate] = useState(false);
   // Stato per TOP EVENT
   const [isTopEvent, setIsTopEvent] = useState(false);
+
+  // Controlla se ci sono risultati di simulazione disponibili
+  const hasSimulationResults = MatlabResultsService.hasSimulationResults();
+  const componentResults = MatlabResultsService.getComponentResults(element.id);
 
   // Stato locale per il tipo di gate (per poter cambiare tipo in modal)
   const [gateTypeLocal, setGateTypeLocal] = useState<GateType | null>(null);
@@ -916,6 +922,18 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
           <button className="cancel-button" onClick={onClose}>
             Annulla
           </button>
+          
+          {/* Pulsante per visualizzare i risultati della simulazione */}
+          {hasSimulationResults && componentResults && onShowResults && (
+            <button 
+              className="results-button"
+              onClick={() => onShowResults!(element.id)}
+              title="Visualizza risultati simulazione (PDF/CDF)"
+            >
+              📊 Risultati Simulazione
+            </button>
+          )}
+          
           <button className="save-button" onClick={handleSave}>
             Salva
           </button>

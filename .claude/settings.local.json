@@ -5,7 +5,10 @@
       "Bash(node:*)",
       "Bash(npm install:*)",
       "Bash(curl:*)",
-      "Read(//c/Users/ferdinando/Downloads/**)"
+      "Read(//c/Users/ferdinando/Downloads/**)",
+      "Bash(npm:*)",
+      "Read(//c/SHyFTOO/output/**)",
+      "Bash(matlab:*)"
     ],
     "deny": [],
     "ask": []

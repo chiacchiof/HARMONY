@@ -4,6 +4,9 @@ export interface SHyFTASettings {
   defaultConfidence: number;
   defaultConfidenceToggle: boolean;
   lastUsedModelName: string;
+  // Impostazioni per l'analisi dei risultati
+  resultsTimestep: number; // Delta temporale per calcoli PDF/CDF (default 1 ora)
+  resultsBinCount: number; // Numero di bin per PDF (default 100)
 }
 
 const DEFAULT_SETTINGS: SHyFTASettings = {
@@ -11,7 +14,9 @@ const DEFAULT_SETTINGS: SHyFTASettings = {
   defaultIterations: 1000,
   defaultConfidence: 0.95,
   defaultConfidenceToggle: true,
-  lastUsedModelName: ''
+  lastUsedModelName: '',
+  resultsTimestep: 1.0, // 1 ora
+  resultsBinCount: 100
 };
 
 const STORAGE_KEY = 'shyfta-settings';
@@ -88,7 +93,7 @@ export class SHyFTAConfig {
     }
     
     // Basic path validation (you can enhance this)
-    const validPathPattern = /^[a-zA-Z]:(\\[^\\/:*?"<>|]+)*\\?$|^\/([^\/]+\/)*[^\/]*$/;
+    const validPathPattern = /^[a-zA-Z]:(\\[^\\/:*?"<>|]+)*\\?$|^\/([^/]+\/)*[^/]*$/;
     return validPathPattern.test(path.trim());
   }
 }

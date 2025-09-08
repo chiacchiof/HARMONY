@@ -79,7 +79,8 @@
 }
 
 .event-distribution,
-.event-repair {
+.event-repair,
+.event-reliability {
   display: flex; /* make full-width rows */
   align-items: center;
   gap: 2px; /* tighter */
@@ -87,6 +88,24 @@
   font-size: 9px; /* slightly smaller */
   color: #2c3e50;
   width: 100%;
+}
+
+.event-reliability {
+  background-color: #ecf0f1;
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin-top: 4px;
+}
+
+.reliability-icon {
+  font-size: 10px;
+  margin-right: 2px;
+}
+
+.reliability-value {
+  font-weight: 600;
+  color: #27ae60;
+  font-size: 10px;
 }
 
 .dist-icon {

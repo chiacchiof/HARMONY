@@ -1,5 +1,7 @@
 import { FaultTreeModel } from '../types/FaultTree';
 import { MatlabExportService } from './matlab-export-service';
+import { MatlabResultsService } from './matlab-results-service';
+import { SHyFTAConfig as SHyFTAConfigService } from '../config/shyfta-config';
 
 export interface SHyFTAConfig {
   shyftaLibFolder: string;
@@ -240,24 +242,6 @@ toc`;
       this.isRunning = true;
       
       try {
-        // Instructions for the user
-        const instructions = `
-🚀 Simulazione MATLAB pronta!
-
-File preparati:
-• ${config.modelName} (modello fault tree)
-• ZFTAMain.m (script principale) 
-• runSHyFTA.bat (launcher aggiornato)
-
-Per avviare la simulazione:
-1. Vai nella cartella: ${shyftaPath}
-2. Fai doppio clic su runSHyFTA.bat
-3. MATLAB si avvierà automaticamente
-4. I risultati saranno in output/results.mat
-
-Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
-        `.trim();
-        
         // Start monitoring for results
         this.startSimulationMonitoring(shyftaPath, faultTreeModel, config, files, resolve, reject);
         
@@ -310,15 +294,50 @@ Il sistema monitora la simulazione e aggiornerà il progresso automaticamente.
           }
         );
         
-        // Simulation completed via backend
-        this.updateProgress(100, '✅ Simulazione completata via backend!', 
-          'MATLAB terminato automaticamente.\nControlla output/results.mat per i risultati.\nLog completo visibile nella console del server Node.js');
+        // Simulation completed via backend - try to load results
+        this.updateProgress(100, '✅ Simulazione completata! Caricamento risultati...', 
+          'MATLAB terminato automaticamente.\nCaricamento e analisi dei risultati in corso...');
+        
+        try {
+          console.log('🔄 [SHyFTAService] Starting automatic results loading...');
+          
+          // Get current settings for results processing
+          const settings = SHyFTAConfigService.loadSettings();
+          console.log(`   ⚙️ Settings: timestep=${settings.resultsTimestep}h, bins=${settings.resultsBinCount}`);
+          
+          // Try to load results automatically with configured parameters
+          const resultsLoaded = await MatlabResultsService.loadResultsAfterSimulation(
+            shyftaPath,
+            faultTreeModel.events,
+            faultTreeModel.gates,
+            config.missionTime,
+            config.iterations,
+            {
+              timestep: settings.resultsTimestep,
+              binCount: settings.resultsBinCount
+            }
+          );
+          
+          if (resultsLoaded) {
+            console.log('✅ [SHyFTAService] Results loaded successfully - UI should update now');
+            this.updateProgress(100, '🎉 Simulazione completata! Risultati caricati.', 
+              'Simulazione completata con successo!\nRisultati di affidabilità ora disponibili sui componenti.\nUsa "Risultati Simulazione" nei dettagli dei componenti per visualizzare PDF/CDF.');
+          } else {
+            console.log('⚠️ [SHyFTAService] Results loading failed - using fallback message');
+            this.updateProgress(100, '✅ Simulazione completata!', 
+              'MATLAB terminato automaticamente.\nControlla output/results.mat per i risultati.');
+          }
+        } catch (error) {
+          console.error('❌ [SHyFTAService] Error loading simulation results:', error);
+          this.updateProgress(100, '✅ Simulazione completata!', 
+            'MATLAB terminato automaticamente.\nControlla output/results.mat per i risultati.');
+        }
         
         if (this.progressCallback) {
           this.progressCallback({
             progress: 100,
             currentStep: '🎉 Simulazione SHyFTA completata automaticamente!',
-            logOutput: 'Simulazione eseguita dal backend.\nLog MATLAB visibili nella console del server.\n',
+            logOutput: 'Simulazione eseguita dal backend.\nRisultati di affidabilità disponibili sui componenti.\n',
             isRunning: false,
             isCompleted: true
           });

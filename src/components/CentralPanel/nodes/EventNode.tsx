@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { BaseEvent } from '../../../types/FaultTree';
+import { MatlabResultsService } from '../../../services/matlab-results-service';
 import './EventNode.css';
 
 interface EventNodeData {
@@ -47,6 +48,29 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
     if (n == null || Number.isNaN(n)) return '';
     return parseFloat(n.toFixed(3)).toString();
   };
+
+  // State per forzare re-render quando i risultati sono caricati
+  const [, forceUpdate] = useState({});
+  
+  // Listener per aggiornamenti dei risultati
+  useEffect(() => {
+    const handleResultsLoaded = () => {
+      console.log(`🔄 [EventNode] Results loaded event received for ${event.name}`);
+      forceUpdate({}); // Forza re-render
+    };
+    
+    window.addEventListener('simulationResultsLoaded', handleResultsLoaded);
+    return () => window.removeEventListener('simulationResultsLoaded', handleResultsLoaded);
+  }, [event.name]);
+
+  // Ottieni risultati di simulazione per questo componente
+  const simulationResults = MatlabResultsService.getComponentResults(event.id);
+  const hasSimulationResults = MatlabResultsService.hasSimulationResults();
+  
+  // Debug logging
+  if (hasSimulationResults) {
+    console.log(`📋 [EventNode] ${event.name} has results:`, simulationResults);
+  }
 
   // Helper to get a full parameter string for any distribution
   const getDistributionParamsString = (dist: any) => {
@@ -100,9 +124,6 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
               {truncateText(event.description, 25)}
             </div>
           )}
-          {event.failureRate && (
-            <div className="event-rate">λ = {event.failureRate}</div>
-          )}
           {/* Show failure distribution label + primary parameter */}
           {event.failureProbabilityDistribution && (
             <div className="event-distribution">
@@ -126,6 +147,15 @@ const EventNode: React.FC<NodeProps<EventNodeData>> = ({ data }) => {
                   const params = getDistributionParamsString(event.repairProbabilityDistribution);
                   return params ? <span className="dist-param">{` ${params}`}</span> : null;
                 })()}
+              </span>
+            </div>
+          )}
+          {/* Show simulation reliability if available */}
+          {hasSimulationResults && simulationResults && (
+            <div className="event-reliability">
+              <span className="reliability-icon">📊</span>
+              <span className="reliability-value">
+                R = {(simulationResults.reliability * 100).toFixed(1)}%
               </span>
             </div>
           )}
