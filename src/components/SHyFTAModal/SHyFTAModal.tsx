@@ -20,7 +20,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
 }) => {
   // State for configuration
   const [shyftaLibFolder, setShyftaLibFolder] = useState('');
-  const [modelName, setModelName] = useState('');
   const [iterations, setIterations] = useState(1000);
   const [confidence, setConfidence] = useState(0.95);
   const [confidenceToggle, setConfidenceToggle] = useState(true);
@@ -34,9 +33,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   
   // State for stop confirmation
   const [showStopConfirmation, setShowStopConfirmation] = useState(false);
-  
-  // Track if model name has been initialized to prevent auto-regeneration
-  const [modelNameInitialized, setModelNameInitialized] = useState(false);
 
   // Load saved configuration and setup progress callback
   useEffect(() => {
@@ -52,12 +48,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       setConfidence(savedSettings.defaultConfidence);
       setConfidenceToggle(savedSettings.defaultConfidenceToggle);
       
-      // Generate new model name only on initial open, not when user clears it
-      if (!modelNameInitialized) {
-        setModelName(SHyFTAConfigService.generateDefaultModelName());
-        setModelNameInitialized(true);
-      }
-      
       // Setup progress callback
       SHyFTAService.setProgressCallback((progressData: SHyFTAProgress) => {
         setProgress(progressData.progress);
@@ -72,13 +62,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       // Cleanup on unmount
       SHyFTAService.setProgressCallback(() => {});
     };
-  }, [isOpen]);
-
-  // Reset model name initialization flag when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setModelNameInitialized(false);
-    }
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -109,7 +92,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
 
   const buildConfig = (): SHyFTAConfig => ({
     shyftaLibFolder,
-    modelName,
+    modelName: 'ZFTATree.m',
     iterations,
     confidence,
     confidenceToggle,
@@ -126,7 +109,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       defaultIterations: iterations,
       defaultConfidence: confidence,
       defaultConfidenceToggle: confidenceToggle,
-      lastUsedModelName: modelName
+      lastUsedModelName: 'ZFTATree.m'
     };
     SHyFTAConfigService.saveSettings(currentSettings);
     
@@ -190,33 +173,14 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   disabled={isRunning}
                   className="folder-name-input"
                 />
-                <button 
-                  type="button" 
-                  onClick={handleSelectFolder}
-                  className="folder-select-btn"
-                  disabled={isRunning}
-                  title="Sfoglia per selezionare cartella"
-                >
-                  📂 Sfoglia
-                </button>
+                
               </div>
               
               <small className="folder-help">
-                💡 Seleziona la cartella SHyFTALib usando il pulsante Sfoglia<br/>
-                🔧 Verrà creato un file .bat per lanciare automaticamente MATLAB nella cartella specificata.
+                💡 Inserisci il path assoluto della cartella SHyFTALib <br/>
               </small>
             </div>
 
-            <div className="form-group">
-              <label>📄 Nome Modello:</label>
-              <input
-                type="text"
-                value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
-                placeholder="initFaultTree_ddmmaaaa_hh_mm_ss.m"
-                disabled={isRunning}
-              />
-            </div>
 
             <div className="form-row">
               <div className="form-group">
@@ -342,7 +306,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
             <button 
               className="run-button primary" 
               onClick={handleRunSimulation}
-              disabled={!shyftaLibFolder || !modelName}
+              disabled={!shyftaLibFolder}
             >
               🚀 Run SHyFTA
             </button>
@@ -358,7 +322,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                 setLogOutput('');
                 handleRunSimulation();
               }}
-              disabled={!shyftaLibFolder || !modelName}
+              disabled={!shyftaLibFolder}
             >
               🔄 Esegui Nuovamente
             </button>
