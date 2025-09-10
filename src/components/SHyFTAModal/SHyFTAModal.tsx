@@ -25,7 +25,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   const [confidence, setConfidence] = useState(0.95);
   const [confidenceToggle, setConfidenceToggle] = useState(true);
   const [resultsTimestep, setResultsTimestep] = useState(1.0);
-  const [resultsBinCount, setResultsBinCount] = useState(100);
   
   // State for simulation
   const [isRunning, setIsRunning] = useState(false);
@@ -54,7 +53,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       setConfidence(savedSettings.defaultConfidence);
       setConfidenceToggle(savedSettings.defaultConfidenceToggle);
       setResultsTimestep(savedSettings.resultsTimestep);
-      setResultsBinCount(savedSettings.resultsBinCount);
       
       // Setup progress callback
       SHyFTAService.setProgressCallback((progressData: SHyFTAProgress) => {
@@ -120,7 +118,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       defaultConfidenceToggle: confidenceToggle,
       lastUsedModelName: 'ZFTATree.m',
       resultsTimestep,
-      resultsBinCount
     };
     SHyFTAConfigService.saveSettings(currentSettings);
     
@@ -169,8 +166,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
         missionTime,
         iterations,
         {
-          timestep: resultsTimestep,
-          binCount: resultsBinCount
+          timestep: resultsTimestep
         }
       );
       
@@ -337,20 +333,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                 </small>
               </div>
 
-              <div className="form-group">
-                <label>📈 Numero Bin PDF:</label>
-                <input
-                  type="number"
-                  value={resultsBinCount}
-                  onChange={(e) => setResultsBinCount(Number(e.target.value))}
-                  min="10"
-                  max="1000"
-                  disabled={isRunning}
-                />
-                <small className="help-text">
-                  Numero di intervalli per istogramma PDF
-                </small>
-              </div>
             </div>
           </div>
 

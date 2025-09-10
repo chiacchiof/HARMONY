@@ -6,7 +6,6 @@ export interface SHyFTASettings {
   lastUsedModelName: string;
   // Impostazioni per l'analisi dei risultati
   resultsTimestep: number; // Delta temporale per calcoli PDF/CDF (default 1 ora)
-  resultsBinCount: number; // Numero di bin per PDF (default 100)
 }
 
 const DEFAULT_SETTINGS: SHyFTASettings = {
@@ -15,8 +14,7 @@ const DEFAULT_SETTINGS: SHyFTASettings = {
   defaultConfidence: 0.95,
   defaultConfidenceToggle: true,
   lastUsedModelName: '',
-  resultsTimestep: 1.0, // 1 ora
-  resultsBinCount: 100
+  resultsTimestep: 1.0 // 1 ora
 };
 
 const STORAGE_KEY = 'shyfta-settings';

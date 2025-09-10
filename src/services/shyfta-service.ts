@@ -303,7 +303,7 @@ toc`;
           
           // Get current settings for results processing
           const settings = SHyFTAConfigService.loadSettings();
-          console.log(`   ⚙️ Settings: timestep=${settings.resultsTimestep}h, bins=${settings.resultsBinCount}`);
+          console.log(`   ⚙️ Settings: timestep=${settings.resultsTimestep}h`);
           
           // Try to load results automatically with configured parameters
           const resultsLoaded = await MatlabResultsService.loadResultsAfterSimulation(
@@ -313,8 +313,7 @@ toc`;
             config.missionTime,
             config.iterations,
             {
-              timestep: settings.resultsTimestep,
-              binCount: settings.resultsBinCount
+              timestep: settings.resultsTimestep
             }
           );
           

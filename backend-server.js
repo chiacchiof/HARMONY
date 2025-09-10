@@ -445,7 +445,7 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
 
 // Parse results.mat file for reliability data
 app.get('/api/results/parse', async (req, res) => {
-  const { resultsPath, components, iterations, missionTime, timestep = 1, binCount = 100 } = req.query;
+  const { resultsPath, components, iterations, missionTime, timestep = 1 } = req.query;
   let responseSent = false; // Flag to prevent double responses
   
   console.log(`📈 Results parsing requested:`);
@@ -453,7 +453,7 @@ app.get('/api/results/parse', async (req, res) => {
   console.log(`   🧩 Components: ${components}`);
   console.log(`   🔄 Iterations: ${iterations}`);
   console.log(`   ⏱️ Mission time: ${missionTime}h`);
-  console.log(`   📊 Config: timestep=${timestep}h, bins=${binCount}`);
+  console.log(`   📊 Config: timestep=${timestep}h`);
   
   if (!resultsPath || !fs.existsSync(resultsPath)) {
     const error = `Results file not found: ${resultsPath}`;
@@ -467,16 +467,38 @@ app.get('/api/results/parse', async (req, res) => {
     const matlabScript = `
 % Script to extract data from results.mat and save as JSON
 try
-    % Load the results file
-    load('${resultsPath.replace(/\\/g, '/')}');
+    % Load only the _tfail variables from the results file
+    fprintf('Loading only _tfail variables from results.mat...\\n');
+    
+    % Parse component names from query first
+    componentNames = split('${components}', ',');
+    tfailVars = {};
+    for i = 1:length(componentNames)
+        compName = strtrim(componentNames{i});
+        if ~isempty(compName)
+            tfailVars{end+1} = [compName '_tfail'];
+        end
+    end
+    
+    % Load only the variables we need
+    if ~isempty(tfailVars)
+        try
+            load('${resultsPath.replace(/\\/g, '/')}', tfailVars{:});
+            fprintf('Successfully loaded %d _tfail variables\\n', length(tfailVars));
+        catch ME
+            fprintf('Warning: Could not load all _tfail variables: %s\\n', ME.message);
+            % Fallback: load all and hope for the best
+            load('${resultsPath.replace(/\\/g, '/')}');
+        end
+    else
+        % Fallback: load all if no components specified
+        load('${resultsPath.replace(/\\/g, '/')}');
+    end
     
     % Initialize results structure
     results = struct();
     results.success = true;
     results.components = {};
-    
-    % Parse component names from query
-    componentNames = split('${components}', ',');
     
     % Extract data for each component using _tfail variables
     fprintf('Looking for _tfail variables for each component...\\n');
@@ -521,19 +543,21 @@ try
                 
                 compData.cdfData = struct('time', timePoints, 'probability', cdfData);
                 
-                % PDF calculation using histogram
-                if ~isempty(validTimes) && length(validTimes) > 1
-                    [counts, centers] = hist(validTimes, ${binCount});
-                    binWidth = (max(validTimes) - min(validTimes)) / ${binCount};
-                    if binWidth > 0
-                        densities = counts / (${iterations} * binWidth);
-                        compData.pdfData = struct('time', centers, 'density', densities);
-                    else
-                        compData.pdfData = struct('time', [], 'density', []);
+                % PDF calculation using same timestep as CDF
+                pdfTimePoints = 0:${timestep}:${missionTime};
+                pdfData = zeros(1, length(pdfTimePoints));
+                
+                if ~isempty(validTimes)
+                    % Count failures in each time bin
+                    for i = 1:length(pdfTimePoints)-1
+                        binStart = pdfTimePoints(i);
+                        binEnd = pdfTimePoints(i+1);
+                        failuresInBin = sum(validTimes >= binStart & validTimes < binEnd);
+                        pdfData(i) = failuresInBin / (${iterations} * ${timestep});
                     end
-                else
-                    compData.pdfData = struct('time', [], 'density', []);
                 end
+                
+                compData.pdfData = struct('time', pdfTimePoints, 'density', pdfData);
                 
                 results.components.(compName) = compData;
             else

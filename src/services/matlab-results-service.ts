@@ -28,7 +28,6 @@ export interface SimulationResults {
 // Configurazione per l'elaborazione dei risultati
 export interface ResultsProcessingConfig {
   timestep: number; // Delta temporale per i calcoli (default 1 ora)
-  binCount: number; // Numero di bin per il calcolo della PDF (default 100)
   maxTime?: number; // Tempo massimo per i grafici (default mission time)
 }
 
@@ -58,7 +57,7 @@ export class MatlabResultsService {
     gates: Gate[],
     missionTime: number,
     iterations: number,
-    config: ResultsProcessingConfig = { timestep: 1, binCount: 100 }
+    config: ResultsProcessingConfig = { timestep: 1 }
   ): Promise<SimulationResults> {
     
     console.log(`📁 Loading real results from: ${filePath}`);
@@ -78,7 +77,6 @@ export class MatlabResultsService {
           iterations: iterations.toString(),
           missionTime: missionTime.toString(),
           timestep: config.timestep.toString(),
-          binCount: config.binCount.toString()
         }).toString()
       );
       
@@ -242,7 +240,7 @@ export class MatlabResultsService {
     gates: Gate[],
     missionTime: number,
     iterations: number,
-    config: ResultsProcessingConfig = { timestep: 1, binCount: 100 }
+    config: ResultsProcessingConfig = { timestep: 1 }
   ): Promise<boolean> {
     try {
       const resultsPath = `${shyftaPath}/output/results.mat`;
@@ -250,7 +248,7 @@ export class MatlabResultsService {
       console.log('🔍 [MatlabResultsService] Loading results after simulation...');
       console.log(`   📁 Results path: ${resultsPath}`);
       console.log(`   📊 Components: ${events.length} events, ${gates.length} gates`);
-      console.log(`   ⚙️ Config: timestep=${config.timestep}h, binCount=${config.binCount}`);
+      console.log(`   ⚙️ Config: timestep=${config.timestep}h`);
       
  
       
@@ -276,9 +274,6 @@ export class MatlabResultsService {
   static validateProcessingConfig(config: ResultsProcessingConfig): string | null {
     if (config.timestep <= 0) {
       return 'Timestep deve essere maggiore di 0';
-    }
-    if (config.binCount <= 0) {
-      return 'Numero di bin deve essere maggiore di 0';
     }
     if (config.maxTime && config.maxTime <= 0) {
       return 'Tempo massimo deve essere maggiore di 0';
