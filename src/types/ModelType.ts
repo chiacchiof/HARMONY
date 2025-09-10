@@ -30,13 +30,6 @@ export function createModelMetadata(modelType: 'fault-tree' | 'markov-chain'): M
   };
 }
 
-export function updateModelMetadata(metadata: ModelMetadata): ModelMetadata {
-  return {
-    ...metadata,
-    lastModified: new Date().toISOString()
-  };
-}
-
 export function detectModelType(data: any): 'fault-tree' | 'markov-chain' | 'unknown' {
   if (data && typeof data === 'object') {
     // Check for metadata

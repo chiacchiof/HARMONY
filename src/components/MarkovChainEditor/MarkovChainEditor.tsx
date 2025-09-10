@@ -6,12 +6,15 @@ import MarkovCentralPanel from '../MarkovCentralPanel/MarkovCentralPanel';
 import RightPanel from '../RightPanel/RightPanel';
 import MarkovStateModal from '../MarkovStateModal/MarkovStateModal';
 import MarkovTransitionModal from '../MarkovTransitionModal/MarkovTransitionModal';
+import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import { MarkovChainModel, MarkovState, MarkovTransition } from '../../types/MarkovChain';
 import { FileService } from '../../services/file-service';
+import { useLLMConfig } from '../../contexts/LLMContext';
 import './MarkovChainEditor.css';
 
 const MarkovChainEditor: React.FC = () => {
   const navigate = useNavigate();
+  const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
   const [markovChainModel, setMarkovChainModel] = useState<MarkovChainModel>({
     states: [],
     transitions: []
@@ -258,12 +261,13 @@ ${markovChainModel.transitions.map(transition => {
   }, []);
 
   const handleShowLLMConfig = useCallback(() => {
-    alert('LLM configuration not available for Markov chains yet');
-  }, []);
+    setShowLLMConfigModal(true);
+  }, [setShowLLMConfigModal]);
 
-  const handleShowSHyFTA = useCallback(() => {
-    alert('SHyFTA integration not available for Markov chains');
-  }, []);
+  const handleLLMConfigChange = useCallback((newConfig: any) => {
+    updateLLMConfig(newConfig);
+  }, [updateLLMConfig]);
+
 
   const handleNewModel = useCallback(() => {
     if (markovChainModel.states.length > 0 || markovChainModel.transitions.length > 0) {
@@ -385,6 +389,12 @@ ${markovChainModel.transitions.map(transition => {
           isDarkMode={isDarkMode}
         />
       )}
+
+      <LLMConfigModal
+        isOpen={showLLMConfigModal}
+        onClose={() => setShowLLMConfigModal(false)}
+        onConfigChange={handleLLMConfigChange}
+      />
 
     </div>
   );

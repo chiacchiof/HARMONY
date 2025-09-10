@@ -1,6 +1,6 @@
 import { FaultTreeModel } from '../types/FaultTree';
 import { MarkovChainModel } from '../types/MarkovChain';
-import { ModelWithMetadata, createModelMetadata, updateModelMetadata, detectModelType } from '../types/ModelType';
+import { ModelWithMetadata, createModelMetadata, detectModelType } from '../types/ModelType';
 
 export interface FileExportOptions {
   format: 'json' | 'xml' | 'csv';

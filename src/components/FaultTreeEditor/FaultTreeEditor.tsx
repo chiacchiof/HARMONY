@@ -14,12 +14,13 @@ import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree';
 import { FaultTreeModification } from '../../types/ChatIntegration';
 import { FileService } from '../../services/file-service';
-import { LLMProviders, loadLLMConfig, saveLLMConfig } from '../../config/llm-config';
+import { useLLMConfig } from '../../contexts/LLMContext';
 import { useDeviceType } from '../../hooks/useDeviceType';
 import './FaultTreeEditor.css';
 
 const FaultTreeEditor: React.FC = () => {
   const navigate = useNavigate();
+  const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
   const [faultTreeModel, setFaultTreeModel] = useState<FaultTreeModel>({
     events: [],
     gates: [],
@@ -29,14 +30,12 @@ const FaultTreeEditor: React.FC = () => {
   const [selectedElement, setSelectedElement] = useState<BaseEvent | Gate | null>(null);
   const [showParameterModal, setShowParameterModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [showLLMConfigModal, setShowLLMConfigModal] = useState(false);
   const [showMatlabExportModal, setShowMatlabExportModal] = useState(false);
   const [showSHyFTAModal, setShowSHyFTAModal] = useState(false);
   const [showNewModelConfirmation, setShowNewModelConfirmation] = useState(false);
   const [showComponentResultsModal, setShowComponentResultsModal] = useState(false);
   const [selectedResultsElementId, setSelectedResultsElementId] = useState<string | null>(null);
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
-  const [, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
   const [isDarkMode, setIsDarkMode] = useState(false);
   
   // Stato per tenere traccia del file aperto
@@ -342,7 +341,7 @@ const FaultTreeEditor: React.FC = () => {
   // Gestione apertura LLM Config Modal
   const handleShowLLMConfig = useCallback(() => {
     setShowLLMConfigModal(true);
-  }, []);
+  }, [setShowLLMConfigModal]);
 
   // Gestione apertura MATLAB Export Modal
   const handleShowMatlabExport = useCallback(() => {
@@ -360,10 +359,9 @@ const FaultTreeEditor: React.FC = () => {
   }, []);
 
   // Gestione salvataggio configurazione LLM
-  const handleLLMConfigChange = useCallback((newConfig: LLMProviders) => {
-    setLlmConfig(newConfig);
-    saveLLMConfig(newConfig);
-  }, []);
+  const handleLLMConfigChange = useCallback((newConfig: any) => {
+    updateLLMConfig(newConfig);
+  }, [updateLLMConfig]);
 
   // Gestione toggle dark mode
   const handleToggleDarkMode = useCallback(() => {

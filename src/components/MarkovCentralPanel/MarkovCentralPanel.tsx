@@ -56,7 +56,7 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const { project } = useReactFlow();
+  const reactFlowInstance = useReactFlow();
 
   // Convert Markov chain model to React Flow nodes and edges
   const convertToReactFlowData = useMemo(() => {
@@ -147,14 +147,25 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
 
   // Handle panel clicks for component placement
   const handlePaneClick = useCallback((event: React.MouseEvent) => {
-    if (componentToPlace) {
-      const position = project({
-        x: event.clientX - 200, // Adjust for panel offset
-        y: event.clientY - 100
+    if (componentToPlace && reactFlowInstance) {
+      // Usa screenToFlowPosition per ottenere la posizione corretta considerando zoom e pan
+      const flowPosition = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY
       });
-      onPanelClick(position);
+      
+      // Dimensioni approssimative per centrare il componente
+      const componentSize = { width: 120, height: 40 }; // MarkovState tipico
+      
+      // Centra il componente rispetto al cursore
+      const centeredPosition = {
+        x: flowPosition.x - (componentSize.width / 2),
+        y: flowPosition.y - (componentSize.height / 2)
+      };
+      
+      onPanelClick(centeredPosition);
     }
-  }, [componentToPlace, project, onPanelClick]);
+  }, [componentToPlace, onPanelClick, reactFlowInstance]);
 
   const proOptions = { hideAttribution: true };
 
