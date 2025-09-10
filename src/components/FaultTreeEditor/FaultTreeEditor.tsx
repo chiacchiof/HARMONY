@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MenuBar from '../MenuBar/MenuBar';
 import LeftPanel from '../LeftPanel/LeftPanel';
 import CentralPanel from '../CentralPanel/CentralPanel';
@@ -18,6 +19,7 @@ import { useDeviceType } from '../../hooks/useDeviceType';
 import './FaultTreeEditor.css';
 
 const FaultTreeEditor: React.FC = () => {
+  const navigate = useNavigate();
   const [faultTreeModel, setFaultTreeModel] = useState<FaultTreeModel>({
     events: [],
     gates: [],
@@ -235,37 +237,30 @@ const FaultTreeEditor: React.FC = () => {
 
   // Gestione salvataggio file
   const handleSaveFile = useCallback(async () => {
-    // Modalità 1: Se abbiamo un file aperto con fileHandle, sovrascriviamo quello
-    if (openedFile && openedFile.fileHandle) {
-      try {
-        await FileService.overwriteExistingFile(faultTreeModel, openedFile.fileHandle);
-        alert('File sovrascritto con successo!');
-      } catch (error) {
-        alert(`Errore durante la sovrascrittura: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
-      }
-    } else {
-      // Modalità 2: Nuovo file o file aperto senza fileHandle, apri il file explorer
-      setShowSaveModal(true);
+    try {
+      const result = await FileService.saveModelWithMetadata(faultTreeModel, 'fault-tree');
+      setOpenedFile(result);
+      alert('Fault Tree salvato con successo!');
+    } catch (error) {
+      alert(`Errore durante il salvataggio: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     }
-  }, [faultTreeModel, openedFile]);
+  }, [faultTreeModel]);
 
   // Gestione apertura file
   const handleOpenFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       try {
-        const model = await FileService.openFaultTree(file);
-        setFaultTreeModel(model);
-        updateCountersFromModel(model); // Aggiorna i contatori
+        const { model } = await FileService.openModelWithValidation(file, 'fault-tree');
+        setFaultTreeModel(model as FaultTreeModel);
+        updateCountersFromModel(model as FaultTreeModel);
         
-        // Salva le informazioni del file aperto (senza fileHandle per il fallback)
         setOpenedFile({
           url: URL.createObjectURL(file),
           filename: file.name
-          // Nota: senza fileHandle, il salvataggio userà il file explorer
         });
         
-        alert('File caricato con successo!');
+        alert('Fault Tree caricato con successo!');
       } catch (error) {
         alert(`Errore nel caricamento del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
       }
@@ -286,18 +281,17 @@ const FaultTreeEditor: React.FC = () => {
         });
         
         const file = await fileHandle.getFile();
-        const model = await FileService.openFaultTree(file);
-        setFaultTreeModel(model);
-        updateCountersFromModel(model); // Aggiorna i contatori
+        const { model } = await FileService.openModelWithValidation(file, 'fault-tree');
+        setFaultTreeModel(model as FaultTreeModel);
+        updateCountersFromModel(model as FaultTreeModel);
         
-        // Salva le informazioni del file aperto con il fileHandle per la sovrascrittura
         setOpenedFile({
           url: URL.createObjectURL(file),
           filename: file.name,
           fileHandle: fileHandle
         });
         
-        alert('File caricato con successo!');
+        alert('Fault Tree caricato con successo!');
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           // L'utente ha annullato la selezione
@@ -375,6 +369,19 @@ const FaultTreeEditor: React.FC = () => {
   const handleToggleDarkMode = useCallback(() => {
     setIsDarkMode(prev => !prev);
   }, []);
+
+  // Gestione navigazione tra editor
+  const handleNavigateToMarkov = useCallback(() => {
+    navigate('/markov-chain-editor');
+  }, [navigate]);
+
+  const handleNavigateToFaultTree = useCallback(() => {
+    // Already on fault tree editor, no need to navigate
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    navigate('/');
+  }, [navigate]);
 
   // Gestione toggle pannello sinistro
   const handleToggleLeftPanel = useCallback(() => {
@@ -613,7 +620,7 @@ const FaultTreeEditor: React.FC = () => {
 
   return (
     <div className={`fault-tree-editor ${isDarkMode ? 'dark-mode' : ''}`}>
-              <MenuBar
+      <MenuBar
           onSave={handleSaveFile}
           onOpenWithFileSystem={handleOpenFileWithFileSystem}
           onExportCode={handleExportCode}
@@ -627,6 +634,10 @@ const FaultTreeEditor: React.FC = () => {
           onToggleDarkMode={handleToggleDarkMode}
           onNewModel={handleNewModel}
           openedFile={openedFile}
+          currentEditor="fault-tree"
+          onNavigateToFaultTree={handleNavigateToFaultTree}
+          onNavigateToMarkov={handleNavigateToMarkov}
+          onLogout={handleLogout}
         />
       
       <div className={`editor-content ${isLeftPanelCollapsed ? 'left-panel-collapsed' : ''} ${isRightPanelCollapsed ? 'right-panel-collapsed' : ''}`}>

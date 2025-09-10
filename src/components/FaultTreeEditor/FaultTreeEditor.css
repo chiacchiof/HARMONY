@@ -13,7 +13,7 @@
 .editor-content {
   flex: 1;
   display: flex;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 60px); /* Solo altezza MenuBar */
   margin-right: 350px; /* Spazio per il pannello destro fisso */
   padding-left: 280px; /* Spazio per il pannello sinistro fisso */
   transition: padding-left 0.3s ease;

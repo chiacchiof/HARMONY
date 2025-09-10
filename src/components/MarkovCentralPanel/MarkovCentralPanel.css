@@ -1,0 +1,154 @@
+.markov-central-panel {
+  flex: 1;
+  height: 100%;
+  background-color: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+.markov-central-panel.dark-mode {
+  background-color: #1a1a1a;
+}
+
+.markov-central-panel .react-flow {
+  background-color: transparent;
+}
+
+.markov-central-panel.placing-component {
+  cursor: crosshair;
+}
+
+.placement-hint {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 123, 255, 0.9);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* React Flow node and edge styling */
+.react-flow__node {
+  cursor: move;
+}
+
+.react-flow__node.selected {
+  box-shadow: 0 0 0 2px #007bff;
+}
+
+.react-flow__edge {
+  pointer-events: all;
+}
+
+.react-flow__edge-path {
+  cursor: pointer;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #007bff;
+  stroke-width: 3;
+}
+
+/* Connection line styling */
+.react-flow__connection-line {
+  stroke: #007bff;
+  stroke-width: 2;
+  stroke-dasharray: 5,5;
+}
+
+/* Handle styling */
+.react-flow__handle {
+  background: transparent;
+  border: none;
+  width: 8px;
+  height: 8px;
+}
+
+.react-flow__handle-connecting {
+  background: #007bff;
+}
+
+.react-flow__handle-valid {
+  background: #28a745;
+}
+
+/* Selection box styling */
+.react-flow__selection {
+  background: rgba(0, 123, 255, 0.1);
+  border: 1px solid #007bff;
+}
+
+/* Controls styling */
+.react-flow__controls {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.markov-central-panel.dark-mode .react-flow__controls {
+  background: rgba(42, 42, 42, 0.9);
+  border: 1px solid #444;
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  padding: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.markov-central-panel.dark-mode .react-flow__controls-button {
+  color: #ffffff;
+}
+
+.react-flow__controls-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.markov-central-panel.dark-mode .react-flow__controls-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Minimap styling */
+.react-flow__minimap {
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.markov-central-panel.dark-mode .react-flow__minimap {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .placement-hint {
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    text-align: center;
+  }
+
+  .react-flow__controls {
+    bottom: 10px;
+    right: 10px;
+  }
+
+  .react-flow__minimap {
+    display: none;
+  }
+}

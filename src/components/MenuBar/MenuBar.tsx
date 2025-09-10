@@ -10,11 +10,16 @@ interface MenuBarProps {
   onExportCSV: () => void | Promise<void>;
   onExportMatlab: () => void;
   onShowLLMConfig: () => void;
-  onShowSHyFTA: () => void;
+  onShowSHyFTA?: () => void;
+  onShowMSolver?: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
   onNewModel: () => void;
   openedFile?: { filename: string; fileHandle?: FileSystemFileHandle } | null;
+  currentEditor?: 'fault-tree' | 'markov-chain';
+  onNavigateToFaultTree?: () => void;
+  onNavigateToMarkov?: () => void;
+  onLogout?: () => void;
 }
 
 const MenuBar: React.FC<MenuBarProps> = ({ 
@@ -27,10 +32,15 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onExportMatlab,
   onShowLLMConfig,
   onShowSHyFTA,
+  onShowMSolver,
   isDarkMode,
   onToggleDarkMode,
   onNewModel,
-  openedFile
+  openedFile,
+  currentEditor,
+  onNavigateToFaultTree,
+  onNavigateToMarkov,
+  onLogout
 }) => {
   const [showFileMenu, setShowFileMenu] = useState(false);
 
@@ -47,13 +57,26 @@ const MenuBar: React.FC<MenuBarProps> = ({
   return (
     <div className={`menu-bar ${isDarkMode ? 'dark-mode' : ''}`}>
               <div className="menu-section">
-          <span className="menu-title">🌳 Dynamic Fault Tree Editor</span>
-          {openedFile && (
-            <div className="file-info">
-              <span>📁 File aperto: {openedFile.filename}</span>
-            </div>
-          )}
+        <div className="editor-navigation">
+          <button 
+            className={`editor-nav-button ${currentEditor === 'fault-tree' ? 'active' : ''}`}
+            onClick={onNavigateToFaultTree}
+          >
+            🌳 Fault Tree Editor
+          </button>
+          <button 
+            className={`editor-nav-button ${currentEditor === 'markov-chain' ? 'active' : ''}`}
+            onClick={onNavigateToMarkov}
+          >
+            🔗 Markov Chain Editor
+          </button>
         </div>
+        {openedFile && (
+          <div className="file-info">
+            <span>📁 File aperto: {openedFile.filename}</span>
+          </div>
+        )}
+      </div>
       
       <div className="menu-section">
         <div className="menu-dropdown"> 
@@ -109,12 +132,28 @@ const MenuBar: React.FC<MenuBarProps> = ({
           ⚙️ LLM
         </button>
 
-        <button className="menu-button shyfta" onClick={onShowSHyFTA}>
+        <button className="menu-button dark-toggle" onClick={onToggleDarkMode}>
+          {isDarkMode ? '☀️' : '🌙'} {isDarkMode ? 'Light' : 'Dark'}
+        </button>
+
+        <button 
+          className={`menu-button shyfta ${currentEditor !== 'fault-tree' ? 'disabled' : ''}`}
+          onClick={currentEditor === 'fault-tree' ? onShowSHyFTA : undefined}
+          disabled={currentEditor !== 'fault-tree'}
+        >
           🔬 SHyFTA
         </button>
 
-        <button className="menu-button dark-toggle" onClick={onToggleDarkMode}>
-          {isDarkMode ? '☀️' : '🌙'} {isDarkMode ? 'Light' : 'Dark'}
+        <button 
+          className={`menu-button msolver ${currentEditor !== 'markov-chain' ? 'disabled' : ''}`}
+          onClick={currentEditor === 'markov-chain' ? onShowMSolver : undefined}
+          disabled={currentEditor !== 'markov-chain'}
+        >
+          📊 MSolver
+        </button>
+
+        <button className="menu-button logout" onClick={onLogout}>
+          🚪 Logout
         </button>
       </div>
 

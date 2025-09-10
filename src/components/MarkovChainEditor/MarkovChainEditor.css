@@ -1,0 +1,47 @@
+.markov-chain-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f5f5;
+  overflow: hidden;
+}
+
+.markov-chain-editor.dark-mode {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.editor-content {
+  flex: 1;
+  display: flex;
+  height: calc(100vh - 60px); /* Solo altezza MenuBar */
+  margin-right: 350px; /* Spazio per il pannello destro fisso */
+  padding-left: 280px; /* Spazio per il pannello sinistro fisso */
+  transition: padding-left 0.3s ease;
+}
+
+.editor-content.left-panel-collapsed {
+  padding-left: 60px; /* Spazio per il pannello sinistro collassato */
+}
+
+.editor-content.right-panel-collapsed {
+  margin-right: 60px; /* Spazio per il pannello destro collassato */
+}
+
+.editor-content.left-panel-collapsed.right-panel-collapsed {
+  padding-left: 60px;
+  margin-right: 60px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .editor-content {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .markov-chain-editor {
+    overflow: auto;
+  }
+}

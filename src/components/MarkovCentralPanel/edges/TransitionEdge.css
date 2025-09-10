@@ -1,0 +1,150 @@
+.transition-edge {
+  fill: none;
+  stroke-width: 2;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.transition-edge:hover {
+  stroke-width: 3;
+  filter: brightness(1.2);
+}
+
+.transition-edge.selected {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px rgba(0, 123, 255, 0.6));
+}
+
+.transition-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 0.8rem;
+}
+
+.label-content {
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #007bff;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+}
+
+.transition-label.dark-mode .label-content {
+  background: rgba(42, 42, 42, 0.95);
+  border-color: #007bff;
+  color: #ffffff;
+}
+
+.label-content:hover {
+  background: rgba(0, 123, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.transition-label.dark-mode .label-content:hover {
+  background: rgba(0, 123, 255, 0.2);
+}
+
+.probability-text {
+  font-weight: 600;
+  color: #007bff;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.transition-label.dark-mode .probability-text {
+  color: #4dabf7;
+}
+
+.delete-transition-button {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #dc3545;
+  color: white;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.transition-label:hover .delete-transition-button {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.transition-label.dark-mode .delete-transition-button {
+  border-color: #333333;
+}
+
+.delete-transition-button:hover {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+/* Animation for new transitions */
+.transition-edge {
+  animation: fadeInTransition 0.5s ease-out;
+}
+
+@keyframes fadeInTransition {
+  from {
+    opacity: 0;
+    stroke-dasharray: 5, 5;
+    stroke-dashoffset: 10;
+  }
+  to {
+    opacity: 1;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Different styles for different distribution types */
+.transition-edge[data-distribution="exponential"] {
+  stroke-dasharray: 5, 3;
+}
+
+.transition-edge[data-distribution="weibull"] {
+  stroke-dasharray: 10, 2, 2, 2;
+}
+
+.transition-edge[data-distribution="normal"] {
+  stroke-dasharray: 8, 4;
+}
+
+.transition-edge[data-distribution="constant"] {
+  stroke-dasharray: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .transition-label {
+    font-size: 0.7rem;
+  }
+  
+  .probability-text {
+    font-size: 0.65rem;
+  }
+  
+  .delete-transition-button {
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+  }
+  
+  .label-content {
+    padding: 0.2rem 0.4rem;
+  }
+}

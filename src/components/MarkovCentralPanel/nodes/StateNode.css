@@ -1,0 +1,185 @@
+.state-node {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+
+.state-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: 3px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  cursor: move;
+}
+
+.state-node.dark-mode .state-circle {
+  border: 3px solid #333333;
+}
+
+.state-node:hover .state-circle {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.state-node.selected .state-circle {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.state-node.absorbing .state-circle {
+  background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+}
+
+.state-content {
+  text-align: center;
+  color: white;
+  font-weight: bold;
+}
+
+.state-name {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.state-reward {
+  font-size: 0.7rem;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+/* Absorbing state indicator */
+.absorbing-indicator {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #dc3545;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.absorbing-ring {
+  width: 8px;
+  height: 8px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: transparent;
+}
+
+/* Delete button */
+.delete-button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #dc3545;
+  color: white;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.state-node:hover .delete-button {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.state-node.dark-mode .delete-button {
+  border-color: #333333;
+}
+
+.delete-button:hover {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+/* Connection handle styling */
+.react-flow__handle {
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.state-node:hover .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__handle-connecting {
+  opacity: 1 !important;
+}
+
+/* Dark mode adjustments */
+.state-node.dark-mode .state-circle {
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+}
+
+.state-node.dark-mode:hover .state-circle {
+  box-shadow: 0 6px 16px rgba(255, 255, 255, 0.15);
+}
+
+/* Animation for new states */
+.state-node {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .state-circle {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .state-name {
+    font-size: 1rem;
+  }
+  
+  .state-reward {
+    font-size: 0.6rem;
+  }
+  
+  .delete-button {
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
+  
+  .absorbing-indicator {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .absorbing-ring {
+    width: 6px;
+    height: 6px;
+  }
+}

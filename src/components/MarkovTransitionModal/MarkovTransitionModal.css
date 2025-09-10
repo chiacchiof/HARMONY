@@ -1,0 +1,358 @@
+.markov-transition-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.markov-transition-modal.dark-mode {
+  background: #2a2a2a;
+  color: #ffffff;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.markov-transition-modal.dark-mode .modal-header {
+  border-bottom-color: #444;
+  background: #333;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.markov-transition-modal.dark-mode .modal-header h2 {
+  color: #ffffff;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.markov-transition-modal.dark-mode .close-button {
+  color: #ccc;
+}
+
+.markov-transition-modal.dark-mode .close-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.modal-body {
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.markov-transition-modal.dark-mode .form-group label {
+  color: #ffffff;
+}
+
+.required {
+  color: #dc3545;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+  box-sizing: border-box;
+}
+
+.markov-transition-modal.dark-mode .form-group input,
+.markov-transition-modal.dark-mode .form-group select {
+  background: #404040;
+  border-color: #555;
+  color: #ffffff;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group input.error,
+.form-group select.error {
+  border-color: #dc3545;
+}
+
+.error-message {
+  display: block;
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.help-text {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+.markov-transition-modal.dark-mode .help-text {
+  color: #ccc;
+}
+
+/* Distribution type selector */
+.form-group select {
+  cursor: pointer;
+}
+
+.form-group select option {
+  padding: 0.5rem;
+}
+
+/* Transition information section */
+.transition-info {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.markov-transition-modal.dark-mode .transition-info {
+  background: #404040;
+  border-color: #555;
+}
+
+.transition-info h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #666;
+}
+
+.markov-transition-modal.dark-mode .transition-info h4 {
+  color: #ccc;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-row .label {
+  font-weight: 600;
+  color: #333;
+}
+
+.markov-transition-modal.dark-mode .info-row .label {
+  color: #ffffff;
+}
+
+.info-row .value {
+  color: #666;
+  font-family: monospace;
+  background: rgba(0, 123, 255, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.markov-transition-modal.dark-mode .info-row .value {
+  color: #ccc;
+  background: rgba(0, 123, 255, 0.2);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.markov-transition-modal.dark-mode .modal-footer {
+  border-top-color: #444;
+  background: #333;
+}
+
+.button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.button.secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.button.secondary:hover {
+  background: #5a6268;
+}
+
+.button.primary {
+  background: #007bff;
+  color: white;
+}
+
+.button.primary:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.keyboard-shortcuts {
+  padding: 0.5rem 2rem;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.markov-transition-modal.dark-mode .keyboard-shortcuts {
+  background: #333;
+  border-top-color: #444;
+}
+
+.keyboard-shortcuts small {
+  color: #666;
+}
+
+.markov-transition-modal.dark-mode .keyboard-shortcuts small {
+  color: #ccc;
+}
+
+kbd {
+  background: #e9ecef;
+  border: 1px solid #adb5bd;
+  border-radius: 3px;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
+.markov-transition-modal.dark-mode kbd {
+  background: #555;
+  border-color: #777;
+  color: #ffffff;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .markov-transition-modal {
+    max-height: 95vh;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .modal-body {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .button {
+    width: 100%;
+  }
+
+  .transition-info {
+    margin-top: 1.5rem;
+    padding: 1rem;
+  }
+
+  .info-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .info-row .value {
+    align-self: flex-start;
+  }
+}

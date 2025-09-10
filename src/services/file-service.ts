@@ -1,4 +1,6 @@
 import { FaultTreeModel } from '../types/FaultTree';
+import { MarkovChainModel } from '../types/MarkovChain';
+import { ModelWithMetadata, createModelMetadata, updateModelMetadata, detectModelType } from '../types/ModelType';
 
 export interface FileExportOptions {
   format: 'json' | 'xml' | 'csv';
@@ -7,6 +9,67 @@ export interface FileExportOptions {
 }
 
 export class FileService {
+  
+  /**
+   * Salva un modello con metadati in formato JSON
+   */
+  static async saveModelWithMetadata(model: FaultTreeModel | MarkovChainModel, modelType: 'fault-tree' | 'markov-chain', filename?: string): Promise<{ url: string; filename: string; fileHandle?: FileSystemFileHandle }> {
+    const modelWithMetadata: ModelWithMetadata = {
+      _metadata: createModelMetadata(modelType),
+      ...model
+    } as ModelWithMetadata;
+    
+    const dataStr = JSON.stringify(modelWithMetadata, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const prefix = modelType === 'fault-tree' ? 'fault-tree' : 'markov-chain';
+    const defaultName = filename || `${prefix}-${new Date().toISOString().split('T')[0]}.json`;
+    
+    // Prova a utilizzare l'API File System Access se disponibile
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'JSON Files',
+            accept: {
+              'application/json': ['.json']
+            }
+          }]
+        });
+        
+        const writable = await fileHandle.createWritable();
+        await writable.write(dataBlob);
+        await writable.close();
+        
+        return {
+          url: '',
+          filename: defaultName,
+          fileHandle
+        };
+      } catch (error) {
+        if ((error as any).name === 'AbortError') {
+          throw new Error('Salvataggio annullato dall\'utente');
+        }
+        console.error('Errore durante il salvataggio:', error);
+        throw error;
+      }
+    }
+    
+    // Fallback per browser non supportati
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = defaultName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    return {
+      url,
+      filename: defaultName
+    };
+  }
   
   /**
    * Salva il fault tree in formato JSON con selezione cartella
@@ -102,7 +165,67 @@ export class FileService {
   }
 
   /**
-   * Apre un file JSON e restituisce il modello
+   * Apre un file JSON e restituisce il modello con validazione del tipo
+   */
+  static async openModelWithValidation(file: File, expectedType: 'fault-tree' | 'markov-chain'): Promise<{ model: FaultTreeModel | MarkovChainModel; actualType: 'fault-tree' | 'markov-chain' }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          const data = JSON.parse(content);
+          
+          const detectedType = detectModelType(data);
+          
+          if (detectedType === 'unknown') {
+            reject(new Error('Formato file non riconosciuto. Il file deve contenere un modello Fault Tree o Markov Chain valido.'));
+            return;
+          }
+          
+          if (detectedType !== expectedType) {
+            const typeNames = {
+              'fault-tree': 'Fault Tree',
+              'markov-chain': 'Markov Chain'
+            };
+            reject(new Error(`Tipo di modello errato. Hai caricato un modello ${typeNames[detectedType]}, ma ti trovi nell'editor ${typeNames[expectedType]}.`));
+            return;
+          }
+          
+          // Rimuovi i metadati dal modello per compatibilità
+          const { _metadata, ...model } = data;
+          
+          // Validazione specifica per tipo
+          if (detectedType === 'fault-tree') {
+            if (!model.events || !model.gates || !model.connections) {
+              throw new Error('Formato Fault Tree non valido: mancano eventi, porte o connessioni');
+            }
+          } else if (detectedType === 'markov-chain') {
+            if (!model.states || !model.transitions) {
+              throw new Error('Formato Markov Chain non valido: mancano stati o transizioni');
+            }
+          }
+          
+          resolve({ model: model as FaultTreeModel | MarkovChainModel, actualType: detectedType });
+        } catch (error) {
+          if (error instanceof Error) {
+            reject(error);
+          } else {
+            reject(new Error(`Errore nel parsing del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`));
+          }
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Errore nella lettura del file'));
+      };
+      
+      reader.readAsText(file);
+    });
+  }
+  
+  /**
+   * Apre un file JSON e restituisce il modello (metodo legacy)
    */
   static async openFaultTree(file: File): Promise<FaultTreeModel> {
     return new Promise((resolve, reject) => {
