@@ -15,7 +15,15 @@
 }
 
 .markov-central-panel.placing-component {
-  cursor: crosshair;
+  cursor: crosshair !important;
+}
+
+.markov-central-panel.placing-component * {
+  cursor: crosshair !important;
+}
+
+.markov-central-panel.placing-component .react-flow__pane {
+  cursor: crosshair !important;
 }
 
 .placement-hint {
@@ -52,8 +60,9 @@
 
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: #007bff;
-  stroke-width: 3;
+  stroke-width: 4;
 }
+
 
 /* Connection line styling */
 .react-flow__connection-line {

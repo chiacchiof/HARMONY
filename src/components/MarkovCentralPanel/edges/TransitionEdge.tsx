@@ -35,6 +35,13 @@ const TransitionEdge: React.FC<EdgeProps<TransitionEdgeData>> = ({
     targetPosition,
   });
 
+  // Calculate arrow position (75% along the path towards target)
+  const arrowX = sourceX + (targetX - sourceX) * 0.75;
+  const arrowY = sourceY + (targetY - sourceY) * 0.75;
+  
+  // Calculate arrow angle based on direction
+  const angle = Math.atan2(targetY - sourceY, targetX - sourceX) * (180 / Math.PI);
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onTransitionClick(transition);
@@ -76,6 +83,15 @@ const TransitionEdge: React.FC<EdgeProps<TransitionEdgeData>> = ({
           strokeWidth: selected ? 3 : 2,
           cursor: 'pointer'
         }}
+      />
+      
+      {/* Direction arrow */}
+      <polygon
+        points="0,-6 12,0 0,6 2,0"
+        transform={`translate(${arrowX},${arrowY}) rotate(${angle})`}
+        fill={selected ? '#007bff' : (isDarkMode ? '#ffffff' : '#333333')}
+        onClick={handleClick}
+        style={{ cursor: 'pointer' }}
       />
       
       <EdgeLabelRenderer>

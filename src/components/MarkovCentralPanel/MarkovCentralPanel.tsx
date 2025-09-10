@@ -75,32 +75,34 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
       selectable: !disableDeletion
     }));
 
-    const reactFlowEdges: Edge[] = markovChainModel.transitions.map(transition => ({
-      id: transition.id,
-      source: transition.source,
-      target: transition.target,
-      sourceHandle: transition.sourceHandle,
-      targetHandle: transition.targetHandle,
-      type: 'transitionEdge',
-      data: {
-        transition,
-        onTransitionClick: onElementClick,
-        onDeleteTransition: onDeleteElement,
-        isDarkMode,
-        disableDeletion
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        width: 20,
-        height: 20,
-        color: isDarkMode ? '#ffffff' : '#000000'
-      },
-      animated: true,
-      style: {
-        stroke: isDarkMode ? '#ffffff' : '#000000',
-        strokeWidth: 2
-      }
-    }));
+    const reactFlowEdges: Edge[] = markovChainModel.transitions.map(transition => {
+      const edge = {
+        id: transition.id,
+        source: transition.source,
+        target: transition.target,
+        sourceHandle: transition.sourceHandle,
+        targetHandle: transition.targetHandle,
+        type: 'transitionEdge',
+        data: {
+          transition,
+          onTransitionClick: onElementClick,
+          onDeleteTransition: onDeleteElement,
+          isDarkMode,
+          disableDeletion
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+          color: isDarkMode ? '#ffffff' : '#333333'
+        },
+        style: {
+          stroke: isDarkMode ? '#ffffff' : '#333333',
+          strokeWidth: 2
+        }
+      };
+      return edge;
+    });
 
     return { nodes: reactFlowNodes, edges: reactFlowEdges };
   }, [markovChainModel, onElementClick, onDeleteElement, isDarkMode, disableDeletion]);
@@ -193,7 +195,10 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
   const proOptions = { hideAttribution: true };
 
   return (
-    <div className={`markov-central-panel ${isDarkMode ? 'dark-mode' : ''}`}>
+    <div 
+      className={`markov-central-panel ${isDarkMode ? 'dark-mode' : ''} ${componentToPlace ? 'placing-component' : ''}`}
+      style={{ cursor: componentToPlace ? 'crosshair' : 'default' }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -211,7 +216,7 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         fitView
         attributionPosition="bottom-left"
         proOptions={proOptions}
-        className={componentToPlace ? 'placing-component' : ''}
+        style={{ cursor: componentToPlace ? 'crosshair' : 'default' }}
       >
         <Background 
           variant={BackgroundVariant.Dots} 
