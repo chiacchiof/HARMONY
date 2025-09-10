@@ -130,12 +130,21 @@ const MarkovChainEditor: React.FC = () => {
   }, []);
 
   // Connection handler
-  const handleCreateConnection = useCallback((sourceId: string, targetId: string) => {
+  const handleCreateConnection = useCallback((sourceId: string, targetId: string, sourceHandle?: string, targetHandle?: string) => {
+    console.log('Creating connection:', {
+      source: sourceId,
+      target: targetId,
+      sourceHandle,
+      targetHandle
+    });
+
     const newTransition: MarkovTransition = {
       id: `transition-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'transition',
       source: sourceId,
       target: targetId,
+      sourceHandle: sourceHandle,
+      targetHandle: targetHandle,
       probabilityDistribution: {
         type: 'constant',
         probability: 0.5

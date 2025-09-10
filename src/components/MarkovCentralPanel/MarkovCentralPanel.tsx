@@ -28,7 +28,7 @@ interface MarkovCentralPanelProps {
   onElementClick: (element: MarkovState | MarkovTransition) => void;
   onModelChange: (model: MarkovChainModel) => void;
   onDeleteElement: (elementId: string) => void;
-  onCreateConnection: (sourceId: string, targetId: string) => void;
+  onCreateConnection: (sourceId: string, targetId: string, sourceHandle?: string, targetHandle?: string) => void;
   onPanelClick: (position: { x: number; y: number }) => void;
   componentToPlace: 'state' | null;
   isDarkMode: boolean;
@@ -79,6 +79,8 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
       id: transition.id,
       source: transition.source,
       target: transition.target,
+      sourceHandle: transition.sourceHandle,
+      targetHandle: transition.targetHandle,
       type: 'transitionEdge',
       data: {
         transition,
@@ -138,11 +140,32 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
   // Handle new connections (transitions)
   const handleConnect = useCallback(
     (connection: Connection) => {
+      console.log('ReactFlow connection:', connection);
       if (connection.source && connection.target) {
-        onCreateConnection(connection.source, connection.target);
+        // Check if connection already exists
+        const existingConnection = markovChainModel.transitions.find(
+          transition => 
+            transition.source === connection.source && 
+            transition.target === connection.target
+        );
+
+        if (existingConnection) {
+          // Show error message
+          alert(`Errore: Esiste già una transizione dallo stato ${connection.source} allo stato ${connection.target}.\n\nOgni coppia di stati può essere collegata una sola volta.`);
+          return;
+        }
+
+        // Check if source and target are the same (self-loop)
+        if (connection.source === connection.target) {
+          // Self-loops are allowed, just create the connection
+          onCreateConnection(connection.source, connection.target, connection.sourceHandle || undefined, connection.targetHandle || undefined);
+          return;
+        }
+
+        onCreateConnection(connection.source, connection.target, connection.sourceHandle || undefined, connection.targetHandle || undefined);
       }
     },
-    [onCreateConnection]
+    [onCreateConnection, markovChainModel.transitions]
   );
 
   // Handle panel clicks for component placement

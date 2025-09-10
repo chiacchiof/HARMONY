@@ -36,53 +36,73 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
     }
   };
 
+  // Generate 12 handles positioned like clock hours
+  const generateClockHandles = () => {
+    const handles = [];
+    const radius = 45; // State circle radius (90px / 2)
+    const handleSize = 14; // Larger handles for better usability
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i * 30 - 90) * (Math.PI / 180); // -90 to start from top (12 o'clock)
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+
+      handles.push(
+        <Handle
+          key={`${state.id}-handle-${i}`}
+          type="source"
+          position={Position.Top}
+          id={`handle-${i}`}
+          style={{
+            position: 'absolute',
+            left: `calc(50% + ${x}px - ${handleSize/2}px)`,
+            top: `calc(50% + ${y}px - ${handleSize/2}px)`,
+            width: `${handleSize}px`,
+            height: `${handleSize}px`,
+            background: isDarkMode ? '#4CAF50' : '#28a745',
+            border: `2px solid ${isDarkMode ? '#ffffff' : '#ffffff'}`,
+            borderRadius: '50%',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            transform: 'none',
+            zIndex: 10,
+          }}
+        />
+      );
+
+      // Also add as target
+      handles.push(
+        <Handle
+          key={`${state.id}-target-${i}`}
+          type="target"
+          position={Position.Top}
+          id={`target-${i}`}
+          style={{
+            position: 'absolute',
+            left: `calc(50% + ${x}px - ${handleSize/2}px)`,
+            top: `calc(50% + ${y}px - ${handleSize/2}px)`,
+            width: `${handleSize}px`,
+            height: `${handleSize}px`,
+            background: isDarkMode ? '#4CAF50' : '#28a745',
+            border: `2px solid ${isDarkMode ? '#ffffff' : '#ffffff'}`,
+            borderRadius: '50%',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            transform: 'none',
+            zIndex: 9,
+          }}
+        />
+      );
+    }
+    return handles;
+  };
+
   return (
     <div 
       className={`state-node ${isDarkMode ? 'dark-mode' : ''} ${selected ? 'selected' : ''} ${state.isAbsorbing ? 'absorbing' : ''}`}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
     >
-      {/* Connection handles */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ 
-          background: isDarkMode ? '#ffffff' : '#333333',
-          border: '2px solid transparent',
-          width: '10px',
-          height: '10px'
-        }}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ 
-          background: isDarkMode ? '#ffffff' : '#333333',
-          border: '2px solid transparent',
-          width: '10px',
-          height: '10px'
-        }}
-      />
-      <Handle
-        type="target"
-        position={Position.Top}
-        style={{ 
-          background: isDarkMode ? '#ffffff' : '#333333',
-          border: '2px solid transparent',
-          width: '10px',
-          height: '10px'
-        }}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        style={{ 
-          background: isDarkMode ? '#ffffff' : '#333333',
-          border: '2px solid transparent',
-          width: '10px',
-          height: '10px'
-        }}
-      />
+      {/* 12 Clock-positioned handles */}
+      {generateClockHandles()}
 
       {/* State circle */}
       <div className="state-circle drag-handle">
