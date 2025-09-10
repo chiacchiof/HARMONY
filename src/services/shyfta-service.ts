@@ -359,7 +359,7 @@ toc`;
           this.progressCallback({
             progress: 0,
             currentStep: '❌ Backend non disponibile',
-            logOutput: `${errorMessage}\n\nPer risolvere:\n1. Avvia il backend: node backend-server.js\n2. Verifica che sia raggiungibile su http://localhost:3001\n3. Riprova la simulazione\n`,
+            logOutput: `${errorMessage}\n\nPer risolvere:\n1. Avvia il backend: node backend-server.js\n2. Verifica che sia raggiungibile su http://${window.location.hostname}:3001\n3. Riprova la simulazione\n`,
             isRunning: false,
             isCompleted: false
           });

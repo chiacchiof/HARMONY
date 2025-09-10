@@ -20,7 +20,7 @@ export interface MatlabExecutionResponse {
 }
 
 export class MatlabExecutionService {
-  private static readonly API_BASE_URL = 'http://localhost:3001/api'; // Backend server
+  private static readonly API_BASE_URL = `http://${window.location.hostname}:3001/api`; // Backend server
 
   /**
    * Execute MATLAB simulation via backend API

@@ -71,7 +71,7 @@ export class MatlabResultsService {
       
       // Call backend API to parse the results.mat file
       const response = await fetch(
-        `http://localhost:3001/api/results/parse?` + new URLSearchParams({
+        `http://${window.location.hostname}:3001/api/results/parse?` + new URLSearchParams({
           resultsPath: filePath,
           components: componentsParam,
           iterations: iterations.toString(),
