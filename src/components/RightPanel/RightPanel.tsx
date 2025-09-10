@@ -10,6 +10,8 @@ interface RightPanelProps extends ChatIntegrationProps {
   isDarkMode: boolean;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  editorType?: 'fault-tree' | 'markov-chain';
+  onGenerateMarkovChain?: (model: any) => void;
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ 
@@ -18,12 +20,14 @@ const RightPanel: React.FC<RightPanelProps> = ({
   currentFaultTree,
   isDarkMode,
   isCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  editorType = 'fault-tree',
+  onGenerateMarkovChain
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      text: 'Ciao! Sono il tuo assistente per Dynamic Fault Tree Analysis. Posso aiutarti a:\n\n• Generare fault tree automaticamente\n• Spiegare concetti e best practices\n• Analizzare il tuo modello corrente\n\nProva a scrivere: "Genera un fault tree per un sistema di alimentazione elettrica"',
+      text: 'Ciao! Sono il tuo assistente per l\'analisi di affidabilità. Posso aiutarti a:\n\n• Generare modelli automaticamente\n• Spiegare concetti e best practices\n• Analizzare il tuo modello corrente\n\nProva a scrivere: "Genera un fault tree per..." o "Crea una markov chain per..."',
       sender: 'bot',
       timestamp: new Date()
     }
@@ -86,8 +90,14 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
     try {
       // Verifica se è una richiesta di generazione fault tree
-      if (LLMService.isGenerationRequest(messageText)) {
+      if (LLMService.isGenerationRequest(messageText) && editorType === 'fault-tree') {
         await handleFaultTreeGeneration(messageText);
+        return;
+      }
+      
+      // Verifica se è una richiesta di generazione markov chain
+      if (isMarkovGenerationRequest(messageText) && editorType === 'markov-chain') {
+        await handleMarkovChainGeneration(messageText);
         return;
       }
 
@@ -149,6 +159,116 @@ const RightPanel: React.FC<RightPanelProps> = ({
       
       setMessages(prev => [...prev, botMessage]);
     } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const isMarkovGenerationRequest = (message: string): boolean => {
+    const keywords = [
+      'crea.*markov', 'genera.*markov', 'crea.*catena', 'genera.*catena',
+      'markov.*chain', 'catena.*markov', 'modello.*markov'
+    ];
+    
+    const lowerMessage = message.toLowerCase();
+    return keywords.some(keyword => {
+      const regex = new RegExp(keyword, 'i');
+      return regex.test(lowerMessage);
+    });
+  };
+
+  const handleMarkovChainGeneration = async (message: string) => {
+    if (!onGenerateMarkovChain) {
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        text: 'Funzionalità di generazione Markov Chain non disponibile.',
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      setIsTyping(false);
+      return;
+    }
+
+    setGenerationStatus({ isGenerating: true, message: 'Generazione Markov Chain in corso...' });
+
+    try {
+      const selectedProvider = llmConfig[currentProvider as keyof LLMProviders];
+      
+      if (selectedProvider && selectedProvider.enabled && selectedProvider.apiKey) {
+        const llmService = new LLMService(selectedProvider);
+        const prompt = `Crea una Markov Chain per: ${message}. Rispondi SOLO con un JSON valido nel formato:
+{
+  "states": [
+    {"id": "S1", "name": "State 1", "position": {"x": 100, "y": 100}, "type": "state"},
+    {"id": "S2", "name": "State 2", "position": {"x": 300, "y": 100}, "type": "state"}
+  ],
+  "transitions": [
+    {"id": "T1", "sourceId": "S1", "targetId": "S2", "rate": 0.1, "label": "Transition 1"}
+  ]
+}`;
+        
+        const llmResponse = await llmService.generateResponse(prompt);
+        const response = llmResponse.content;
+        
+        // Prova a parsare come JSON
+        try {
+          const jsonMatch = response.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const markovModel = JSON.parse(jsonMatch[0]);
+            
+            if (markovModel.states && markovModel.transitions) {
+              onGenerateMarkovChain(markovModel);
+              
+              const successMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                text: `✅ Ho generato una Markov Chain con:\n• ${markovModel.states.length} stati\n• ${markovModel.transitions.length} transizioni\n\nIl modello è stato aggiunto all'editor grafico!`,
+                sender: 'bot',
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, successMessage]);
+            } else {
+              throw new Error('Formato JSON non valido per Markov Chain');
+            }
+          } else {
+            // Se non è JSON, mostra la risposta normale
+            const normalMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              text: response,
+              sender: 'bot',
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, normalMessage]);
+          }
+        } catch (parseError) {
+          // Se il parsing fallisce, mostra la risposta normale
+          const normalMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            text: response,
+            sender: 'bot',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, normalMessage]);
+        }
+      } else {
+        // Fallback response per Markov Chain
+        const fallbackMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          text: 'Per generare Markov Chain automaticamente, configura un provider LLM nelle impostazioni. Al momento posso solo fornire consigli teorici sui modelli di Markov.',
+          sender: 'bot',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, fallbackMessage]);
+      }
+    } catch (error) {
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        text: `Errore durante la generazione: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`,
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setGenerationStatus({ isGenerating: false });
       setIsTyping(false);
     }
   };

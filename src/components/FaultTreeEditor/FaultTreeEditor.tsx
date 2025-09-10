@@ -672,6 +672,7 @@ const FaultTreeEditor: React.FC = () => {
           isDarkMode={isDarkMode}
           isCollapsed={isRightPanelCollapsed}
           onToggleCollapse={handleToggleRightPanel}
+          editorType="fault-tree"
         />
       </div>
 

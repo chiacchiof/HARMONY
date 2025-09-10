@@ -268,6 +268,10 @@ ${markovChainModel.transitions.map(transition => {
     updateLLMConfig(newConfig);
   }, [updateLLMConfig]);
 
+  const handleGenerateMarkovChain = useCallback((generatedModel: MarkovChainModel) => {
+    setMarkovChainModel(generatedModel);
+  }, []);
+
 
   const handleNewModel = useCallback(() => {
     if (markovChainModel.states.length > 0 || markovChainModel.transitions.length > 0) {
@@ -364,6 +368,8 @@ ${markovChainModel.transitions.map(transition => {
         isDarkMode={isDarkMode}
         isCollapsed={isRightPanelCollapsed}
         onToggleCollapse={handleToggleRightPanel}
+        editorType="markov-chain"
+        onGenerateMarkovChain={handleGenerateMarkovChain}
       />
 
       {showStateModal && selectedElement && selectedElement.type === 'state' && (
