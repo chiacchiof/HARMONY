@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../../types/FaultTree';
 import { ChatIntegrationProps, GenerationStatus } from '../../types/ChatIntegration';
-import { LLMProviders, loadLLMConfig, saveLLMConfig } from '../../config/llm-config';
+import { LLMProviders } from '../../config/llm-config';
 import { LLMService } from '../../services/llm-service';
+import { useLLMConfig } from '../../contexts/LLMContext';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import './RightPanel.css';
 
@@ -24,19 +25,26 @@ const RightPanel: React.FC<RightPanelProps> = ({
   editorType = 'fault-tree',
   onGenerateMarkovChain
 }) => {
+  const { llmConfig, showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig, currentProvider, setCurrentProvider } = useLLMConfig();
+  
+  const getInitialMessage = () => {
+    if (editorType === 'markov-chain') {
+      return 'Ciao! Sono Harmony, il tuo assistente per l\'analisi delle Markov Chain. Posso aiutarti a:\n\n• Generare catene di Markov automaticamente\n• Spiegare concetti di processi stocastici\n• Analizzare il tuo modello corrente\n\nProva a scrivere: "Crea una markov chain per un sistema a 3 stati" o "Spiega le proprietà di una catena di Markov"';
+    } else {
+      return 'Ciao! Sono Harmony, il tuo assistente per Dynamic Fault Tree Analysis. Posso aiutarti a:\n\n• Generare fault tree automaticamente\n• Spiegare concetti e best practices\n• Analizzare il tuo modello corrente\n\nProva a scrivere: "Genera un fault tree per un sistema di alimentazione elettrica"';
+    }
+  };
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      text: 'Ciao! Sono il tuo assistente per l\'analisi di affidabilità. Posso aiutarti a:\n\n• Generare modelli automaticamente\n• Spiegare concetti e best practices\n• Analizzare il tuo modello corrente\n\nProva a scrivere: "Genera un fault tree per..." o "Crea una markov chain per..."',
+      text: getInitialMessage(),
       sender: 'bot',
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [llmConfig, setLlmConfig] = useState<LLMProviders>(loadLLMConfig());
-  const [showConfigModal, setShowConfigModal] = useState(false);
-  const [currentProvider, setCurrentProvider] = useState<string>('local');
   const [showProviderDropdown, setShowProviderDropdown] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>({ isGenerating: false });
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -49,6 +57,22 @@ const RightPanel: React.FC<RightPanelProps> = ({
     scrollToBottom();
   }, [messages]);
 
+  // Update initial message when editor type changes
+  useEffect(() => {
+    const initialText = editorType === 'markov-chain' 
+      ? 'Ciao! Sono Harmony, il tuo assistente per l\'analisi delle Markov Chain. Posso aiutarti a:\n\n• Generare catene di Markov automaticamente\n• Spiegare concetti di processi stocastici\n• Analizzare il tuo modello corrente\n\nProva a scrivere: "Crea una markov chain per un sistema a 3 stati" o "Spiega le proprietà di una catena di Markov"'
+      : 'Ciao! Sono Harmony, il tuo assistente per Dynamic Fault Tree Analysis. Posso aiutarti a:\n\n• Generare fault tree automaticamente\n• Spiegare concetti e best practices\n• Analizzare il tuo modello corrente\n\nProva a scrivere: "Genera un fault tree per un sistema di alimentazione elettrica"';
+    
+    setMessages([
+      {
+        id: '1',
+        text: initialText,
+        sender: 'bot',
+        timestamp: new Date()
+      }
+    ]);
+  }, [editorType]);
+
   // Inizializza il provider corrente
   useEffect(() => {
     const availableProviders = getAvailableProviders(llmConfig);
@@ -56,7 +80,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
       setCurrentProvider(availableProviders[0].key);
       console.log('Initial provider set to:', availableProviders[0].key);
     }
-  }, [llmConfig, currentProvider]);
+  }, [llmConfig, currentProvider, setCurrentProvider]);
 
   // Chiudi dropdown quando si clicca fuori
   useEffect(() => {
@@ -443,7 +467,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           </div>
           <button 
             className="config-button"
-            onClick={() => setShowConfigModal(true)}
+            onClick={() => setShowLLMConfigModal(true)}
             title="Configura LLM"
           >
             ⚙️
@@ -492,24 +516,49 @@ const RightPanel: React.FC<RightPanelProps> = ({
             <div className="quick-examples">
               <div className="quick-examples-title">🚀 Esempi di Generazione:</div>
               <div className="quick-buttons">
-                <button 
-                  className="quick-button"
-                  onClick={() => handleQuickExample('Genera un fault tree per un sistema di alimentazione elettrica con ridondanza')}
-                >
-                  🔌 Sistema Elettrico
-                </button>
-                <button 
-                  className="quick-button"
-                  onClick={() => handleQuickExample('Crea fault tree per sistema frenante automotive con ABS')}
-                >
-                  🚗 Sistema Frenante
-                </button>
-                <button 
-                  className="quick-button"
-                  onClick={() => handleQuickExample('Modella fault tree per sistema di controllo industriale PLC')}
-                >
-                  🏭 Sistema Controllo
-                </button>
+                {editorType === 'markov-chain' ? (
+                  <>
+                    <button 
+                      className="quick-button"
+                      onClick={() => handleQuickExample('Crea una markov chain per un sistema a 3 stati: funzionante, degradato, guasto')}
+                    >
+                      ⚡ Sistema 3 Stati
+                    </button>
+                    <button 
+                      className="quick-button"
+                      onClick={() => handleQuickExample('Genera una catena di Markov per modellare la disponibilità di un server con riparazione')}
+                    >
+                      🖥️ Server con Riparazione
+                    </button>
+                    <button 
+                      className="quick-button"
+                      onClick={() => handleQuickExample('Modella una markov chain per un sistema ridondante con 2 componenti identici')}
+                    >
+                      🔄 Sistema Ridondante
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      className="quick-button"
+                      onClick={() => handleQuickExample('Genera un fault tree per un sistema di alimentazione elettrica con ridondanza')}
+                    >
+                      🔌 Sistema Elettrico
+                    </button>
+                    <button 
+                      className="quick-button"
+                      onClick={() => handleQuickExample('Crea fault tree per sistema frenante automotive con ABS')}
+                    >
+                      🚗 Sistema Frenante
+                    </button>
+                    <button 
+                      className="quick-button"
+                      onClick={() => handleQuickExample('Modella fault tree per sistema di controllo industriale PLC')}
+                    >
+                      🏭 Sistema Controllo
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -545,23 +594,31 @@ const RightPanel: React.FC<RightPanelProps> = ({
           <div className="help-section">
             <h4>💡 Suggerimenti</h4>
             <div className="help-items">
-              <div className="help-item">🔧 Genera fault tree automaticamente</div>
-              <div className="help-item">❓ Chiedi informazioni sui tipi di porte</div>
-              <div className="help-item">📊 Richiedi consigli sulla modellazione</div>
-              <div className="help-item">🎯 Analizza il tuo modello corrente</div>
+              {editorType === 'markov-chain' ? (
+                <>
+                  <div className="help-item">🔗 Genera catene di Markov automaticamente</div>
+                  <div className="help-item">❓ Chiedi informazioni sui processi stocastici</div>
+                  <div className="help-item">📊 Richiedi consigli sulla modellazione probabilistica</div>
+                  <div className="help-item">🎯 Analizza proprietà della tua catena</div>
+                </>
+              ) : (
+                <>
+                  <div className="help-item">🔧 Genera fault tree automaticamente</div>
+                  <div className="help-item">❓ Chiedi informazioni sui tipi di porte</div>
+                  <div className="help-item">📊 Richiedi consigli sulla modellazione</div>
+                  <div className="help-item">🎯 Analizza il tuo modello corrente</div>
+                </>
+              )}
             </div>
           </div>
         </>
       )}
 
-      {showConfigModal && (
+      {showLLMConfigModal && (
         <LLMConfigModal
-          isOpen={showConfigModal}
-          onClose={() => setShowConfigModal(false)}
-          onConfigChange={(newConfig) => {
-            setLlmConfig(newConfig);
-            saveLLMConfig(newConfig);
-          }}
+          isOpen={showLLMConfigModal}
+          onClose={() => setShowLLMConfigModal(false)}
+          onConfigChange={updateLLMConfig}
         />
       )}
     </div>
