@@ -10,7 +10,6 @@ import ReactFlow, {
   BackgroundVariant,
   NodeChange,
   EdgeChange,
-  MarkerType,
   SelectionMode,
   ConnectionMode,
   useReactFlow,
@@ -76,6 +75,10 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     }));
 
     const reactFlowEdges: Edge[] = markovChainModel.transitions.map(transition => {
+      // Find state names
+      const sourceState = markovChainModel.states.find(s => s.id === transition.source);
+      const targetState = markovChainModel.states.find(s => s.id === transition.target);
+      
       const edge = {
         id: transition.id,
         source: transition.source,
@@ -88,13 +91,9 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
           onTransitionClick: onElementClick,
           onDeleteTransition: onDeleteElement,
           isDarkMode,
-          disableDeletion
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          width: 20,
-          height: 20,
-          color: isDarkMode ? '#ffffff' : '#333333'
+          disableDeletion,
+          sourceStateName: sourceState?.name,
+          targetStateName: targetState?.name
         },
         style: {
           stroke: isDarkMode ? '#ffffff' : '#333333',

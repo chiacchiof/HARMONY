@@ -63,6 +63,15 @@
   stroke-width: 4;
 }
 
+/* Ensure native markers are visible */
+.react-flow .react-flow__arrowhead {
+  fill: currentColor;
+}
+
+.react-flow .react-flow__arrowclosed {
+  fill: currentColor;
+}
+
 
 /* Connection line styling */
 .react-flow__connection-line {

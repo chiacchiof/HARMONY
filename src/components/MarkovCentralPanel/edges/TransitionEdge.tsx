@@ -9,6 +9,8 @@ interface TransitionEdgeData {
   onDeleteTransition: (transitionId: string) => void;
   isDarkMode: boolean;
   disableDeletion: boolean;
+  sourceStateName?: string;
+  targetStateName?: string;
 }
 
 const TransitionEdge: React.FC<EdgeProps<TransitionEdgeData>> = ({
@@ -24,7 +26,7 @@ const TransitionEdge: React.FC<EdgeProps<TransitionEdgeData>> = ({
 }) => {
   if (!data) return null;
 
-  const { transition, onTransitionClick, onDeleteTransition, isDarkMode, disableDeletion } = data;
+  const { transition, onTransitionClick, onDeleteTransition, isDarkMode, disableDeletion, sourceStateName, targetStateName } = data;
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -34,13 +36,6 @@ const TransitionEdge: React.FC<EdgeProps<TransitionEdgeData>> = ({
     targetY,
     targetPosition,
   });
-
-  // Calculate arrow position (75% along the path towards target)
-  const arrowX = sourceX + (targetX - sourceX) * 0.75;
-  const arrowY = sourceY + (targetY - sourceY) * 0.75;
-  
-  // Calculate arrow angle based on direction
-  const angle = Math.atan2(targetY - sourceY, targetX - sourceX) * (180 / Math.PI);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -73,6 +68,7 @@ const TransitionEdge: React.FC<EdgeProps<TransitionEdgeData>> = ({
 
   return (
     <>
+      {/* Edge path */}
       <path
         id={id}
         className={`transition-edge ${isDarkMode ? 'dark-mode' : ''} ${selected ? 'selected' : ''}`}
@@ -83,15 +79,6 @@ const TransitionEdge: React.FC<EdgeProps<TransitionEdgeData>> = ({
           strokeWidth: selected ? 3 : 2,
           cursor: 'pointer'
         }}
-      />
-      
-      {/* Direction arrow */}
-      <polygon
-        points="0,-6 12,0 0,6 2,0"
-        transform={`translate(${arrowX},${arrowY}) rotate(${angle})`}
-        fill={selected ? '#007bff' : (isDarkMode ? '#ffffff' : '#333333')}
-        onClick={handleClick}
-        style={{ cursor: 'pointer' }}
       />
       
       <EdgeLabelRenderer>
@@ -106,8 +93,11 @@ const TransitionEdge: React.FC<EdgeProps<TransitionEdgeData>> = ({
           <div 
             className="label-content"
             onClick={handleClick}
-            title={`Transition: ${getProbabilityLabel()}`}
+            title={`Transition: ${sourceStateName || transition.source} → ${targetStateName || transition.target}`}
           >
+            <div className="transition-direction">
+              {sourceStateName || transition.source} → {targetStateName || transition.target}
+            </div>
             <div className="probability-text">
               {getProbabilityLabel()}
             </div>

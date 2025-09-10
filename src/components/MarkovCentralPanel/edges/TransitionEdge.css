@@ -15,15 +15,7 @@
   filter: drop-shadow(0 0 6px rgba(0, 123, 255, 0.6));
 }
 
-/* Direction arrow styling */
-.transition-edge + polygon {
-  transition: all 0.2s ease;
-}
 
-.transition-edge:hover + polygon {
-  transform: scale(1.2);
-  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.3));
-}
 
 .transition-label {
   display: flex;
@@ -59,11 +51,25 @@
   background: rgba(0, 123, 255, 0.2);
 }
 
+.transition-direction {
+  font-weight: bold;
+  color: #28a745;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  margin-bottom: 2px;
+  text-align: center;
+}
+
+.transition-label.dark-mode .transition-direction {
+  color: #4CAF50;
+}
+
 .probability-text {
   font-weight: 600;
   color: #007bff;
   font-size: 0.75rem;
   white-space: nowrap;
+  text-align: center;
 }
 
 .transition-label.dark-mode .probability-text {
