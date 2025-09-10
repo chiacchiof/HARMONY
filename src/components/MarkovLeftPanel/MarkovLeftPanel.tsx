@@ -24,8 +24,12 @@ const MarkovLeftPanel: React.FC<MarkovLeftPanelProps> = ({
 }) => {
   const handleStateClick = () => {
     if (clickToPlaceMode) {
-      setComponentToPlace('state');
+      // In click-to-place mode, clicking State button ensures it's selected for placement
+      if (componentToPlace !== 'state') {
+        setComponentToPlace('state');
+      }
     } else {
+      // Normal mode: add state directly to center
       onAddState();
     }
   };
@@ -76,7 +80,7 @@ const MarkovLeftPanel: React.FC<MarkovLeftPanelProps> = ({
             </div>
             <p className="mode-description">
               {clickToPlaceMode 
-                ? 'Click on the canvas to place components'
+                ? 'Instant Add: Click anywhere on canvas to add multiple states'
                 : 'Click components to add them to the center'
               }
             </p>

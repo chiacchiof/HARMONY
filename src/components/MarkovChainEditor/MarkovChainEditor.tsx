@@ -83,15 +83,24 @@ const MarkovChainEditor: React.FC = () => {
   const handlePanelClick = useCallback((position: { x: number; y: number }) => {
     if (clickToPlaceMode && componentToPlace === 'state') {
       handleAddState(position);
-      setClickToPlaceMode(false);
-      setComponentToPlace(null);
+      // Keep click-to-place mode active for instant add functionality
+      // Mode will only be disabled when user manually toggles it off
     }
   }, [clickToPlaceMode, componentToPlace, handleAddState]);
 
   // Toggle click-to-place mode
   const handleToggleClickToPlace = useCallback(() => {
-    setClickToPlaceMode(prev => !prev);
-    setComponentToPlace(null);
+    setClickToPlaceMode(prev => {
+      const newMode = !prev;
+      if (newMode) {
+        // Activating click-to-place mode
+        setComponentToPlace('state');
+      } else {
+        // Deactivating click-to-place mode
+        setComponentToPlace(null);
+      }
+      return newMode;
+    });
   }, []);
 
   // Update element handler
