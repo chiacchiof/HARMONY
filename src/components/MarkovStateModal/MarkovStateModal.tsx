@@ -7,13 +7,15 @@ interface MarkovStateModalProps {
   onSave: (state: MarkovState) => void;
   onClose: () => void;
   isDarkMode: boolean;
+  onRemoveTransitions?: (stateId: string) => void;
 }
 
 const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
   state,
   onSave,
   onClose,
-  isDarkMode
+  isDarkMode,
+  onRemoveTransitions
 }) => {
   const [name, setName] = useState(state.name);
   const [description, setDescription] = useState(state.description || '');
@@ -47,6 +49,15 @@ const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
 
     return isValid;
   }, [name, rewardFunction]);
+
+  // Handle absorbing state toggle
+  const handleAbsorbingToggle = useCallback((checked: boolean) => {
+    if (checked && onRemoveTransitions) {
+      // If setting as absorbing state, remove existing outgoing transitions
+      onRemoveTransitions(state.id);
+    }
+    setIsAbsorbing(checked);
+  }, [state.id, onRemoveTransitions]);
 
   // Handle save
   const handleSave = useCallback(() => {
@@ -154,7 +165,7 @@ const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
                 <input
                   type="checkbox"
                   checked={isAbsorbing}
-                  onChange={(e) => setIsAbsorbing(e.target.checked)}
+                  onChange={(e) => handleAbsorbingToggle(e.target.checked)}
                 />
                 <span className="toggle-switch"></span>
                 Absorbing State

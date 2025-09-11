@@ -138,6 +138,14 @@ const MarkovChainEditor: React.FC = () => {
     }));
   }, []);
 
+  // Remove outgoing transitions from a state (used when marking as absorbing)
+  const handleRemoveOutgoingTransitions = useCallback((stateId: string) => {
+    setMarkovChainModel(prev => ({
+      ...prev,
+      transitions: prev.transitions.filter(transition => transition.source !== stateId)
+    }));
+  }, []);
+
   // Connection handler
   const handleCreateConnection = useCallback((sourceId: string, targetId: string, sourceHandle?: string, targetHandle?: string) => {
     console.log('Creating connection:', {
@@ -146,6 +154,13 @@ const MarkovChainEditor: React.FC = () => {
       sourceHandle,
       targetHandle
     });
+
+    // Check if source state is absorbing
+    const sourceState = markovChainModel.states.find(state => state.id === sourceId);
+    if (sourceState && sourceState.isAbsorbing) {
+      alert('Cannot create transitions from an absorbing state. Absorbing states have no outgoing transitions.');
+      return;
+    }
 
     const newTransition: MarkovTransition = {
       id: `transition-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -164,7 +179,7 @@ const MarkovChainEditor: React.FC = () => {
       ...prev,
       transitions: [...prev.transitions, newTransition]
     }));
-  }, []);
+  }, [markovChainModel.states]);
 
   // File operations handlers for MenuBar
   const handleSaveFile = useCallback(async () => {
@@ -399,6 +414,7 @@ ${markovChainModel.transitions.map(transition => {
             setSelectedElement(null);
           }}
           isDarkMode={isDarkMode}
+          onRemoveTransitions={handleRemoveOutgoingTransitions}
         />
       )}
 
