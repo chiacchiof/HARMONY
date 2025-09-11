@@ -14,7 +14,8 @@ import ReactFlow, {
   ConnectionMode,
   useReactFlow,
   ReactFlowProvider,
-  NodeRemoveChange
+  NodeRemoveChange,
+  NodePositionChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -65,6 +66,15 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     show: boolean;
   }>({ x: 0, y: 0, show: false });
 
+  // Memoized callbacks to avoid recreating data objects
+  const onStateClickCallback = useCallback((state: MarkovState | MarkovTransition) => {
+    onElementClick(state);
+  }, [onElementClick]);
+
+  const onDeleteStateCallback = useCallback((stateId: string) => {
+    onDeleteElement(stateId);
+  }, [onDeleteElement]);
+
   // Convert Markov chain model to React Flow nodes and edges
   const convertToReactFlowData = useMemo(() => {
     const reactFlowNodes: Node[] = markovChainModel.states.map(state => ({
@@ -73,8 +83,8 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
       position: state.position,
       data: {
         state,
-        onStateClick: onElementClick,
-        onDeleteState: onDeleteElement,
+        onStateClick: onStateClickCallback,
+        onDeleteState: onDeleteStateCallback,
         isDarkMode,
         disableDeletion
       },
@@ -96,8 +106,8 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         type: 'transitionEdge',
         data: {
           transition,
-          onTransitionClick: onElementClick,
-          onDeleteTransition: onDeleteElement,
+          onTransitionClick: onStateClickCallback,
+          onDeleteTransition: onDeleteStateCallback,
           isDarkMode,
           disableDeletion,
           sourceStateName: sourceState?.name,
@@ -112,7 +122,7 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     });
 
     return { nodes: reactFlowNodes, edges: reactFlowEdges };
-  }, [markovChainModel, onElementClick, onDeleteElement, isDarkMode, disableDeletion]);
+  }, [markovChainModel, onStateClickCallback, onDeleteStateCallback, isDarkMode, disableDeletion]);
 
   // Update React Flow nodes and edges when model changes
   useEffect(() => {
@@ -135,18 +145,21 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     const otherChanges = changes.filter(change => change.type !== 'remove');
     onNodesChange(otherChanges);
     
-    // Update model with new positions
+    // Update model only for position changes when not dragging
     otherChanges.forEach(change => {
-      if (change.type === 'position' && change.position) {
-        const updatedStates = markovChainModel.states.map(state =>
-          state.id === change.id 
-            ? { ...state, position: change.position! }
-            : state
-        );
-        onModelChange({
-          ...markovChainModel,
-          states: updatedStates
-        });
+      if (change.type === 'position') {
+        const positionChange = change as NodePositionChange;
+        if (positionChange.position && !positionChange.dragging) {
+          const updatedStates = markovChainModel.states.map(state =>
+            state.id === positionChange.id 
+              ? { ...state, position: positionChange.position! }
+              : state
+          );
+          onModelChange({
+            ...markovChainModel,
+            states: updatedStates
+          });
+        }
       }
     });
   }, [onNodesChange, markovChainModel, onModelChange, onDeleteElement]);
@@ -333,6 +346,13 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         deleteKeyCode={null}
         selectionOnDrag={!componentToPlace}
         panOnDrag={componentToPlace ? false : [1, 2]}
+        nodesDraggable={true}
+        nodesConnectable={true}
+        elementsSelectable={true}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
+        zoomOnDoubleClick={false}
+        preventScrolling={false}
         fitView
         attributionPosition="bottom-left"
         proOptions={proOptions}

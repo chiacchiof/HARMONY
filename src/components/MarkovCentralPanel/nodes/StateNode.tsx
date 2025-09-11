@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { MarkovState } from '../../../types/MarkovChain';
 import './StateNode.css';
@@ -17,27 +17,27 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
 }) => {
   const { state, onStateClick, onDeleteState, isDarkMode, disableDeletion } = data;
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onStateClick(state);
-  };
+  }, [onStateClick, state]);
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (!disableDeletion) {
       onDeleteState(state.id);
     }
-  };
+  }, [disableDeletion, onDeleteState, state.id]);
 
-  const handleContextMenu = (e: React.MouseEvent) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     if (!disableDeletion) {
       onDeleteState(state.id);
     }
-  };
+  }, [disableDeletion, onDeleteState, state.id]);
 
   // Generate 12 handles positioned like clock hours
-  const generateClockHandles = () => {
+  const clockHandles = useMemo(() => {
     const handles = [];
     const radius = 45; // State circle radius (90px / 2)
     const handleSize = 14; // Larger handles for better usability
@@ -93,7 +93,7 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
       );
     }
     return handles;
-  };
+  }, [state.id, isDarkMode]);
 
   return (
     <div 
@@ -102,7 +102,7 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
       onContextMenu={handleContextMenu}
     >
       {/* 12 Clock-positioned handles */}
-      {generateClockHandles()}
+      {clockHandles}
 
       {/* State circle */}
       <div className="state-circle drag-handle">
