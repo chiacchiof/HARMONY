@@ -75,6 +75,7 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     onDeleteElement(stateId);
   }, [onDeleteElement]);
 
+
   // Convert Markov chain model to React Flow nodes and edges
   const convertToReactFlowData = useMemo(() => {
     const reactFlowNodes: Node[] = markovChainModel.states.map(state => ({
@@ -122,13 +123,42 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     });
 
     return { nodes: reactFlowNodes, edges: reactFlowEdges };
-  }, [markovChainModel, onStateClickCallback, onDeleteStateCallback, isDarkMode, disableDeletion]);
+  }, [markovChainModel.states, markovChainModel.transitions, onStateClickCallback, onDeleteStateCallback, isDarkMode, disableDeletion]);
 
   // Update React Flow nodes and edges when model changes
   useEffect(() => {
     const { nodes: newNodes, edges: newEdges } = convertToReactFlowData;
-    setNodes(newNodes);
-    setEdges(newEdges);
+    
+    // Only update if there are actual changes to prevent unnecessary re-renders
+    setNodes(currentNodes => {
+      if (currentNodes.length !== newNodes.length) {
+        return newNodes;
+      }
+      
+      // Check if any node data has actually changed
+      const hasChanges = newNodes.some(newNode => {
+        const currentNode = currentNodes.find(n => n.id === newNode.id);
+        return !currentNode || 
+               JSON.stringify(currentNode.data.state) !== JSON.stringify(newNode.data.state);
+      });
+      
+      return hasChanges ? newNodes : currentNodes;
+    });
+    
+    setEdges(currentEdges => {
+      if (currentEdges.length !== newEdges.length) {
+        return newEdges;
+      }
+      
+      // Check if any edge data has actually changed
+      const hasChanges = newEdges.some(newEdge => {
+        const currentEdge = currentEdges.find(e => e.id === newEdge.id);
+        return !currentEdge || 
+               JSON.stringify(currentEdge.data.transition) !== JSON.stringify(newEdge.data.transition);
+      });
+      
+      return hasChanges ? newEdges : currentEdges;
+    });
   }, [convertToReactFlowData, setNodes, setEdges]);
 
   // Handle node position changes and deletions
@@ -145,23 +175,25 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     const otherChanges = changes.filter(change => change.type !== 'remove');
     onNodesChange(otherChanges);
     
-    // Update model only for position changes when not dragging
-    otherChanges.forEach(change => {
-      if (change.type === 'position') {
-        const positionChange = change as NodePositionChange;
-        if (positionChange.position && !positionChange.dragging) {
-          const updatedStates = markovChainModel.states.map(state =>
-            state.id === positionChange.id 
-              ? { ...state, position: positionChange.position! }
-              : state
-          );
-          onModelChange({
-            ...markovChainModel,
-            states: updatedStates
-          });
-        }
-      }
-    });
+    // Batch update model for all position changes when not dragging
+    const positionUpdates = otherChanges
+      .filter((change): change is NodePositionChange => 
+        change.type === 'position' && !!(change as NodePositionChange).position && !(change as NodePositionChange).dragging
+      );
+    
+    if (positionUpdates.length > 0) {
+      const updatedStates = markovChainModel.states.map(state => {
+        const positionUpdate = positionUpdates.find(update => update.id === state.id);
+        return positionUpdate
+          ? { ...state, position: positionUpdate.position! }
+          : state;
+      });
+      
+      onModelChange({
+        ...markovChainModel,
+        states: updatedStates
+      });
+    }
   }, [onNodesChange, markovChainModel, onModelChange, onDeleteElement]);
 
   // Handle edge changes
