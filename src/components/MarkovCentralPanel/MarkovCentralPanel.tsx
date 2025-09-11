@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -13,7 +13,8 @@ import ReactFlow, {
   SelectionMode,
   ConnectionMode,
   useReactFlow,
-  ReactFlowProvider
+  ReactFlowProvider,
+  NodeRemoveChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -56,6 +57,13 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const reactFlowInstance = useReactFlow();
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    show: boolean;
+  }>({ x: 0, y: 0, show: false });
 
   // Convert Markov chain model to React Flow nodes and edges
   const convertToReactFlowData = useMemo(() => {
@@ -71,7 +79,7 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         disableDeletion
       },
       dragHandle: '.drag-handle',
-      selectable: !disableDeletion
+      selectable: true
     }));
 
     const reactFlowEdges: Edge[] = markovChainModel.transitions.map(transition => {
@@ -113,12 +121,22 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     setEdges(newEdges);
   }, [convertToReactFlowData, setNodes, setEdges]);
 
-  // Handle node position changes
+  // Handle node position changes and deletions
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
-    onNodesChange(changes);
+    // Process deletions first
+    const deleteChanges = changes.filter(change => change.type === 'remove');
+    deleteChanges.forEach(change => {
+      if (change.type === 'remove') {
+        onDeleteElement((change as NodeRemoveChange).id);
+      }
+    });
+
+    // Process other changes (position, selection, etc.)
+    const otherChanges = changes.filter(change => change.type !== 'remove');
+    onNodesChange(otherChanges);
     
     // Update model with new positions
-    changes.forEach(change => {
+    otherChanges.forEach(change => {
       if (change.type === 'position' && change.position) {
         const updatedStates = markovChainModel.states.map(state =>
           state.id === change.id 
@@ -131,12 +149,19 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         });
       }
     });
-  }, [onNodesChange, markovChainModel, onModelChange]);
+  }, [onNodesChange, markovChainModel, onModelChange, onDeleteElement]);
 
   // Handle edge changes
   const handleEdgesChange = useCallback((changes: EdgeChange[]) => {
     onEdgesChange(changes);
-  }, [onEdgesChange]);
+    
+    // Handle edge deletions
+    changes.forEach(change => {
+      if (change.type === 'remove') {
+        onDeleteElement(change.id);
+      }
+    });
+  }, [onEdgesChange, onDeleteElement]);
 
   // Handle new connections (transitions)
   const handleConnect = useCallback(
@@ -191,13 +216,106 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     }
   }, [componentToPlace, onPanelClick, reactFlowInstance]);
 
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (disableDeletion) return;
+
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Find selected nodes and edges
+      const selectedNodes = nodes.filter(node => node.selected);
+      const selectedEdges = edges.filter(edge => edge.selected);
+      
+      // Delete selected nodes (states)
+      selectedNodes.forEach(node => {
+        onDeleteElement(node.id);
+      });
+      
+      // Delete selected edges (transitions)
+      selectedEdges.forEach(edge => {
+        onDeleteElement(edge.id);
+      });
+      
+      event.preventDefault();
+    } else if (event.ctrlKey && event.key === 'a') {
+      // Ctrl+A to select all
+      event.preventDefault();
+      
+      // Select all nodes
+      setNodes(nodes => nodes.map(node => ({ ...node, selected: true })));
+      
+      // Select all edges
+      setEdges(edges => edges.map(edge => ({ ...edge, selected: true })));
+    }
+  }, [nodes, edges, onDeleteElement, setNodes, setEdges, disableDeletion]);
+
+  // Handle context menu
+  const handleContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      show: true
+    });
+  }, []);
+
+  // Hide context menu
+  const hideContextMenu = useCallback(() => {
+    setContextMenu(prev => ({ ...prev, show: false }));
+  }, []);
+
+  // Context menu actions
+  const handleSelectAll = useCallback(() => {
+    setNodes(nodes => nodes.map(node => ({ ...node, selected: true })));
+    setEdges(edges => edges.map(edge => ({ ...edge, selected: true })));
+    hideContextMenu();
+  }, [setNodes, setEdges, hideContextMenu]);
+
+  const handleDeselectAll = useCallback(() => {
+    setNodes(nodes => nodes.map(node => ({ ...node, selected: false })));
+    setEdges(edges => edges.map(edge => ({ ...edge, selected: false })));
+    hideContextMenu();
+  }, [setNodes, setEdges, hideContextMenu]);
+
+  const handleDeleteSelected = useCallback(() => {
+    const selectedNodes = nodes.filter(node => node.selected);
+    const selectedEdges = edges.filter(edge => edge.selected);
+    
+    selectedNodes.forEach(node => onDeleteElement(node.id));
+    selectedEdges.forEach(edge => onDeleteElement(edge.id));
+    
+    hideContextMenu();
+  }, [nodes, edges, onDeleteElement, hideContextMenu]);
+
+  // Add keyboard event listeners
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('click', hideContextMenu);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', hideContextMenu);
+    };
+  }, [handleKeyDown, hideContextMenu]);
+
   const proOptions = { hideAttribution: true };
 
   return (
-    <div 
-      className={`markov-central-panel ${isDarkMode ? 'dark-mode' : ''} ${componentToPlace ? 'placing-component' : ''}`}
-      style={{ cursor: componentToPlace ? 'crosshair' : 'default' }}
-    >
+    <div className={`markov-central-panel ${isDarkMode ? 'dark-mode' : ''} ${componentToPlace ? 'placing-component' : ''}`}>
+      <div className="panel-header">
+        <h3>Markov Chain Diagram</h3>
+        <div className="diagram-info">
+          <span>Stati: {markovChainModel.states.length}</span>
+          <span>Transizioni: {markovChainModel.transitions.length}</span>
+        </div>
+        <div className="diagram-help">
+          <span>💡 Tasto destro per menu • Trascina per selezione multipla • Ctrl+Click per selezione • Ctrl+A seleziona tutto • DEL/Backspace elimina</span>
+        </div>
+      </div>
+      
+      <div 
+        className={`react-flow-container ${componentToPlace ? 'placement-mode' : ''}`} 
+        onContextMenu={handleContextMenu}
+        style={{ cursor: componentToPlace ? 'crosshair' : 'default' }}
+      >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -211,7 +329,10 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         snapToGrid={true}
         snapGrid={[15, 15]}
         selectionMode={SelectionMode.Partial}
-        multiSelectionKeyCode="Shift"
+        multiSelectionKeyCode="Control"
+        deleteKeyCode={null}
+        selectionOnDrag={!componentToPlace}
+        panOnDrag={componentToPlace ? false : [1, 2]}
         fitView
         attributionPosition="bottom-left"
         proOptions={proOptions}
@@ -234,11 +355,39 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         />
       </ReactFlow>
       
+      {/* Context menu */}
+      {contextMenu.show && (
+        <div 
+          className="context-menu"
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            zIndex: 1000
+          }}
+        >
+          <button onClick={handleSelectAll}>
+            🔲 Seleziona tutto (Ctrl+A)
+          </button>
+          <button onClick={handleDeselectAll}>
+            ⬜ Deseleziona tutto
+          </button>
+          <hr />
+          <button 
+            onClick={handleDeleteSelected}
+            disabled={!nodes.some(n => n.selected) && !edges.some(e => e.selected)}
+          >
+            🗑️ Elimina selezionati (Del)
+          </button>
+        </div>
+      )}
+      
       {componentToPlace && (
         <div className="placement-hint">
           Click on the canvas to place the selected component
         </div>
       )}
+      </div>
     </div>
   );
 };
