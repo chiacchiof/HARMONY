@@ -58,7 +58,8 @@ const MarkovChainEditor: React.FC = () => {
       name: `S${nextStateNumber}`,
       position: position || { x: 100, y: 100 },
       rewardFunction: 1,
-      isAbsorbing: false
+      isAbsorbing: false,
+      isInitial: false
     };
 
     setMarkovChainModel(prev => ({
@@ -143,6 +144,17 @@ const MarkovChainEditor: React.FC = () => {
     setMarkovChainModel(prev => ({
       ...prev,
       transitions: prev.transitions.filter(transition => transition.source !== stateId)
+    }));
+  }, []);
+
+  // Set a state as initial (ensure only one initial state at a time)
+  const handleSetAsInitial = useCallback((stateId: string) => {
+    setMarkovChainModel(prev => ({
+      ...prev,
+      states: prev.states.map(state => ({
+        ...state,
+        isInitial: state.id === stateId
+      }))
     }));
   }, []);
 
@@ -415,6 +427,7 @@ ${markovChainModel.transitions.map(transition => {
           }}
           isDarkMode={isDarkMode}
           onRemoveTransitions={handleRemoveOutgoingTransitions}
+          onSetAsInitial={handleSetAsInitial}
         />
       )}
 

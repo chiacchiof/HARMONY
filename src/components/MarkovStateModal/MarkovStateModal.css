@@ -284,6 +284,11 @@
   background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
 }
 
+.preview-state.initial .preview-circle {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 .preview-name {
   font-size: 0.9rem;
   line-height: 1;
@@ -303,6 +308,14 @@
 
 .markov-state-modal.dark-mode .preview-indicator {
   color: #ff6b6b;
+}
+
+.preview-state.initial .preview-indicator {
+  color: #007bff;
+}
+
+.markov-state-modal.dark-mode .preview-state.initial .preview-indicator {
+  color: #4CAF50;
 }
 
 .modal-footer {

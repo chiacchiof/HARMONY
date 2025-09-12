@@ -97,7 +97,7 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
 
   return (
     <div 
-      className={`state-node ${isDarkMode ? 'dark-mode' : ''} ${selected ? 'selected' : ''} ${state.isAbsorbing ? 'absorbing' : ''}`}
+      className={`state-node ${isDarkMode ? 'dark-mode' : ''} ${selected ? 'selected' : ''} ${state.isAbsorbing ? 'absorbing' : ''} ${state.isInitial ? 'initial' : ''}`}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
     >
@@ -118,6 +118,13 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
       {state.isAbsorbing && (
         <div className="absorbing-indicator" title="Absorbing State">
           <div className="absorbing-ring"></div>
+        </div>
+      )}
+
+      {/* Initial state indicator */}
+      {state.isInitial && (
+        <div className="initial-indicator" title="Initial State">
+          <div className="initial-arrow">⇒</div>
         </div>
       )}
 

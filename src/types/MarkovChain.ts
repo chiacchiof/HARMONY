@@ -8,6 +8,7 @@ export interface MarkovState {
   position: { x: number; y: number };
   rewardFunction: number; // Default 1
   isAbsorbing: boolean; // Default false
+  isInitial: boolean; // Default false, only one state can be initial
   parameters?: Record<string, any>;
 }
 

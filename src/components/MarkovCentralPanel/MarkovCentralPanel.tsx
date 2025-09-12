@@ -129,20 +129,53 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
   useEffect(() => {
     const { nodes: newNodes, edges: newEdges } = convertToReactFlowData;
     
-    // Only update if there are actual changes to prevent unnecessary re-renders
+    // Update nodes while preserving React Flow positions and selections
     setNodes(currentNodes => {
-      if (currentNodes.length !== newNodes.length) {
-        return newNodes;
-      }
-      
-      // Check if any node data has actually changed
-      const hasChanges = newNodes.some(newNode => {
-        const currentNode = currentNodes.find(n => n.id === newNode.id);
-        return !currentNode || 
-               JSON.stringify(currentNode.data.state) !== JSON.stringify(newNode.data.state);
+      // Update existing nodes and preserve their React Flow state (position, selection, etc.)
+      const updatedNodes = currentNodes.map(currentNode => {
+        const newNode = newNodes.find(n => n.id === currentNode.id);
+        if (!newNode) return currentNode; // Node will be removed later if not found
+        
+        // Check if state data has changed
+        const stateChanged = JSON.stringify(currentNode.data.state) !== JSON.stringify(newNode.data.state);
+        
+        if (stateChanged) {
+          // Update only the data, preserve the existing node structure and position
+          return {
+            ...currentNode,
+            data: {
+              ...currentNode.data,
+              state: newNode.data.state
+            }
+          };
+        }
+        
+        return currentNode;
       });
       
-      return hasChanges ? newNodes : currentNodes;
+      // Filter out nodes that no longer exist
+      const existingNodes = updatedNodes.filter(currentNode =>
+        newNodes.some(newNode => newNode.id === currentNode.id)
+      );
+      
+      // Add new nodes while keeping existing ones with their positions
+      const nodesToAdd = newNodes.filter(newNode => 
+        !currentNodes.some(current => current.id === newNode.id)
+      );
+      
+      // Only update if there are actual changes
+      const hasChanges = nodesToAdd.length > 0 || 
+                        existingNodes.length !== currentNodes.length ||
+                        existingNodes.some((node, index) => 
+                          !currentNodes[index] || 
+                          JSON.stringify(node.data.state) !== JSON.stringify(currentNodes[index]?.data?.state)
+                        );
+      
+      if (hasChanges) {
+        return [...existingNodes, ...nodesToAdd];
+      }
+      
+      return currentNodes;
     });
     
     setEdges(currentEdges => {
@@ -385,7 +418,6 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         zoomOnPinch={true}
         zoomOnDoubleClick={false}
         preventScrolling={false}
-        fitView
         attributionPosition="bottom-left"
         proOptions={proOptions}
         style={{ cursor: componentToPlace ? 'crosshair' : 'default' }}

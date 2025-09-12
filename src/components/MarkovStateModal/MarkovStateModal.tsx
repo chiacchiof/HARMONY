@@ -8,6 +8,7 @@ interface MarkovStateModalProps {
   onClose: () => void;
   isDarkMode: boolean;
   onRemoveTransitions?: (stateId: string) => void;
+  onSetAsInitial?: (stateId: string) => void;
 }
 
 const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
@@ -15,12 +16,14 @@ const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
   onSave,
   onClose,
   isDarkMode,
-  onRemoveTransitions
+  onRemoveTransitions,
+  onSetAsInitial
 }) => {
   const [name, setName] = useState(state.name);
   const [description, setDescription] = useState(state.description || '');
   const [rewardFunction, setRewardFunction] = useState(state.rewardFunction);
   const [isAbsorbing, setIsAbsorbing] = useState(state.isAbsorbing);
+  const [isInitial, setIsInitial] = useState(state.isInitial || false);
   const [nameError, setNameError] = useState('');
   const [rewardError, setRewardError] = useState('');
 
@@ -59,6 +62,15 @@ const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
     setIsAbsorbing(checked);
   }, [state.id, onRemoveTransitions]);
 
+  // Handle initial state toggle
+  const handleInitialToggle = useCallback((checked: boolean) => {
+    if (checked && onSetAsInitial) {
+      // If setting as initial state, ensure only one initial state exists
+      onSetAsInitial(state.id);
+    }
+    setIsInitial(checked);
+  }, [state.id, onSetAsInitial]);
+
   // Handle save
   const handleSave = useCallback(() => {
     if (validateInputs()) {
@@ -67,11 +79,12 @@ const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
         name: name.trim(),
         description: description.trim() || undefined,
         rewardFunction,
-        isAbsorbing
+        isAbsorbing,
+        isInitial
       };
       onSave(updatedState);
     }
-  }, [state, name, description, rewardFunction, isAbsorbing, onSave, validateInputs]);
+  }, [state, name, description, rewardFunction, isAbsorbing, isInitial, onSave, validateInputs]);
 
   // Handle key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
@@ -174,11 +187,26 @@ const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
                 An absorbing state is one where the process ends (no outgoing transitions)
               </div>
             </div>
+
+            <div className="form-group">
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={isInitial}
+                  onChange={(e) => handleInitialToggle(e.target.checked)}
+                />
+                <span className="toggle-switch"></span>
+                Initial State
+              </label>
+              <div className="help-text">
+                The initial state where the Markov chain begins (only one state can be initial)
+              </div>
+            </div>
           </div>
 
           <div className="state-preview">
             <h4>Preview</h4>
-            <div className={`preview-state ${isAbsorbing ? 'absorbing' : ''}`}>
+            <div className={`preview-state ${isAbsorbing ? 'absorbing' : ''} ${isInitial ? 'initial' : ''}`}>
               <div className="preview-circle">
                 <div className="preview-name">{name || 'State'}</div>
                 {rewardFunction !== 1 && (
@@ -186,6 +214,7 @@ const MarkovStateModal: React.FC<MarkovStateModalProps> = ({
                 )}
               </div>
               {isAbsorbing && <div className="preview-indicator">Absorbing</div>}
+              {isInitial && <div className="preview-indicator">Initial</div>}
             </div>
           </div>
         </div>
