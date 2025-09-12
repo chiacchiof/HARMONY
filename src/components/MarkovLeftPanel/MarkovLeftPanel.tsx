@@ -24,13 +24,16 @@ const MarkovLeftPanel: React.FC<MarkovLeftPanelProps> = ({
 }) => {
   const handleStateClick = () => {
     if (clickToPlaceMode) {
-      // In click-to-place mode, clicking State button ensures it's selected for placement
-      if (componentToPlace !== 'state') {
-        setComponentToPlace('state');
+      // In click-to-place mode, toggle selection
+      if (componentToPlace === 'state') {
+        setComponentToPlace(null); // Deselect if already selected
+      } else {
+        setComponentToPlace('state'); // Select if not selected
       }
     } else {
-      // Normal mode: add state directly to center
-      onAddState();
+      // Force user to enable Click to Place Mode first
+      onToggleClickToPlace(); // Enable click to place mode
+      setComponentToPlace('state'); // And select state for placement
     }
   };
 
@@ -80,8 +83,10 @@ const MarkovLeftPanel: React.FC<MarkovLeftPanelProps> = ({
             </div>
             <p className="mode-description">
               {clickToPlaceMode 
-                ? 'Instant Add: Click anywhere on canvas to add multiple states'
-                : 'Click components to add them to the center'
+                ? componentToPlace === 'state' 
+                  ? '🎯 State selected: Click canvas to place states, click State button to deselect'
+                  : '📋 Click State button to select, then click canvas to place'
+                : '⚠️ Click State button to enable Click to Place Mode automatically'
               }
             </p>
           </div>
@@ -89,11 +94,11 @@ const MarkovLeftPanel: React.FC<MarkovLeftPanelProps> = ({
           <div className="info-section">
             <h4>Instructions</h4>
             <ul>
+              <li>Click State button to enable placement mode</li>
+              <li>Click canvas to place states where you want</li>
               <li>Drag states to move them around</li>
               <li>Connect states by dragging from one to another</li>
-              <li>Click on states to edit properties</li>
-              <li>Click on transitions to edit probabilities</li>
-              <li>Use right-click to delete elements</li>
+              <li>Click on states/transitions to edit properties</li>
             </ul>
           </div>
         </div>
