@@ -34,6 +34,7 @@ interface MarkovCentralPanelProps {
   componentToPlace: 'state' | null;
   isDarkMode: boolean;
   disableDeletion?: boolean;
+  onReorganizeComponents?: () => void;
 }
 
 const nodeTypes = {
@@ -53,7 +54,8 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
   onPanelClick,
   componentToPlace,
   isDarkMode,
-  disableDeletion = false
+  disableDeletion = false,
+  onReorganizeComponents
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -65,6 +67,7 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     y: number;
     show: boolean;
   }>({ x: 0, y: 0, show: false });
+  const [isLocked, setIsLocked] = useState(false);
 
   // Memoized callbacks to avoid recreating data objects
   const onStateClickCallback = useCallback((state: MarkovState | MarkovTransition) => {
@@ -215,16 +218,11 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
       );
     
     if (positionUpdates.length > 0) {
-      console.log('📍 Position updates in Markov:', positionUpdates);
       const updatedStates = markovChainModel.states.map(state => {
         const positionUpdate = positionUpdates.find(update => update.id === state.id);
-        const newState = positionUpdate
+        return positionUpdate
           ? { ...state, position: positionUpdate.position! }
           : state;
-        if (positionUpdate) {
-          console.log(`📍 Updating state ${state.id} position:`, positionUpdate.position);
-        }
-        return newState;
       });
       
       onModelChange({
@@ -415,12 +413,12 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         multiSelectionKeyCode="Control"
         deleteKeyCode={null}
         selectionOnDrag={!componentToPlace}
-        panOnDrag={componentToPlace ? false : [1, 2]}
-        nodesDraggable={true}
-        nodesConnectable={true}
-        elementsSelectable={true}
-        zoomOnScroll={true}
-        zoomOnPinch={true}
+        panOnDrag={componentToPlace ? false : isLocked ? false : [1, 2]}
+        nodesDraggable={!isLocked}
+        nodesConnectable={!isLocked}
+        elementsSelectable={!isLocked}
+        zoomOnScroll={!isLocked}
+        zoomOnPinch={!isLocked}
         zoomOnDoubleClick={false}
         preventScrolling={false}
         attributionPosition="bottom-left"
@@ -433,6 +431,53 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
           size={1}
           color={isDarkMode ? '#404040' : '#e0e0e0'}
         />
+        
+        {/* Controlli personalizzati */}
+        <div className="react-flow__panel react-flow__controls bottom left">
+          <button
+            className="react-flow__controls-button"
+            onClick={() => reactFlowInstance.zoomIn()}
+            title="Zoom In (+)"
+          >
+            +
+          </button>
+          <button
+            className="react-flow__controls-button"
+            onClick={() => reactFlowInstance.zoomOut()}
+            title="Zoom Out (-)"
+          >
+            -
+          </button>
+          <button
+            className="react-flow__controls-button"
+            onClick={() => reactFlowInstance.fitView()}
+            title="Fit View"
+          >
+            ⊞
+          </button>
+          <button
+            className="react-flow__controls-button"
+            onClick={() => setIsLocked(!isLocked)}
+            title={isLocked ? "Sblocca Vista" : "Blocca Vista"}
+          >
+            {isLocked ? "🔓" : "🔒"}
+          </button>
+          {onReorganizeComponents && (
+            <button
+              className="react-flow__controls-button"
+              onClick={() => {
+                onReorganizeComponents();
+                setTimeout(() => {
+                  reactFlowInstance.fitView();
+                }, 100);
+              }}
+              title="Riorganizza tutti gli stati al centro"
+            >
+              🔧
+            </button>
+          )}
+        </div>
+        
         <MiniMap
           style={{
             backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff',

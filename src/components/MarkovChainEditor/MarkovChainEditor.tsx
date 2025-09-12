@@ -367,7 +367,6 @@ ${markovChainModel.transitions.map(transition => {
 
   // Handle model changes from the central panel (especially for position updates)
   const handleModelChange = useCallback((updatedModel: MarkovChainModel) => {
-    console.log('🔄 Model change in Markov Chain:', updatedModel);
     setMarkovChainModel(updatedModel);
   }, []);
 
@@ -379,6 +378,32 @@ ${markovChainModel.transitions.map(transition => {
   const handleToggleRightPanel = useCallback(() => {
     setIsRightPanelCollapsed(prev => !prev);
   }, []);
+
+  // Reorganize states to center
+  const handleReorganizeComponents = useCallback(() => {
+    if (markovChainModel.states.length === 0) return;
+    
+    const gridSpacing = 200;
+    const cols = Math.ceil(Math.sqrt(markovChainModel.states.length));
+    
+    const reorganizedStates = markovChainModel.states.map((state, index) => {
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      
+      return {
+        ...state,
+        position: {
+          x: col * gridSpacing,
+          y: row * gridSpacing
+        }
+      };
+    });
+
+    setMarkovChainModel({
+      ...markovChainModel,
+      states: reorganizedStates
+    });
+  }, [markovChainModel]);
 
   return (
     <div className={`markov-chain-editor ${isDarkMode ? 'dark-mode' : ''}`}>
@@ -425,6 +450,7 @@ ${markovChainModel.transitions.map(transition => {
           componentToPlace={componentToPlace}
           isDarkMode={isDarkMode}
           disableDeletion={showStateModal || showTransitionModal}
+          onReorganizeComponents={handleReorganizeComponents}
         />
       </div>
       
