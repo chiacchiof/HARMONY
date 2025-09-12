@@ -33,6 +33,7 @@ const MarkovChainEditor: React.FC = () => {
   const [clickToPlaceMode, setClickToPlaceMode] = useState(false);
   const [componentToPlace, setComponentToPlace] = useState<'state' | null>(null);
   const [nextStateNumber, setNextStateNumber] = useState(1);
+  const [isRestoringFromSnapshot, setIsRestoringFromSnapshot] = useState(false);
 
 
   // Helper function to update state counter
@@ -55,10 +56,13 @@ const MarkovChainEditor: React.FC = () => {
   // Ripristina il modello dal snapshot al mount
   useEffect(() => {
     const snapshot = getMarkovChainSnapshot();
-    if (snapshot) {
+    if (snapshot && (markovChainModel.states.length === 0 && markovChainModel.transitions.length === 0)) {
+      setIsRestoringFromSnapshot(true);
       setMarkovChainModel(snapshot);
+      // Reset the flag after a short delay to allow React Flow to process
+      setTimeout(() => setIsRestoringFromSnapshot(false), 100);
     }
-  }, [getMarkovChainSnapshot]);
+  }, [getMarkovChainSnapshot, markovChainModel.states.length, markovChainModel.transitions.length]);
 
   // Add state handler
   const handleAddState = useCallback((position?: { x: number; y: number }) => {
@@ -361,6 +365,12 @@ ${markovChainModel.transitions.map(transition => {
     navigate('/');
   }, [navigate]);
 
+  // Handle model changes from the central panel (especially for position updates)
+  const handleModelChange = useCallback((updatedModel: MarkovChainModel) => {
+    console.log('🔄 Model change in Markov Chain:', updatedModel);
+    setMarkovChainModel(updatedModel);
+  }, []);
+
   // Toggle panels
   const handleToggleLeftPanel = useCallback(() => {
     setIsLeftPanelCollapsed(prev => !prev);
@@ -408,7 +418,7 @@ ${markovChainModel.transitions.map(transition => {
         <MarkovCentralPanel 
           markovChainModel={markovChainModel}
           onElementClick={handleElementClick}
-          onModelChange={setMarkovChainModel}
+          onModelChange={handleModelChange}
           onDeleteElement={handleDeleteElement}
           onCreateConnection={handleCreateConnection}
           onPanelClick={handlePanelClick}

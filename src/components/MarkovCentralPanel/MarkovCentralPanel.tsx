@@ -208,18 +208,23 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     const otherChanges = changes.filter(change => change.type !== 'remove');
     onNodesChange(otherChanges);
     
-    // Batch update model for all position changes when not dragging
+    // Batch update model for all position changes
     const positionUpdates = otherChanges
       .filter((change): change is NodePositionChange => 
-        change.type === 'position' && !!(change as NodePositionChange).position && !(change as NodePositionChange).dragging
+        change.type === 'position' && !!(change as NodePositionChange).position
       );
     
     if (positionUpdates.length > 0) {
+      console.log('📍 Position updates in Markov:', positionUpdates);
       const updatedStates = markovChainModel.states.map(state => {
         const positionUpdate = positionUpdates.find(update => update.id === state.id);
-        return positionUpdate
+        const newState = positionUpdate
           ? { ...state, position: positionUpdate.position! }
           : state;
+        if (positionUpdate) {
+          console.log(`📍 Updating state ${state.id} position:`, positionUpdate.position);
+        }
+        return newState;
       });
       
       onModelChange({
