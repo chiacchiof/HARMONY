@@ -15,6 +15,7 @@ interface MenuBarProps {
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
   onNewModel: () => void;
+  onClearAllModels?: () => void;
   openedFile?: { filename: string; fileHandle?: FileSystemFileHandle } | null;
   currentEditor?: 'fault-tree' | 'markov-chain';
   onNavigateToFaultTree?: () => void;
@@ -36,6 +37,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
   isDarkMode,
   onToggleDarkMode,
   onNewModel,
+  onClearAllModels,
   openedFile,
   currentEditor,
   onNavigateToFaultTree,
@@ -92,6 +94,11 @@ const MenuBar: React.FC<MenuBarProps> = ({
               <button className="dropdown-item" onClick={onNewModel}>
                 🆕 Nuovo
               </button>
+              {onClearAllModels && (
+                <button className="dropdown-item" onClick={onClearAllModels}>
+                  🗑️ Pulisci tutti i modelli
+                </button>
+              )}
                              <button className="dropdown-item" onClick={onOpenWithFileSystem}>
                  📂 Apri File (.json)
                </button>

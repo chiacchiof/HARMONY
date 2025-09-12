@@ -15,12 +15,14 @@ import { FaultTreeModel, BaseEvent, Gate, GateType } from '../../types/FaultTree
 import { FaultTreeModification } from '../../types/ChatIntegration';
 import { FileService } from '../../services/file-service';
 import { useLLMConfig } from '../../contexts/LLMContext';
+import { useModelPersistence } from '../../contexts/ModelPersistenceContext';
 import { useDeviceType } from '../../hooks/useDeviceType';
 import './FaultTreeEditor.css';
 
 const FaultTreeEditor: React.FC = () => {
   const navigate = useNavigate();
   const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
+  const { saveFaultTreeSnapshot, getFaultTreeSnapshot, clearSnapshots } = useModelPersistence();
   const [faultTreeModel, setFaultTreeModel] = useState<FaultTreeModel>({
     events: [],
     gates: [],
@@ -101,6 +103,15 @@ const FaultTreeEditor: React.FC = () => {
       setIsRightPanelCollapsed(false);
     }
   }, [deviceType]);
+
+  // Ripristina il modello dal snapshot al mount
+  useEffect(() => {
+    const snapshot = getFaultTreeSnapshot();
+    if (snapshot) {
+      setFaultTreeModel(snapshot);
+      updateCountersFromModel(snapshot);
+    }
+  }, [getFaultTreeSnapshot, updateCountersFromModel]);
 
   // Gestione aggiunta eventi base
   const handleAddBaseEvent = useCallback(() => {
@@ -370,8 +381,9 @@ const FaultTreeEditor: React.FC = () => {
 
   // Gestione navigazione tra editor
   const handleNavigateToMarkov = useCallback(() => {
+    saveFaultTreeSnapshot(faultTreeModel);
     navigate('/markov-chain-editor');
-  }, [navigate]);
+  }, [navigate, saveFaultTreeSnapshot, faultTreeModel]);
 
   const handleNavigateToFaultTree = useCallback(() => {
     // Already on fault tree editor, no need to navigate
@@ -631,6 +643,7 @@ const FaultTreeEditor: React.FC = () => {
           isDarkMode={isDarkMode}
           onToggleDarkMode={handleToggleDarkMode}
           onNewModel={handleNewModel}
+          onClearAllModels={clearSnapshots}
           openedFile={openedFile}
           currentEditor="fault-tree"
           onNavigateToFaultTree={handleNavigateToFaultTree}

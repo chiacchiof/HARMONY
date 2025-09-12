@@ -10,11 +10,13 @@ import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import { MarkovChainModel, MarkovState, MarkovTransition } from '../../types/MarkovChain';
 import { FileService } from '../../services/file-service';
 import { useLLMConfig } from '../../contexts/LLMContext';
+import { useModelPersistence } from '../../contexts/ModelPersistenceContext';
 import './MarkovChainEditor.css';
 
 const MarkovChainEditor: React.FC = () => {
   const navigate = useNavigate();
   const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
+  const { saveMarkovChainSnapshot, getMarkovChainSnapshot, clearSnapshots } = useModelPersistence();
   const [markovChainModel, setMarkovChainModel] = useState<MarkovChainModel>({
     states: [],
     transitions: []
@@ -49,6 +51,14 @@ const MarkovChainEditor: React.FC = () => {
   useEffect(() => {
     updateNextStateNumber();
   }, [updateNextStateNumber]);
+
+  // Ripristina il modello dal snapshot al mount
+  useEffect(() => {
+    const snapshot = getMarkovChainSnapshot();
+    if (snapshot) {
+      setMarkovChainModel(snapshot);
+    }
+  }, [getMarkovChainSnapshot]);
 
   // Add state handler
   const handleAddState = useCallback((position?: { x: number; y: number }) => {
@@ -333,8 +343,9 @@ ${markovChainModel.transitions.map(transition => {
 
   // Navigation handlers
   const handleNavigateToFaultTree = useCallback(() => {
+    saveMarkovChainSnapshot(markovChainModel);
     navigate('/fault-tree-editor');
-  }, [navigate]);
+  }, [navigate, saveMarkovChainSnapshot, markovChainModel]);
 
   const handleNavigateToMarkov = useCallback(() => {
     // Already on markov chain editor, no need to navigate
@@ -374,6 +385,7 @@ ${markovChainModel.transitions.map(transition => {
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onNewModel={handleNewModel}
+        onClearAllModels={clearSnapshots}
         openedFile={null}
         currentEditor="markov-chain"
         onNavigateToFaultTree={handleNavigateToFaultTree}
