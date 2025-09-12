@@ -7,6 +7,7 @@ import RightPanel from '../RightPanel/RightPanel';
 import MarkovStateModal from '../MarkovStateModal/MarkovStateModal';
 import MarkovTransitionModal from '../MarkovTransitionModal/MarkovTransitionModal';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
+import MSolverModal from '../MSolverModal/MSolverModal';
 import { MarkovChainModel, MarkovState, MarkovTransition } from '../../types/MarkovChain';
 import { FileService } from '../../services/file-service';
 import { useLLMConfig } from '../../contexts/LLMContext';
@@ -25,6 +26,7 @@ const MarkovChainEditor: React.FC = () => {
   const [selectedElement, setSelectedElement] = useState<MarkovState | MarkovTransition | null>(null);
   const [showStateModal, setShowStateModal] = useState(false);
   const [showTransitionModal, setShowTransitionModal] = useState(false);
+  const [showMSolverModal, setShowMSolverModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
@@ -355,10 +357,9 @@ ${markovChainModel.transitions.map(transition => {
     // Already on markov chain editor, no need to navigate
   }, []);
 
-  // MSolver handler (placeholder for now)
+  // MSolver handler
   const handleShowMSolver = useCallback(() => {
-    console.log('MSolver clicked');
-    // TODO: Implement MSolver modal/functionality
+    setShowMSolverModal(true);
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -495,6 +496,12 @@ ${markovChainModel.transitions.map(transition => {
         isOpen={showLLMConfigModal}
         onClose={() => setShowLLMConfigModal(false)}
         onConfigChange={handleLLMConfigChange}
+      />
+
+      <MSolverModal
+        isOpen={showMSolverModal}
+        onClose={() => setShowMSolverModal(false)}
+        markovChainModel={markovChainModel}
       />
 
     </div>
