@@ -84,7 +84,8 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
   };
 
   const extractStateResults = (data: any, stateIndex: number): CTMCStateResults => {
-    const solverMethod = data.solverMethod || 'Transitorio';
+    // Use data.Solver if available (new format), fallback to data.solverMethod (old format)
+    const solverMethod = data.Solver || data.solverMethod || 'Transitorio';
     const isSteadyState = solverMethod === 'Stazionario';
     
     console.log(`🔍 [DEBUG] Extracting results for state ${stateIndex}:`);

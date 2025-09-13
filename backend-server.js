@@ -1129,7 +1129,8 @@ app.get('/api/ctmc/results', async (req, res) => {
       // Log summary for debugging
       console.log(`📊 CTMC Results Summary:`);
       console.log(`   - States: ${parsedResults.states?.length || 0}`);
-      console.log(`   - Solver method: ${parsedResults.solverMethod || 'not specified'}`);
+      console.log(`   - Solver: ${parsedResults.Solver || 'not specified'}`);
+      console.log(`   - Solver method (legacy): ${parsedResults.solverMethod || 'not specified'}`);
       console.log(`   - Result vector: ${parsedResults.result?.length || 0} elements`);
       console.log(`   - Time steps: ${parsedResults.timeSteps?.length || 0}`);
       console.log(`   - Analysis time: ${parsedResults.analysisTime || 'not specified'}`);

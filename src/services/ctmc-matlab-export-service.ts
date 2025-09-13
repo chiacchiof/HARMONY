@@ -4,6 +4,7 @@ export interface CTMCExportOptions {
   timeT: number;
   deltaT?: number;
   solverMethod: 'Transitorio' | 'Uniformizzazione' | 'Stazionario';
+  simulationEnabled?: boolean;
   filename?: string;
   libraryDirectory: string;
 }
@@ -130,6 +131,24 @@ export class CTMCMatlabExportService {
     
     const pi0Def = `pi0 = [${initialDistribution.join(' ')}];`;
     console.log(`[CTMC] Generated pi0: ${pi0Def}`);
+
+    // Determine the solver method name based on simulation flag and solver method
+    let solverName = '';
+    if (options.simulationEnabled) {
+      solverName = 'Simulation';
+    } else {
+      switch (options.solverMethod) {
+        case 'Transitorio':
+          solverName = 'Transitorio';
+          break;
+        case 'Uniformizzazione':
+          solverName = 'Uniformized';
+          break;
+        case 'Stazionario':
+          solverName = 'Stazionario';
+          break;
+      }
+    }
 
     // Generate method-specific code
     let solutionCode = '';
@@ -267,6 +286,7 @@ if exist('probabilityMatrix', 'var')
     resultsStruct.transitions = transitions;
     resultsStruct.t = t;
     resultsStruct.deltaT = deltaT;
+    resultsStruct.Solver = '${solverName}';
     resultsStruct.analysisTime = datestr(now, 'yyyy-mm-dd HH:MM:SS');
 else
     save(resultsFile, 'result', 'Q', 'pi0', 'states', 'transitions');
@@ -276,6 +296,7 @@ else
     resultsStruct.result = result;
     resultsStruct.states = states;
     resultsStruct.transitions = transitions;
+    resultsStruct.Solver = '${solverName}';
     resultsStruct.analysisTime = datestr(now, 'yyyy-mm-dd HH:MM:SS');
 end
 

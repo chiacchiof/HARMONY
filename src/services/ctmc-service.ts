@@ -59,6 +59,7 @@ export class CTMCService {
         timeT: config.timeT,
         deltaT: config.deltaT,
         solverMethod: config.solverMethod,
+        simulationEnabled: config.simulationEnabled,
         filename: `ctmc-model-${new Date().toISOString().split('T')[0]}.m`,
         libraryDirectory: config.libraryDirectory
       };
@@ -96,6 +97,7 @@ export class CTMCService {
       timeT: config.timeT,
       deltaT: config.deltaT,
       solverMethod: config.solverMethod,
+      simulationEnabled: config.simulationEnabled,
       libraryDirectory: config.libraryDirectory
     };
 
