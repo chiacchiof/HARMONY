@@ -8,6 +8,7 @@ import MarkovStateModal from '../MarkovStateModal/MarkovStateModal';
 import MarkovTransitionModal from '../MarkovTransitionModal/MarkovTransitionModal';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import MSolverModal from '../MSolverModal/MSolverModal';
+import CTMCResultsModal from '../CTMCResultsModal/CTMCResultsModal';
 import { MarkovChainModel, MarkovState, MarkovTransition } from '../../types/MarkovChain';
 import { FileService } from '../../services/file-service';
 import { useLLMConfig } from '../../contexts/LLMContext';
@@ -27,6 +28,8 @@ const MarkovChainEditor: React.FC = () => {
   const [showStateModal, setShowStateModal] = useState(false);
   const [showTransitionModal, setShowTransitionModal] = useState(false);
   const [showMSolverModal, setShowMSolverModal] = useState(false);
+  const [showCTMCResultsModal, setShowCTMCResultsModal] = useState(false);
+  const [selectedResultsStateId, setSelectedResultsStateId] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
@@ -35,6 +38,7 @@ const MarkovChainEditor: React.FC = () => {
   const [clickToPlaceMode, setClickToPlaceMode] = useState(false);
   const [componentToPlace, setComponentToPlace] = useState<'state' | null>(null);
   const [nextStateNumber, setNextStateNumber] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isRestoringFromSnapshot, setIsRestoringFromSnapshot] = useState(false);
 
 
@@ -362,6 +366,12 @@ ${markovChainModel.transitions.map(transition => {
     setShowMSolverModal(true);
   }, []);
 
+  // CTMC Results handler
+  const handleViewResults = useCallback((stateId: string) => {
+    setSelectedResultsStateId(stateId);
+    setShowCTMCResultsModal(true);
+  }, []);
+
   const handleLogout = useCallback(() => {
     navigate('/');
   }, [navigate]);
@@ -448,6 +458,7 @@ ${markovChainModel.transitions.map(transition => {
           onDeleteElement={handleDeleteElement}
           onCreateConnection={handleCreateConnection}
           onPanelClick={handlePanelClick}
+          onViewResults={handleViewResults}
           componentToPlace={componentToPlace}
           isDarkMode={isDarkMode}
           disableDeletion={showStateModal || showTransitionModal}
@@ -502,6 +513,25 @@ ${markovChainModel.transitions.map(transition => {
         isOpen={showMSolverModal}
         onClose={() => setShowMSolverModal(false)}
         markovChainModel={markovChainModel}
+      />
+
+      <CTMCResultsModal
+        isOpen={showCTMCResultsModal}
+        onClose={() => {
+          setShowCTMCResultsModal(false);
+          setSelectedResultsStateId(null);
+        }}
+        stateId={selectedResultsStateId}
+        stateName={selectedResultsStateId ? markovChainModel.states.find(s => s.id === selectedResultsStateId)?.name || null : null}
+        matlabStateIndex={selectedResultsStateId ? 
+          [...markovChainModel.states]
+            .sort((a, b) => {
+              const aId = parseInt(a.id.replace('state-', '')) || 0;
+              const bId = parseInt(b.id.replace('state-', '')) || 0;
+              return aId - bId;
+            })
+            .findIndex(s => s.id === selectedResultsStateId) + 1 : undefined
+        }
       />
 
     </div>

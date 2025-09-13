@@ -31,6 +31,7 @@ interface MarkovCentralPanelProps {
   onDeleteElement: (elementId: string) => void;
   onCreateConnection: (sourceId: string, targetId: string, sourceHandle?: string, targetHandle?: string) => void;
   onPanelClick: (position: { x: number; y: number }) => void;
+  onViewResults: (stateId: string) => void;
   componentToPlace: 'state' | null;
   isDarkMode: boolean;
   disableDeletion?: boolean;
@@ -52,6 +53,7 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
   onDeleteElement,
   onCreateConnection,
   onPanelClick,
+  onViewResults,
   componentToPlace,
   isDarkMode,
   disableDeletion = false,
@@ -81,6 +83,18 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
 
   // Convert Markov chain model to React Flow nodes and edges
   const convertToReactFlowData = useMemo(() => {
+    // Create state index mapping for MATLAB (1-based indexing)
+    const sortedStates = [...markovChainModel.states].sort((a, b) => {
+      const aId = parseInt(a.id.replace('state-', '')) || 0;
+      const bId = parseInt(b.id.replace('state-', '')) || 0;
+      return aId - bId;
+    });
+    
+    const stateIndexMap = new Map<string, number>();
+    sortedStates.forEach((state, index) => {
+      stateIndexMap.set(state.id, index + 1); // MATLAB uses 1-based indexing
+    });
+
     const reactFlowNodes: Node[] = markovChainModel.states.map(state => ({
       id: state.id,
       type: 'stateNode',
@@ -89,8 +103,10 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
         state,
         onStateClick: onStateClickCallback,
         onDeleteState: onDeleteStateCallback,
+        onViewResults,
         isDarkMode,
-        disableDeletion
+        disableDeletion,
+        matlabStateIndex: stateIndexMap.get(state.id)
       },
       dragHandle: '.drag-handle',
       selectable: true
@@ -126,7 +142,7 @@ const MarkovCentralPanelContent: React.FC<MarkovCentralPanelProps> = ({
     });
 
     return { nodes: reactFlowNodes, edges: reactFlowEdges };
-  }, [markovChainModel.states, markovChainModel.transitions, onStateClickCallback, onDeleteStateCallback, isDarkMode, disableDeletion]);
+  }, [markovChainModel.states, markovChainModel.transitions, onStateClickCallback, onDeleteStateCallback, onViewResults, isDarkMode, disableDeletion]);
 
   // Update React Flow nodes and edges when model changes
   useEffect(() => {

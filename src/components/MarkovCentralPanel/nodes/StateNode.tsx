@@ -7,15 +7,17 @@ interface StateNodeData {
   state: MarkovState;
   onStateClick: (state: MarkovState) => void;
   onDeleteState: (stateId: string) => void;
+  onViewResults: (stateId: string) => void;
   isDarkMode: boolean;
   disableDeletion: boolean;
+  matlabStateIndex?: number; // Index used in MATLAB (1-based)
 }
 
 const StateNode: React.FC<NodeProps<StateNodeData>> = ({ 
   data, 
   selected 
 }) => {
-  const { state, onStateClick, onDeleteState, isDarkMode, disableDeletion } = data;
+  const { state, onStateClick, onDeleteState, onViewResults, isDarkMode, disableDeletion, matlabStateIndex } = data;
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,6 +37,11 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
       onDeleteState(state.id);
     }
   }, [disableDeletion, onDeleteState, state.id]);
+
+  const handleViewResults = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewResults(state.id);
+  }, [onViewResults, state.id]);
 
   // Generate 12 handles positioned like clock hours
   const clockHandles = useMemo(() => {
@@ -108,7 +115,7 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
       <div className="state-circle drag-handle">
         <div className="state-content">
           <div className="state-name">{state.name}</div>
-          <div className="state-id">Id: {parseInt(state.id.replace('state-', '')) || 0}</div>
+          <div className="state-id">Id: {matlabStateIndex !== undefined ? matlabStateIndex - 1 : parseInt(state.id.replace('state-', '')) || 0}</div>
           {state.rewardFunction !== 1 && (
             <div className="state-reward">R: {state.rewardFunction}</div>
           )}
@@ -128,6 +135,15 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
           <div className="initial-arrow">⇒</div>
         </div>
       )}
+
+      {/* Results viewer button */}
+      <button 
+        className="results-button"
+        onClick={handleViewResults}
+        title="View CTMC Results"
+      >
+        📊
+      </button>
 
       {/* Delete button */}
       {!disableDeletion && (

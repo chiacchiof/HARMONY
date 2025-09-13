@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MarkovChainModel } from '../../types/MarkovChain';
 import { CTMCService, CTMCConfig, CTMCProgress } from '../../services/ctmc-service';
+import CTMCResultsModal from '../CTMCResultsModal/CTMCResultsModal';
 import './MSolverModal.css';
 
 interface MSolverModalProps {
@@ -30,6 +31,9 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
   const [logOutput, setLogOutput] = useState('');
+  
+  // State for CTMC Results Modal
+  const [showCTMCResults, setShowCTMCResults] = useState(false);
 
   // Load saved configuration when modal opens
   useEffect(() => {
@@ -48,6 +52,11 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
       setLogOutput('');
     }
   }, [isOpen]);
+
+  // Debug state changes
+  useEffect(() => {
+    console.log(`🔄 [MSolverModal] State update: isRunning=${isRunning}, isCompleted=${isCompleted}`);
+  }, [isRunning, isCompleted]);
 
   if (!isOpen) return null;
 
@@ -86,6 +95,12 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
 
       // Set up progress callback
       CTMCService.setProgressCallback((progress: CTMCProgress) => {
+        console.log(`🔄 [MSolverModal] Progress update:`, {
+          progress: progress.progress,
+          isRunning: progress.isRunning,
+          isCompleted: progress.isCompleted,
+          currentStep: progress.currentStep
+        });
         setProgress(progress.progress);
         setCurrentStep(progress.currentStep);
         setLogOutput(progress.logOutput);
@@ -97,7 +112,12 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
       await CTMCService.runAnalysis(markovChainModel, config);
       
     } catch (error) {
-      alert(`Errore durante l'analisi CTMC: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+      // Handle error through progress system instead of alert popup
+      setIsRunning(false);
+      setIsCompleted(false);
+      setProgress(0);
+      setCurrentStep('❌ Errore durante analisi CTMC');
+      setLogOutput(`Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}\n\nPossibili soluzioni:\n1. Verifica che il backend sia attivo (node backend-server.js)\n2. Controlla il percorso della libreria CTMC\n3. Assicurati che MATLAB sia installato e nel PATH\n4. Riprova con un modello più semplice\n`);
     }
   };
 
@@ -334,6 +354,20 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
             {isRunning ? 'Chiudi quando completato' : 'Chiudi'}
           </button>
           
+          {/* Retrieve Results - SEMPRE disponibile quando non sta girando (come SHyFTA) */}
+          {!isRunning && (
+            <button 
+              className="test-button"
+              onClick={() => {
+                console.log(`🔄 [MSolverModal] Opening CTMC Results Modal`);
+                setShowCTMCResults(true);
+              }}
+              title="Carica risultati CTMC dal file results.json"
+            >
+              🔍 Retrieve Results
+            </button>
+          )}
+          
           {!isRunning && !isCompleted && (
             <button 
               className="run-button primary" 
@@ -345,29 +379,19 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
           )}
           
           {!isRunning && isCompleted && (
-            <>
-              <button 
-                className="results-button" 
-                onClick={() => {
-                  alert(`Risultati CTMC disponibili:\n\nMetodo: ${solverMethod}\nTempo: ${timeT}\nStati: ${markovChainModel.states.length}\n\nI risultati dettagliati sono salvati in output/results.mat\n\nPer una visualizzazione completa dei risultati, implementare il CTMC Results Viewer.`);
-                }}
-              >
-                📊 Visualizza Risultati CTMC
-              </button>
-              <button 
-                className="run-button primary" 
-                onClick={() => {
-                  setIsCompleted(false);
-                  setProgress(0);
-                  setCurrentStep('');
-                  setLogOutput('');
-                  handleRunCTMC();
-                }}
-                disabled={!libraryDirectory}
-              >
-                🔄 Esegui Nuovamente
-              </button>
-            </>
+            <button 
+              className="run-button primary" 
+              onClick={() => {
+                setIsCompleted(false);
+                setProgress(0);
+                setCurrentStep('');
+                setLogOutput('');
+                handleRunCTMC();
+              }}
+              disabled={!libraryDirectory}
+            >
+              🔄 Esegui Nuovamente
+            </button>
           )}
           
           {isRunning && (
@@ -380,6 +404,14 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
           )}
         </div>
       </div>
+      
+      {/* CTMC Results Modal */}
+      <CTMCResultsModal
+        isOpen={showCTMCResults}
+        onClose={() => setShowCTMCResults(false)}
+        stateId={null}
+        stateName={null}
+      />
     </div>
   );
 };

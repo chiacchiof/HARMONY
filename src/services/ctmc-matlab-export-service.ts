@@ -138,22 +138,84 @@ export class CTMCMatlabExportService {
     switch (options.solverMethod) {
       case 'Transitorio':
         solutionCode = `
-% Soluzione transitoria usando expm
+% Time evolution analysis
 t = ${options.timeT};
+deltaT = ${options.deltaT || 0.1}; % Time step for probability evolution
+
+% Time loop for probability calculation
+timeSteps = 0:deltaT:t;
+numTimeSteps = length(timeSteps);
+numStates = length(states);
+
+% Initialize probability matrix (time x states)
+probabilityMatrix = zeros(numTimeSteps, numStates);
+
+% Calculate probability for each time step
+fprintf("\\nCalculating probability evolution...\\n");
+for i = 1:numTimeSteps
+    currentTime = timeSteps(i);
+    if currentTime == 0
+        % Initial condition
+        probabilityMatrix(i, :) = pi0;
+    else
+        % Solve CTMC for current time
+        pi_t = solveCTMC(Q, pi0, currentTime);
+        probabilityMatrix(i, :) = pi_t;
+    end
+    
+    % Progress indicator
+    if mod(i, 10) == 0 || i == numTimeSteps
+        fprintf("Progress: %.1f%% (t=%.2f)\\n", (i/numTimeSteps)*100, currentTime);
+    end
+end
+
+% Final solution using expm
 pi_t_expm = solveCTMC(Q, pi0, t);
 result = pi_t_expm;`;
         resultsCode = `fprintf("\\nDistribuzione transitoria a t=%.2f:\\n", t);
-fprintf("π(t=%.2f) = %s\\n", t, mat2str(result, 6));`;
+fprintf("π(t=%.2f) = %s\\n", t, mat2str(result, 6));
+fprintf("Time evolution matrix: %dx%d (time x states)\\n", size(probabilityMatrix, 1), size(probabilityMatrix, 2));`;
         break;
 
       case 'Uniformizzazione':
         solutionCode = `
-% Soluzione transitoria usando uniformizzazione
+% Time evolution analysis using uniformization
 t = ${options.timeT};
+deltaT = ${options.deltaT || 0.1}; % Time step for probability evolution
+
+% Time loop for probability calculation
+timeSteps = 0:deltaT:t;
+numTimeSteps = length(timeSteps);
+numStates = length(states);
+
+% Initialize probability matrix (time x states)
+probabilityMatrix = zeros(numTimeSteps, numStates);
+
+% Calculate probability for each time step
+fprintf("\\nCalculating probability evolution (uniformization)...\\n");
+for i = 1:numTimeSteps
+    currentTime = timeSteps(i);
+    if currentTime == 0
+        % Initial condition
+        probabilityMatrix(i, :) = pi0;
+    else
+        % Solve CTMC for current time using uniformization
+        pi_t = solveCTMC(Q, pi0, currentTime, "method", "uniformization", "tol", 1e-12);
+        probabilityMatrix(i, :) = pi_t;
+    end
+    
+    % Progress indicator
+    if mod(i, 10) == 0 || i == numTimeSteps
+        fprintf("Progress: %.1f%% (t=%.2f)\\n", (i/numTimeSteps)*100, currentTime);
+    end
+end
+
+% Final solution using uniformization
 pi_t_uni = solveCTMC(Q, pi0, t, "method", "uniformization", "tol", 1e-12);
 result = pi_t_uni;`;
         resultsCode = `fprintf("\\nDistribuzione transitoria (uniformizzazione) a t=%.2f:\\n", t);
-fprintf("π(t=%.2f) = %s\\n", t, mat2str(result, 6));`;
+fprintf("π(t=%.2f) = %s\\n", t, mat2str(result, 6));
+fprintf("Time evolution matrix: %dx%d (time x states)\\n", size(probabilityMatrix, 1), size(probabilityMatrix, 2));`;
         break;
 
       case 'Stazionario':
@@ -192,8 +254,42 @@ ${resultsCode}
 
 % 7. Salvataggio risultati
 resultsFile = fullfile(pwd, 'output/results.mat');
-save(resultsFile, 'result', 'Q', 'pi0', 'states', 'transitions');
-fprintf("\\nRisultati salvati in: %s\\n", resultsFile);
+if exist('probabilityMatrix', 'var')
+    save(resultsFile, 'result', 'timeSteps', 'probabilityMatrix', 'Q', 'pi0', 'states', 'transitions', 't', 'deltaT');
+    fprintf("\\nRisultati salvati in: %s\\n", resultsFile);
+    fprintf("Time evolution matrix: %dx%d (time x states)\\n", size(probabilityMatrix, 1), size(probabilityMatrix, 2));
+    
+    % Also save as JSON for Node.js parsing
+    resultsStruct.timeSteps = timeSteps;
+    resultsStruct.probabilityMatrix = probabilityMatrix;
+    resultsStruct.result = result;
+    resultsStruct.states = states;
+    resultsStruct.transitions = transitions;
+    resultsStruct.t = t;
+    resultsStruct.deltaT = deltaT;
+    resultsStruct.analysisTime = datestr(now, 'yyyy-mm-dd HH:MM:SS');
+else
+    save(resultsFile, 'result', 'Q', 'pi0', 'states', 'transitions');
+    fprintf("\\nRisultati salvati in: %s\\n", resultsFile);
+    
+    % Also save as JSON for Node.js parsing
+    resultsStruct.result = result;
+    resultsStruct.states = states;
+    resultsStruct.transitions = transitions;
+    resultsStruct.analysisTime = datestr(now, 'yyyy-mm-dd HH:MM:SS');
+end
+
+% Convert to JSON and save
+jsonFile = fullfile(pwd, 'output/results.json');
+jsonText = jsonencode(resultsStruct);
+fid = fopen(jsonFile, 'w');
+if fid == -1
+    fprintf("Warning: Could not create JSON file\\n");
+else
+    fprintf(fid, '%s', jsonText);
+    fclose(fid);
+    fprintf("JSON results saved to: %s\\n", jsonFile);
+end
 `;
 
     return matlabCode;

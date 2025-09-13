@@ -116,6 +116,29 @@
   line-height: 1;
 }
 
+/* Results button */
+.results-button {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #007bff;
+  color: white;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
 /* Delete button */
 .delete-button {
   position: absolute;
@@ -139,13 +162,20 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
+.state-node:hover .results-button,
 .state-node:hover .delete-button {
   opacity: 1;
   transform: scale(1);
 }
 
+.state-node.dark-mode .results-button,
 .state-node.dark-mode .delete-button {
   border-color: #333333;
+}
+
+.results-button:hover {
+  background: #0056b3;
+  transform: scale(1.1);
 }
 
 .delete-button:hover {
@@ -232,10 +262,15 @@
     font-size: 0.6rem;
   }
   
+  .results-button,
   .delete-button {
     width: 20px;
     height: 20px;
     font-size: 14px;
+  }
+  
+  .results-button {
+    font-size: 10px;
   }
   
   .absorbing-indicator {

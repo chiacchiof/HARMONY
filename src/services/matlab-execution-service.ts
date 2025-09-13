@@ -70,9 +70,9 @@ export class MatlabExecutionService {
       // Create abort controller for longer timeout on CTMC
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.log('⏰ MATLAB execution timeout after 60 seconds');
+        console.log('⏰ MATLAB execution timeout after 300 seconds');
         abortController.abort();
-      }, 60000); // 60 second timeout for MATLAB execution
+      }, 300000); // 300 second timeout for MATLAB execution (5 minutes for complex CTMC)
       
       // Use fetch with streaming for POST request with file content
       const response = await fetch(`${this.API_BASE_URL}/matlab/execute-stream`, {
@@ -104,6 +104,7 @@ export class MatlabExecutionService {
             
             if (done) {
               console.log('📡 Stream ended');
+              clearTimeout(timeoutId); // Clear timeout when stream ends
               break;
             }
 
@@ -129,6 +130,7 @@ export class MatlabExecutionService {
 
                     if (data.success) {
                       console.log('🎉 MATLAB simulation completed!');
+                      clearTimeout(timeoutId); // Clear timeout on successful completion
                       reader.releaseLock();
                       resolve();
                       return;
@@ -168,13 +170,38 @@ export class MatlabExecutionService {
 
         } catch (streamError) {
           console.error('❌ Stream reading error:', streamError);
+          clearTimeout(timeoutId);
           reader.releaseLock();
-          reject(streamError);
+          
+          // Provide more specific error messages for common issues
+          if (streamError instanceof Error) {
+            if (streamError.name === 'AbortError') {
+              reject(new Error('L\'analisi CTMC è stata interrotta (timeout o cancellazione)'));
+            } else if (streamError.message && streamError.message.includes('BodyStreamBuffer')) {
+              reject(new Error('Errore di connessione durante l\'analisi CTMC. Riprova.'));
+            } else {
+              reject(streamError);
+            }
+          } else {
+            reject(new Error('Errore sconosciuto durante l\'analisi CTMC'));
+          }
         }
       });
 
     } catch (error) {
       console.error('❌ Failed to start MATLAB monitoring:', error);
+      
+      // Provide user-friendly error messages
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('L\'analisi CTMC è stata interrotta (timeout o cancellazione)');
+        } else if (error.message.includes('BodyStreamBuffer')) {
+          throw new Error('Errore di connessione durante l\'analisi CTMC. Verifica che il backend sia attivo e riprova.');
+        } else if (error.message.includes('fetch')) {
+          throw new Error('Impossibile connettersi al backend MATLAB. Verifica che il server sia attivo sulla porta 3001.');
+        }
+      }
+      
       throw error;
     }
   }

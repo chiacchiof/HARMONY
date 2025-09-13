@@ -8,38 +8,89 @@
 % 1. Define state space (0-3 customers in queue)
 states = 0:3;
 
-% 2. List of transitions [from to rate] (»=2, ¼=1)
+% 2. List of transitions [from to rate] (ï¿½=2, ï¿½=1)
 transitions = [
-    1  2  2;   % 0’1 with »=2 (MATLAB indexes from 1)
-    2  3  2;   % 1’2
-    3  4  2;   % 2’3
-    2  1  1;   % 1’0 with ¼=1
-    3  2  1;   % 2’1
-    4  3  1    % 3’2
+    1  2  2;   % 0ï¿½1 with ï¿½=2 (MATLAB indexes from 1)
+    2  3  2;   % 1ï¿½2
+    3  4  2;   % 2ï¿½3
+    2  1  1;   % 1ï¿½0 with ï¿½=1
+    3  2  1;   % 2ï¿½1
+    4  3  1    % 3ï¿½2
 ];
 
-% 3. Build generator Q (4×4)
+% 3. Build generator Q (4ï¿½4)
 Q = buildGenerator(states, transitions);
 
-% 4. Initial distribution (state 0 certain ’ index 1)
+% 4. Initial distribution (state 0 certain ï¿½ index 1)
 pi0 = [1 0 0 0];
 
-% 5. Transient at t = 5 (default method = expm)
+% 5. Time evolution analysis
 t = 5;
+deltaT = 0.1; % Time step for probability evolution
+
+% 6. Time loop for probability calculation
+timeSteps = 0:deltaT:t;
+numTimeSteps = length(timeSteps);
+numStates = length(states);
+
+% Initialize probability matrix (time x states)
+probabilityMatrix = zeros(numTimeSteps, numStates);
+
+% Calculate probability for each time step
+fprintf("\nCalculating probability evolution...\n");
+for i = 1:numTimeSteps
+    currentTime = timeSteps(i);
+    if currentTime == 0
+        % Initial condition
+        probabilityMatrix(i, :) = pi0;
+    else
+        % Solve CTMC for current time
+        pi_t = solveCTMC(Q, pi0, currentTime);
+        probabilityMatrix(i, :) = pi_t;
+    end
+    
+    % Progress indicator
+    if mod(i, 10) == 0 || i == numTimeSteps
+        fprintf("Progress: %.1f%% (t=%.2f)\n", (i/numTimeSteps)*100, currentTime);
+    end
+end
+
+% 7. Final solutions using different methods
 pi_t_expm = solveCTMC(Q, pi0, t);
-
-% Same using uniformization
 pi_t_uni = solveCTMC(Q, pi0, t, "method", "uniformization", "tol", 1e-12);
-
-% 6. Stationary distribution
 pi_inf = stationaryPI(Q);
 
-% 7. Print results
-fprintf("\nÀ(t=5) with expm: %s\n", mat2str(pi_t_expm, 6));
-fprintf("À(t=5) uniformization: %s\n", mat2str(pi_t_uni, 6));
-fprintf("À stationary: %s\n", mat2str(pi_inf, 6));
+% 8. Print results
+fprintf("\nï¿½(t=%.2f) with expm: %s\n", t, mat2str(pi_t_expm, 6));
+fprintf("ï¿½(t=%.2f) uniformization: %s\n", t, mat2str(pi_t_uni, 6));
+fprintf("ï¿½ stationary: %s\n", mat2str(pi_inf, 6));
 
-% 8. Save results
+% 9. Save results including time evolution
 resultsFile = fullfile(pwd, 'output/results.mat');
-save(resultsFile, 'pi_t_expm', 'pi_t_uni', 'pi_inf', 'Q', 'pi0', 'states', 'transitions');
+save(resultsFile, 'timeSteps', 'probabilityMatrix', 'pi_t_expm', 'pi_t_uni', 'pi_inf', 'Q', 'pi0', 'states', 'transitions', 't', 'deltaT');
 fprintf("\nResults saved to: %s\n", resultsFile);
+fprintf("Time evolution matrix: %dx%d (time x states)\n", size(probabilityMatrix, 1), size(probabilityMatrix, 2));
+
+% 10. Also save results as JSON for easy Node.js parsing
+resultsStruct.timeSteps = timeSteps;
+resultsStruct.probabilityMatrix = probabilityMatrix;
+resultsStruct.pi_t_expm = pi_t_expm;
+resultsStruct.pi_t_uni = pi_t_uni;
+resultsStruct.pi_inf = pi_inf;
+resultsStruct.states = states;
+resultsStruct.transitions = transitions;
+resultsStruct.t = t;
+resultsStruct.deltaT = deltaT;
+resultsStruct.analysisTime = datestr(now, 'yyyy-mm-dd HH:MM:SS');
+
+% Convert to JSON and save
+jsonFile = fullfile(pwd, 'output/results.json');
+jsonText = jsonencode(resultsStruct);
+fid = fopen(jsonFile, 'w');
+if fid == -1
+    fprintf("Warning: Could not create JSON file\n");
+else
+    fprintf(fid, '%s', jsonText);
+    fclose(fid);
+    fprintf("JSON results saved to: %s\n", jsonFile);
+end
