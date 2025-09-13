@@ -74,9 +74,10 @@ fprintf("Time evolution matrix: %dx%d (time x states)\n", size(probabilityMatrix
 % 10. Also save results as JSON for easy Node.js parsing
 resultsStruct.timeSteps = timeSteps;
 resultsStruct.probabilityMatrix = probabilityMatrix;
-resultsStruct.pi_t_expm = pi_t_expm;
-resultsStruct.pi_t_uni = pi_t_uni;
-resultsStruct.pi_inf = pi_inf;
+%resultsStruct.pi_t_expm = pi_t_expm;
+%resultsStruct.pi_t_uni = pi_t_uni;
+%resultsStruct.pi_inf = pi_inf;
+resultsStruct.result = result;
 resultsStruct.states = states;
 resultsStruct.transitions = transitions;
 resultsStruct.t = t;

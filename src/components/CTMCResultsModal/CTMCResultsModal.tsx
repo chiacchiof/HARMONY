@@ -87,59 +87,81 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
     const solverMethod = data.solverMethod || 'Transitorio';
     const isSteadyState = solverMethod === 'Stazionario';
     
-    // Handle steady-state results (Stazionario method)
-    if (isSteadyState && data.result) {
-      console.log(`🔍 [DEBUG] Parsing steady-state results for state ${stateIndex}:`);
-      console.log(`   Raw data.result:`, data.result);
-      console.log(`   Type:`, typeof data.result);
-      
-      let steadyStateProbability = 0;
-      
-      if (Array.isArray(data.result)) {
-        // Already an array
-        steadyStateProbability = data.result[stateIndex] || 0;
-        console.log(`   Using array element [${stateIndex}]:`, steadyStateProbability);
-      } else if (typeof data.result === 'string') {
-        // Parse MATLAB vector string like "0 1 0 0 0 0"
-        const probabilities = data.result.trim()
-          .split(/\s+/)  // Split on any whitespace
-          .map((p: string) => parseFloat(p))
-          .filter((p: number) => !isNaN(p)); // Remove any NaN values
-          
-        console.log(`   Parsed probabilities array:`, probabilities);
-        steadyStateProbability = probabilities[stateIndex] || 0;
-        console.log(`   Selected probability for state ${stateIndex}:`, steadyStateProbability);
-      } else if (typeof data.result === 'number') {
-        // Single number - only valid for state 0
-        steadyStateProbability = stateIndex === 0 ? data.result : 0;
-        console.log(`   Using single number for state 0:`, steadyStateProbability);
-      }
-      
-      console.log(`✅ Final steady-state probability for state ${stateIndex}:`, steadyStateProbability);
+    console.log(`🔍 [DEBUG] Extracting results for state ${stateIndex}:`);
+    console.log(`   Solver method: ${solverMethod}`);
+    console.log(`   Is steady state: ${isSteadyState}`);
+    console.log(`   Raw data.result:`, data.result);
+    
+    // Get final probability from unified result vector (works for both transient and steady-state)
+    let finalProbability = 0;
+    
+    if (data.result && Array.isArray(data.result)) {
+      // result is already an array
+      finalProbability = data.result[stateIndex] || 0;
+      console.log(`   Using result array[${stateIndex}]: ${finalProbability}`);
+    } else if (data.result && typeof data.result === 'string') {
+      // Parse MATLAB vector string like "0.2 0.3 0.1 0.0 0.4 0.0"
+      const probabilities = data.result.trim()
+        .split(/\s+/)  // Split on any whitespace
+        .map((p: string) => parseFloat(p))
+        .filter((p: number) => !isNaN(p)); // Remove any NaN values
+        
+      console.log(`   Parsed probabilities from string:`, probabilities);
+      finalProbability = probabilities[stateIndex] || 0;
+      console.log(`   Selected probability for state ${stateIndex}: ${finalProbability}`);
+    } else if (data.result && typeof data.result === 'number') {
+      // Single number - only valid for state 0
+      finalProbability = stateIndex === 0 ? data.result : 0;
+      console.log(`   Using single number for state 0: ${finalProbability}`);
+    }
+    
+    // For steady-state analysis, we only need the final probability
+    if (isSteadyState) {
+      console.log(`✅ Steady-state result for state ${stateIndex}: ${finalProbability}`);
       
       return {
         stateId: stateId!,
         stateName: stateName || `State ${stateIndex}`,
         stateIndex,
         probabilityEvolution: [], // No time evolution for steady-state
-        finalProbability: steadyStateProbability,
-        averageProbability: steadyStateProbability, // Same as final for steady-state
+        finalProbability,
+        averageProbability: finalProbability, // Same as final for steady-state
         solverMethod,
         isSteadyState: true
       };
     }
     
-    // Handle transient results (Transitorio/Uniformizzazione methods)
-    const timeSteps = data.timeSteps || Array.from({length: 51}, (_, i) => i * 0.1);
-    const probabilityMatrix = data.probabilityMatrix || generateMockProbabilities(timeSteps.length, stateIndex);
+    // For transient analysis, build probability evolution from matrix if available
+    const timeSteps = data.timeSteps || [];
+    const probabilityMatrix = data.probabilityMatrix || [];
     
-    const probabilityEvolution = timeSteps.map((time: number, i: number) => ({
-      time,
-      probability: probabilityMatrix[i] && probabilityMatrix[i][stateIndex] ? probabilityMatrix[i][stateIndex] : 0
-    }));
+    let probabilityEvolution: { time: number; probability: number }[] = [];
+    let averageProbability = finalProbability; // fallback to final probability
+    
+    if (timeSteps.length > 0 && probabilityMatrix.length > 0) {
+      // Build evolution from matrix
+      probabilityEvolution = timeSteps.map((time: number, i: number) => ({
+        time,
+        probability: probabilityMatrix[i] && probabilityMatrix[i][stateIndex] ? probabilityMatrix[i][stateIndex] : 0
+      }));
+      
+      // Calculate average from evolution
+      if (probabilityEvolution.length > 0) {
+        averageProbability = probabilityEvolution.reduce((sum, p) => sum + p.probability, 0) / probabilityEvolution.length;
+      }
+      
+      console.log(`✅ Transient evolution built: ${probabilityEvolution.length} time points`);
+    } else {
+      console.log(`⚠️ No time evolution data available, using final probability only`);
+      
+      // Create a simple two-point evolution using the final probability
+      probabilityEvolution = [
+        { time: 0, probability: stateIndex === 0 ? 1 : 0 }, // Initial state
+        { time: data.t || 1, probability: finalProbability }   // Final state
+      ];
+    }
 
-    const finalProbability = probabilityEvolution[probabilityEvolution.length - 1]?.probability || 0;
-    const averageProbability = probabilityEvolution.reduce((sum: number, p: { time: number; probability: number }) => sum + p.probability, 0) / probabilityEvolution.length;
+    console.log(`✅ Transient result for state ${stateIndex}: final=${finalProbability}, avg=${averageProbability}`);
 
     return {
       stateId: stateId!,

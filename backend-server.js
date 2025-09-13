@@ -1068,24 +1068,20 @@ app.get('/api/ctmc/results', async (req, res) => {
   const { libraryPath } = req.query;
   console.log('📊 CTMC results requested');
   if (libraryPath) {
-    console.log(`📁 Custom library path provided: ${libraryPath}`);
+    console.log(`📁 Library path provided: ${libraryPath}`);
   }
   
   try {
-    // Determine the correct results path
-    let resultsPath = null;
+    // Determine the correct results path - always look for results.json
+    let resultsDir = null;
     
-    // Priority 1: Use the library path provided by user (from frontend)
     if (libraryPath) {
-      resultsPath = path.join(libraryPath, 'output', 'results.mat');
+      resultsDir = path.join(libraryPath, 'output');
       console.log(`🎯 Using provided library path: ${libraryPath}`);
-    }
-    // Priority 2: Use the last known CTMC library path (from execution)
-    else if (lastCTMCLibraryPath) {
-      resultsPath = path.join(lastCTMCLibraryPath, 'output', 'results.mat');
+    } else if (lastCTMCLibraryPath) {
+      resultsDir = path.join(lastCTMCLibraryPath, 'output');
       console.log(`🎯 Using last CTMC execution path: ${lastCTMCLibraryPath}`);
-    }
-    else {
+    } else {
       console.log('❌ No CTMC library path available');
       return res.status(404).json({ 
         success: false, 
@@ -1093,113 +1089,61 @@ app.get('/api/ctmc/results', async (req, res) => {
       });
     }
     
-    console.log(`🔍 Looking for results at: ${resultsPath}`);
+    const jsonResultsPath = path.join(resultsDir, 'results.json');
+    console.log(`🔍 Looking for results.json at: ${jsonResultsPath}`);
     
-    // Check for both .mat and .json results files
-    const jsonResultsPath = resultsPath.replace('.mat', '.json');
-    const matExists = fs.existsSync(resultsPath);
-    const jsonExists = fs.existsSync(jsonResultsPath);
-    
-    console.log(`🔍 Checking results files:`);
-    console.log(`   .mat file: ${resultsPath} - ${matExists ? 'EXISTS' : 'NOT FOUND'}`);
-    console.log(`   .json file: ${jsonResultsPath} - ${jsonExists ? 'EXISTS' : 'NOT FOUND'}`);
-    
-    if (!matExists && !jsonExists) {
-      console.log(`❌ No results files found`);
+    // Check if results.json exists
+    if (!fs.existsSync(jsonResultsPath)) {
+      console.log(`❌ results.json not found at: ${jsonResultsPath}`);
       return res.status(404).json({ 
         success: false, 
-        error: `CTMC results not found. Expected at ${resultsPath} or ${jsonResultsPath}. Please run CTMC analysis first.`,
-        expectedPaths: [resultsPath, jsonResultsPath]
+        error: `CTMC results.json not found at ${jsonResultsPath}. Please run CTMC analysis first.`,
+        expectedPath: jsonResultsPath
       });
     }
     
-    console.log(`✅ Found CTMC results at: ${resultsPath}`);
+    console.log(`✅ Found results.json at: ${jsonResultsPath}`);
     
-    // Check file modification time to ensure recent results
-    const stats = fs.statSync(resultsPath);
+    // Check file modification time
+    const stats = fs.statSync(jsonResultsPath);
     const fileAge = Date.now() - stats.mtime.getTime();
-    const maxAge = 60 * 60 * 1000; // 60 minutes (increased for testing)
+    console.log(`📅 File age: ${Math.round(fileAge/60000)} minutes`);
     
-    console.log(`📅 File age: ${Math.round(fileAge/60000)} minutes (max: ${maxAge/60000} minutes)`);
-    
-    // For testing, we'll accept older files (normally would check if fileAge > maxAge)
-    if (fileAge > (24 * 60 * 60 * 1000)) { // Only reject files older than 24 hours
-      console.log(`⚠️ CTMC results file is too old (${Math.round(fileAge/60000)} minutes)`);
-      return res.status(410).json({ 
+    // Read and parse the JSON results
+    try {
+      console.log(`📄 Reading CTMC results from: ${jsonResultsPath}`);
+      const jsonContent = fs.readFileSync(jsonResultsPath, 'utf8');
+      const parsedResults = JSON.parse(jsonContent);
+      
+      console.log(`✅ Parsed JSON results:`, Object.keys(parsedResults));
+      
+      // Return the results as-is from the JSON file with some additional metadata
+      const resultsData = {
+        success: true,
+        source: 'matlab_json',
+        fileAge: Math.round(fileAge / 1000), // seconds
+        filePath: jsonResultsPath,
+        data: parsedResults  // Return all data from JSON as-is
+      };
+      
+      // Log summary for debugging
+      console.log(`📊 CTMC Results Summary:`);
+      console.log(`   - States: ${parsedResults.states?.length || 0}`);
+      console.log(`   - Solver method: ${parsedResults.solverMethod || 'not specified'}`);
+      console.log(`   - Result vector: ${parsedResults.result?.length || 0} elements`);
+      console.log(`   - Time steps: ${parsedResults.timeSteps?.length || 0}`);
+      console.log(`   - Analysis time: ${parsedResults.analysisTime || 'not specified'}`);
+      
+      res.json(resultsData);
+      
+    } catch (jsonError) {
+      console.error(`❌ Error parsing results.json: ${jsonError.message}`);
+      return res.status(500).json({ 
         success: false, 
-        error: 'CTMC results are very old. Please run a new CTMC analysis.' 
+        error: `Failed to parse results.json: ${jsonError.message}`,
+        filePath: jsonResultsPath
       });
     }
-    
-    // Try to read real results from JSON file first (preferred), then fallback to mock data
-    let resultsData;
-    
-    if (jsonExists) {
-      try {
-        console.log(`📄 Reading real CTMC results from JSON: ${jsonResultsPath}`);
-        const jsonContent = fs.readFileSync(jsonResultsPath, 'utf8');
-        const parsedResults = JSON.parse(jsonContent);
-        
-        resultsData = {
-          success: true,
-          source: 'real_matlab_json',
-          data: {
-            timeSteps: parsedResults.timeSteps || [],
-            probabilityMatrix: parsedResults.probabilityMatrix || [],
-            states: parsedResults.states || [],
-            pi_t_expm: parsedResults.pi_t_expm || [],
-            pi_t_uni: parsedResults.pi_t_uni || [],
-            pi_inf: parsedResults.pi_inf || [],
-            t: parsedResults.t || 0,
-            deltaT: parsedResults.deltaT || 0.1,
-            analysisTime: parsedResults.analysisTime || new Date().toISOString(),
-            fileAge: Math.round(fileAge / 1000) // seconds
-          }
-        };
-        
-        console.log(`✅ Loaded real CTMC results:`);
-        console.log(`   Time steps: ${resultsData.data.timeSteps.length}`);
-        console.log(`   States: ${resultsData.data.states.length}`);
-        console.log(`   Probability matrix: ${resultsData.data.probabilityMatrix.length} x ${resultsData.data.probabilityMatrix[0]?.length || 0}`);
-        
-      } catch (jsonError) {
-        console.error(`❌ Error parsing JSON results: ${jsonError.message}`);
-        console.log(`⚠️ Falling back to mock data`);
-        
-        // Fallback to mock data if JSON parsing fails
-        resultsData = {
-          success: true,
-          source: 'mock_fallback',
-          data: {
-            timeSteps: Array.from({length: 51}, (_, i) => i * 0.1),
-            probabilityMatrix: generateMockCTMCData(51, 4),
-            states: [0, 1, 2, 3],
-            initialDistribution: [1, 0, 0, 0],
-            analysisTime: new Date().toISOString(),
-            fileAge: Math.round(fileAge / 1000)
-          }
-        };
-      }
-    } else {
-      console.log(`⚠️ JSON file not found, using mock data (MAT file exists: ${matExists})`);
-      
-      // Fallback to mock data if no JSON file
-      resultsData = {
-        success: true,
-        source: 'mock_no_json',
-        data: {
-          timeSteps: Array.from({length: 51}, (_, i) => i * 0.1),
-          probabilityMatrix: generateMockCTMCData(51, 4),
-          states: [0, 1, 2, 3],
-          initialDistribution: [1, 0, 0, 0],
-          analysisTime: new Date().toISOString(),
-          fileAge: Math.round(fileAge / 1000)
-        }
-      };
-    }
-    
-    console.log(`✅ Returning CTMC results (source: ${resultsData.source})`);
-    res.json(resultsData);
     
   } catch (error) {
     console.error('❌ Error reading CTMC results:', error);
