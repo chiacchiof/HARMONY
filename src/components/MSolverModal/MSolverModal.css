@@ -535,6 +535,24 @@ input:focus + .toggle-slider {
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+.test-button {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+}
+
+.test-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.test-button.disabled {
+  background: #9ca3af !important;
+  color: #6b7280 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
 .stop-button {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
@@ -666,6 +684,11 @@ input:focus + .toggle-slider {
 
 .dark-mode .solver-help {
   color: #9ca3af;
+}
+
+.dark-mode .test-button.disabled {
+  background: #4b5563 !important;
+  color: #6b7280 !important;
 }
 
 /* Responsive Design */

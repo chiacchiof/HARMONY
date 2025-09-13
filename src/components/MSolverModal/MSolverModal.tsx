@@ -352,22 +352,23 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
             {isRunning ? 'Chiudi quando completato' : 'Chiudi'}
           </button>
           
-          {/* Retrieve Results - SEMPRE disponibile quando non sta girando (come SHyFTA) */}
+          {/* Retrieve Results - Disponibile solo dopo aver completato almeno una run CTMC */}
           {!isRunning && (
             <button 
-              className="test-button"
-              onClick={async () => {
+              className={`test-button ${!isCompleted ? 'disabled' : ''}`}
+              onClick={isCompleted ? async () => {
                 console.log(`🔄 [MSolverModal] Retrieving CTMC results...`);
                 
                 const success = await CTMCResultsService.loadResults();
                 
                 if (success) {
-                  alert('✅ Risultati CTMC caricati con successo! Le probabilità stazionarie sono ora visibili sui nodi degli stati.');
+                  alert('✅ Risultati CTMC caricati con successo! Le probabilità sono ora visibili sui nodi degli stati.');
                 } else {
                   alert('❌ Errore nel caricamento dei risultati CTMC. Verifica che l\'analisi sia stata completata.');
                 }
-              }}
-              title="Carica risultati CTMC dal file results.json"
+              } : undefined}
+              disabled={!isCompleted}
+              title={isCompleted ? "Carica risultati CTMC dal file results.json" : "Completa prima una Run CTMC per abilitare il caricamento dei risultati"}
             >
               🔍 Retrieve Results
             </button>
