@@ -28,6 +28,7 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
   const [results, setResults] = useState<CTMCStateResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{x: number, y: number, time: number, probability: number} | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -237,7 +238,18 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
               const x = margin.left + (d.time / maxX) * chartWidth;
               const y = margin.top + chartHeight - (d.probability / maxY) * chartHeight;
               return (
-                <circle key={i} cx={x} cy={y} r="3" fill="#3498db" stroke="white" strokeWidth="1"/>
+                <circle 
+                  key={i} 
+                  cx={x} 
+                  cy={y} 
+                  r="4" 
+                  fill="#3498db" 
+                  stroke="white" 
+                  strokeWidth="2"
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setTooltip({x, y: y - 10, time: d.time, probability: d.probability})}
+                  onMouseLeave={() => setTooltip(null)}
+                />
               );
             })}
             
@@ -262,6 +274,43 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
                 {formatNumber(frac * maxY, 3)}
               </text>
             ))}
+            
+            {/* Tooltip */}
+            {tooltip && (
+              <g>
+                <rect 
+                  x={tooltip.x - 40} 
+                  y={tooltip.y - 30} 
+                  width="80" 
+                  height="25" 
+                  fill="#333" 
+                  fillOpacity="0.9" 
+                  rx="4" 
+                  stroke="#fff" 
+                  strokeWidth="1"
+                />
+                <text 
+                  x={tooltip.x} 
+                  y={tooltip.y - 18} 
+                  textAnchor="middle" 
+                  fill="white" 
+                  fontSize="10" 
+                  fontWeight="bold"
+                >
+                  t={formatNumber(tooltip.time, 2)}
+                </text>
+                <text 
+                  x={tooltip.x} 
+                  y={tooltip.y - 8} 
+                  textAnchor="middle" 
+                  fill="white" 
+                  fontSize="10" 
+                  fontWeight="bold"
+                >
+                  π={formatNumber(tooltip.probability, 4)}
+                </text>
+              </g>
+            )}
           </svg>
         </div>
         

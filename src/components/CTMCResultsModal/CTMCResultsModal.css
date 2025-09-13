@@ -204,6 +204,16 @@
   margin: 0 auto;
 }
 
+.ctmc-chart circle {
+  transition: all 0.2s ease;
+}
+
+.ctmc-chart circle:hover {
+  r: 6;
+  fill: #2980b9;
+  stroke-width: 3;
+}
+
 .axis-label {
   font-size: 12px;
   fill: #495057;
