@@ -19,7 +19,8 @@
       "Bash(tasklist:*)",
       "Read(//c//**)",
       "Bash(cat:*)",
-      "Read(//c/SHyFTOO/**)"
+      "Read(//c/SHyFTOO/**)",
+      "Bash(copy:*)"
     ],
     "deny": [],
     "ask": []
