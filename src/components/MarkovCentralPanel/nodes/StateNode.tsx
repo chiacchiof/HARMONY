@@ -1,6 +1,7 @@
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { MarkovState } from '../../../types/MarkovChain';
+import CTMCResultsService from '../../../services/ctmc-results-service';
 import './StateNode.css';
 
 interface StateNodeData {
@@ -42,6 +43,36 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
     e.stopPropagation();
     onViewResults(state.id);
   }, [onViewResults, state.id]);
+
+  // State for CTMC probability display
+  const [probability, setProbability] = useState<number | null>(null);
+  const [isResultsLoaded, setIsResultsLoaded] = useState(false);
+
+  // Subscribe to CTMC results changes
+  useEffect(() => {
+    const updateProbability = () => {
+      const isLoaded = CTMCResultsService.isResultsLoaded();
+      setIsResultsLoaded(isLoaded);
+      
+      if (isLoaded && matlabStateIndex !== undefined) {
+        // Use matlabStateIndex - 1 because MATLAB is 1-based, array is 0-based
+        const prob = CTMCResultsService.getStateProbability(matlabStateIndex - 1);
+        setProbability(prob);
+        
+        console.log(`🔍 [StateNode] State ${state.name} (MATLAB index ${matlabStateIndex}): probability = ${prob}`);
+      } else {
+        setProbability(null);
+      }
+    };
+
+    // Initial update
+    updateProbability();
+
+    // Subscribe to changes
+    const unsubscribe = CTMCResultsService.subscribe(updateProbability);
+
+    return unsubscribe;
+  }, [matlabStateIndex, state.name]);
 
   // Generate 12 handles positioned like clock hours
   const clockHandles = useMemo(() => {
@@ -118,6 +149,9 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
           <div className="state-id">Id: {matlabStateIndex !== undefined ? matlabStateIndex - 1 : parseInt(state.id.replace('state-', '')) || 0}</div>
           {state.rewardFunction !== 1 && (
             <div className="state-reward">R: {state.rewardFunction}</div>
+          )}
+          {probability !== null && (
+            <div className="state-probability">π: {(probability * 100).toFixed(2)}%</div>
           )}
         </div>
       </div>

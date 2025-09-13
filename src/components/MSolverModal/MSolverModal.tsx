@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MarkovChainModel } from '../../types/MarkovChain';
 import { CTMCService, CTMCConfig, CTMCProgress } from '../../services/ctmc-service';
-import CTMCResultsModal from '../CTMCResultsModal/CTMCResultsModal';
+import CTMCResultsService from '../../services/ctmc-results-service';
 import './MSolverModal.css';
 
 interface MSolverModalProps {
@@ -32,8 +32,6 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
   const [currentStep, setCurrentStep] = useState('');
   const [logOutput, setLogOutput] = useState('');
   
-  // State for CTMC Results Modal
-  const [showCTMCResults, setShowCTMCResults] = useState(false);
 
   // Load saved configuration when modal opens
   useEffect(() => {
@@ -358,9 +356,16 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
           {!isRunning && (
             <button 
               className="test-button"
-              onClick={() => {
-                console.log(`🔄 [MSolverModal] Opening CTMC Results Modal`);
-                setShowCTMCResults(true);
+              onClick={async () => {
+                console.log(`🔄 [MSolverModal] Retrieving CTMC results...`);
+                
+                const success = await CTMCResultsService.loadResults();
+                
+                if (success) {
+                  alert('✅ Risultati CTMC caricati con successo! Le probabilità stazionarie sono ora visibili sui nodi degli stati.');
+                } else {
+                  alert('❌ Errore nel caricamento dei risultati CTMC. Verifica che l\'analisi sia stata completata.');
+                }
               }}
               title="Carica risultati CTMC dal file results.json"
             >
@@ -405,13 +410,6 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
         </div>
       </div>
       
-      {/* CTMC Results Modal */}
-      <CTMCResultsModal
-        isOpen={showCTMCResults}
-        onClose={() => setShowCTMCResults(false)}
-        stateId={null}
-        stateName={null}
-      />
     </div>
   );
 };

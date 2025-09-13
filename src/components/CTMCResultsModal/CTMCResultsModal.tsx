@@ -8,6 +8,8 @@ interface CTMCStateResults {
   probabilityEvolution: { time: number; probability: number }[];
   finalProbability: number;
   averageProbability: number;
+  solverMethod?: string;
+  isSteadyState?: boolean;
 }
 
 interface CTMCResultsModalProps {
@@ -82,8 +84,52 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
   };
 
   const extractStateResults = (data: any, stateIndex: number): CTMCStateResults => {
-    // Mock data generation for demonstration
-    // In a real implementation, this would parse the MATLAB results
+    const solverMethod = data.solverMethod || 'Transitorio';
+    const isSteadyState = solverMethod === 'Stazionario';
+    
+    // Handle steady-state results (Stazionario method)
+    if (isSteadyState && data.result) {
+      console.log(`🔍 [DEBUG] Parsing steady-state results for state ${stateIndex}:`);
+      console.log(`   Raw data.result:`, data.result);
+      console.log(`   Type:`, typeof data.result);
+      
+      let steadyStateProbability = 0;
+      
+      if (Array.isArray(data.result)) {
+        // Already an array
+        steadyStateProbability = data.result[stateIndex] || 0;
+        console.log(`   Using array element [${stateIndex}]:`, steadyStateProbability);
+      } else if (typeof data.result === 'string') {
+        // Parse MATLAB vector string like "0 1 0 0 0 0"
+        const probabilities = data.result.trim()
+          .split(/\s+/)  // Split on any whitespace
+          .map((p: string) => parseFloat(p))
+          .filter((p: number) => !isNaN(p)); // Remove any NaN values
+          
+        console.log(`   Parsed probabilities array:`, probabilities);
+        steadyStateProbability = probabilities[stateIndex] || 0;
+        console.log(`   Selected probability for state ${stateIndex}:`, steadyStateProbability);
+      } else if (typeof data.result === 'number') {
+        // Single number - only valid for state 0
+        steadyStateProbability = stateIndex === 0 ? data.result : 0;
+        console.log(`   Using single number for state 0:`, steadyStateProbability);
+      }
+      
+      console.log(`✅ Final steady-state probability for state ${stateIndex}:`, steadyStateProbability);
+      
+      return {
+        stateId: stateId!,
+        stateName: stateName || `State ${stateIndex}`,
+        stateIndex,
+        probabilityEvolution: [], // No time evolution for steady-state
+        finalProbability: steadyStateProbability,
+        averageProbability: steadyStateProbability, // Same as final for steady-state
+        solverMethod,
+        isSteadyState: true
+      };
+    }
+    
+    // Handle transient results (Transitorio/Uniformizzazione methods)
     const timeSteps = data.timeSteps || Array.from({length: 51}, (_, i) => i * 0.1);
     const probabilityMatrix = data.probabilityMatrix || generateMockProbabilities(timeSteps.length, stateIndex);
     
@@ -101,7 +147,9 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
       stateIndex,
       probabilityEvolution,
       finalProbability,
-      averageProbability
+      averageProbability,
+      solverMethod,
+      isSteadyState: false
     };
   };
 
@@ -149,19 +197,28 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
             <div className="result-value">{results.stateIndex}</div>
           </div>
           
+          <div className="result-card">
+            <div className="result-label">Metodo</div>
+            <div className="result-value">{results.solverMethod || 'Transitorio'}</div>
+          </div>
+          
           <div className="result-card probability-card">
-            <div className="result-label">Probabilità Finale</div>
+            <div className="result-label">
+              {results.isSteadyState ? 'Probabilità Stazionaria' : 'Probabilità Finale'}
+            </div>
             <div className="result-value probability-value">
               {(results.finalProbability * 100).toFixed(2)}%
             </div>
           </div>
           
-          <div className="result-card average-card">
-            <div className="result-label">Probabilità Media</div>
-            <div className="result-value average-value">
-              {(results.averageProbability * 100).toFixed(2)}%
+          {!results.isSteadyState && (
+            <div className="result-card average-card">
+              <div className="result-label">Probabilità Media</div>
+              <div className="result-value average-value">
+                {(results.averageProbability * 100).toFixed(2)}%
+              </div>
             </div>
-          </div>
+          )}
         </div>
         
         <div className="detailed-info">
@@ -170,12 +227,25 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
             <div className="info-item">
               <strong>Catena di Markov:</strong> Processo stocastico che modella le transizioni tra stati con rates esponenziali.
             </div>
-            <div className="info-item">
-              <strong>Probabilità di Stato:</strong> π<sub>{results.stateIndex}</sub>(t) rappresenta la probabilità di essere nello stato {results.stateIndex} al tempo t.
-            </div>
-            <div className="info-item">
-              <strong>Evoluzione Temporale:</strong> La probabilità cambia nel tempo secondo l'equazione differenziale dπ/dt = πQ.
-            </div>
+            {results.isSteadyState ? (
+              <>
+                <div className="info-item">
+                  <strong>Analisi Stazionaria:</strong> Calcola la distribuzione di probabilità a regime (t → ∞) quando il sistema raggiunge l'equilibrio.
+                </div>
+                <div className="info-item">
+                  <strong>Probabilità Stazionaria:</strong> π<sub>{results.stateIndex}</sub> rappresenta la frazione di tempo che il sistema trascorre nello stato {results.stateIndex} a lungo termine.
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="info-item">
+                  <strong>Probabilità di Stato:</strong> π<sub>{results.stateIndex}</sub>(t) rappresenta la probabilità di essere nello stato {results.stateIndex} al tempo t.
+                </div>
+                <div className="info-item">
+                  <strong>Evoluzione Temporale:</strong> La probabilità cambia nel tempo secondo l'equazione differenziale dπ/dt = πQ.
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -183,7 +253,32 @@ const CTMCResultsModal: React.FC<CTMCResultsModalProps> = ({
   };
 
   const renderProbabilityChart = () => {
-    if (!results || !results.probabilityEvolution.length) {
+    if (!results) return null;
+    
+    // For steady-state analysis, show info instead of chart
+    if (results.isSteadyState) {
+      return (
+        <div className="chart-placeholder">
+          <div className="steady-state-info">
+            <h3>📊 Analisi Stazionaria Completata</h3>
+            <div className="steady-state-result">
+              <div className="steady-state-card">
+                <div className="steady-state-label">Probabilità Stazionaria π<sub>{results.stateIndex}</sub></div>
+                <div className="steady-state-value">{(results.finalProbability * 100).toFixed(4)}%</div>
+              </div>
+            </div>
+            <p className="steady-state-description">
+              <strong>Interpretazione:</strong> A lungo termine, il sistema trascorre il {(results.finalProbability * 100).toFixed(2)}% 
+              del tempo nello stato {results.stateIndex}. Questo valore rappresenta la probabilità stazionaria 
+              calcolata risolvendo il sistema πQ = 0 con ∑π<sub>i</sub> = 1.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    
+    // For transient analysis, check if data is available
+    if (!results.probabilityEvolution.length) {
       return (
         <div className="chart-placeholder">
           <div className="chart-error">
