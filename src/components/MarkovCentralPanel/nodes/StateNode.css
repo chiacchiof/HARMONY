@@ -53,8 +53,15 @@
 }
 
 .state-name {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   line-height: 1;
+}
+
+.state-id {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 1px;
+  font-weight: normal;
 }
 
 .state-reward {

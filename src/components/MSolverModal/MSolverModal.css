@@ -303,6 +303,39 @@ input:focus + .toggle-slider {
   font-weight: 600;
 }
 
+/* Solver method dropdown styling */
+.solver-method-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.solver-method-select:disabled {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.solver-method-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.solver-help {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
 /* Progress Section */
 .progress-section {
   background: #fef7e0;
@@ -491,6 +524,17 @@ input:focus + .toggle-slider {
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
+.results-button {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+}
+
+.results-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
 .stop-button {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
@@ -606,6 +650,21 @@ input:focus + .toggle-slider {
 }
 
 .dark-mode .folder-help {
+  color: #9ca3af;
+}
+
+.dark-mode .solver-method-select {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+.dark-mode .solver-method-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.dark-mode .solver-help {
   color: #9ca3af;
 }
 

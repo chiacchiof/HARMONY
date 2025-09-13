@@ -99,7 +99,303 @@ pause`;
   }
 }
 
-// Helper function to execute MATLAB simulation
+// Helper function to update CTMC batch file
+async function updateCTMCBatchFile(ctmcPath, modelName, res) {
+  try {
+    // Read the template from the frontend project
+    const templatePath = path.join(__dirname, 'public', 'assets', 'runCTMC.bat');
+    let batContent;
+    
+    if (fs.existsSync(templatePath)) {
+      batContent = fs.readFileSync(templatePath, 'utf8');
+      console.log(`✅ Using existing CTMC template: ${templatePath}`);
+    } else {
+      // Fallback template if file doesn't exist
+      batContent = `@echo off
+echo ========================================
+echo    CTMC MATLAB Analysis Launcher
+echo ========================================
+echo.
+
+set CTMC_PATH=${ctmcPath}
+set MODEL_NAME=${modelName.replace(/\.m$/, '')}
+
+echo Cartella CTMC: %CTMC_PATH%
+echo Nome Modello: %MODEL_NAME%
+echo.
+
+cd /d %CTMC_PATH%
+if %errorlevel% neq 0 (
+    echo ERRORE: Impossibile accedere alla cartella "%CTMC_PATH%"
+    pause
+    exit /b 1
+)
+
+if not exist "CTMCSolver.m" (
+    echo ERRORE: File CTMCSolver.m non trovato!
+    pause
+    exit /b 1
+)
+
+echo Pulizia cartella output...
+if exist "output" (
+    rd /s /q "output"
+)
+mkdir "output"
+
+echo Avvio analisi CTMC MATLAB...
+matlab -batch "try; CTMCSolver; disp('SIMULATION_COMPLETED'); catch ME; fprintf(2, 'MATLAB_ERROR: %s\n', ME.message); disp('SIMULATION_FAILED'); exit(1); end; exit(0);" -logfile matlab_output.log
+
+if exist "output\\results.mat" (
+    echo Analisi CTMC completata con successo!
+    echo Risultati salvati in: output\\results.mat
+) else (
+    echo Analisi CTMC fallita o incompleta.
+)
+echo.
+pause`;
+    }
+    
+    // Replace placeholders in the template
+    const modelNameWithoutExt = modelName.replace(/\.m$/, '');
+    batContent = batContent
+      .replace(/set CTMC_PATH=.*/, `set CTMC_PATH=${ctmcPath}`)
+      .replace(/set MODEL_NAME=.*/, `set MODEL_NAME=${modelNameWithoutExt}`);
+    
+    // Save updated batch file
+    const batPath = path.join(ctmcPath, 'runCTMC.bat');
+    fs.writeFileSync(batPath, batContent, 'utf8');
+    console.log(`🔧 Updated CTMC batch file: ${batPath}`);
+    
+  } catch (error) {
+    console.error('❌ Error updating CTMC batch file:', error);
+    throw error;
+  }
+}
+
+// Helper function to execute CTMC simulation
+function executeCTMCSimulation(ctmcPath, outputDir, res) {
+  console.log(`🔬 [CTMC executeCTMCSimulation] ENTRY - Starting CTMC MATLAB execution: ${ctmcPath}`);
+  console.log(`📊 [CTMC executeCTMCSimulation] Will monitor output directory: ${outputDir}`);
+  console.log(`🔧 [CTMC executeCTMCSimulation] Response object type: ${typeof res}, hasWriteHead: ${typeof res.writeHead}`);
+  
+  const batPath = path.join(ctmcPath, 'runCTMC.bat');
+  
+  console.log(`🚀 Starting CTMC MATLAB execution: ${batPath}`);
+  console.log(`📊 Will monitor output directory: ${outputDir}`);
+  
+  // Spawn the MATLAB process with detached: false to ensure child processes are killed
+  const matlabProcess = spawn('cmd', ['/c', batPath], {
+    cwd: ctmcPath,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    detached: false,  // Ensure child processes are killed with parent
+    shell: true       // Use shell for better process tree management
+  });
+
+  // Track the current process globally for stop functionality
+  currentMatlabProcess = matlabProcess;
+
+  let outputBuffer = '';
+  let currentProgress = 0;
+  let lastUpdateTime = Date.now();
+
+  console.log(`🎬 MATLAB CTMC process started with PID: ${matlabProcess.pid}`);
+
+  // Listen to stdout for MATLAB progress
+  matlabProcess.stdout.on('data', (data) => {
+    const output = data.toString();
+    outputBuffer += output;
+    
+    console.log('📊 MATLAB STDOUT:', output);
+
+    // For CTMC, look for completion indicators and batch progress
+    const completionIndicators = [
+      'π(t=',
+      '(t=', // Handle encoding issues with π
+      'Risultati salvati in:',
+      'Results saved to:',
+      'Distribuzione transitoria',
+      'output/results.mat',
+      'output\\results.mat',
+      'SIMULATION_COMPLETED',
+      'save(',
+      'fullfile(pwd',
+      'Distribuzione transitoria a t=',
+      'Analisi CTMC completata con successo!'
+    ];
+    
+    const hasCompletion = completionIndicators.some(indicator => 
+      output.toLowerCase().includes(indicator.toLowerCase())
+    );
+    
+    // Also look for batch file progress indicators
+    if (output.includes('Avvio analisi CTMC MATLAB...')) {
+      currentProgress = Math.max(currentProgress, 20);
+      console.log('🚀 CTMC MATLAB started');
+    }
+    
+    if (hasCompletion && currentProgress < 100) {
+      currentProgress = 100;
+      console.log('🎉 CTMC completion detected, setting progress to 100%');
+      console.log(`🎯 Completion detected by indicator: ${completionIndicators.find(ind => output.toLowerCase().includes(ind.toLowerCase()))}`);
+    }
+    
+    // Send progress update
+    const progressData = {
+      success: false,
+      progress: currentProgress,
+      output: `CTMC MATLAB: ${currentProgress}%\n${outputBuffer.slice(-800)}`
+    };
+    
+    res.write(`data: ${JSON.stringify(progressData)}\n\n`);
+    lastUpdateTime = Date.now();
+  });
+
+  // Listen to stderr for errors
+  matlabProcess.stderr.on('data', (data) => {
+    const errorOutput = data.toString();
+    console.error('❌ MATLAB STDERR:', errorOutput);
+    outputBuffer += `ERROR: ${errorOutput}`;
+    
+    const errorData = {
+      success: false,
+      progress: currentProgress,
+      error: errorOutput.trim(),
+      output: `❌ CTMC ERRORE: ${errorOutput}\n${outputBuffer.slice(-800)}`
+    };
+    
+    res.write(`data: ${JSON.stringify(errorData)}\n\n`);
+  });
+
+  // Handle process completion
+  matlabProcess.on('close', (code) => {
+    console.log(`🏁 MATLAB CTMC process finished with exit code: ${code}`);
+    
+    if (currentMatlabProcess === matlabProcess) {
+      currentMatlabProcess = null;
+    }
+    
+    // Check if results.mat exists in output directory (more robust search)
+    let resultsPath = path.join(outputDir, 'results.mat');
+    let resultsExist = fs.existsSync(resultsPath);
+    
+    // If not found, try multiple approaches
+    if (!resultsExist) {
+      console.log(`🔍 Primary results path not found: ${resultsPath}`);
+      
+      // Try direct path from working directory
+      const directPath = path.join(ctmcPath, 'output', 'results.mat');
+      if (fs.existsSync(directPath)) {
+        resultsPath = directPath;
+        resultsExist = true;
+        console.log(`🔧 Found results at direct path: ${directPath}`);
+      }
+      
+      // Try case-insensitive search on Windows
+      if (!resultsExist && process.platform === 'win32') {
+        try {
+          const parentDir = path.dirname(ctmcPath);
+          const dirs = fs.readdirSync(parentDir);
+          
+          // Find the actual CTMC directory with correct case
+          const ctmcDirName = path.basename(ctmcPath);
+          const actualCtmcDir = dirs.find(dir => 
+            dir.toLowerCase() === ctmcDirName.toLowerCase()
+          );
+          
+          if (actualCtmcDir) {
+            const actualCtmcPath = path.join(parentDir, actualCtmcDir);
+            const actualOutputDir = path.join(actualCtmcPath, 'output');
+            resultsPath = path.join(actualOutputDir, 'results.mat');
+            resultsExist = fs.existsSync(resultsPath);
+            
+            if (resultsExist) {
+              console.log(`🔧 Found results file with case correction: ${resultsPath}`);
+            }
+          }
+        } catch (caseError) {
+          console.warn('⚠️ Case-insensitive file search failed:', caseError.message);
+        }
+      }
+    }
+    
+    console.log(`🔍 Checking CTMC results file: ${resultsPath}`);
+    console.log(`📊 CTMC results file exists: ${resultsExist ? 'YES' : 'NO'}`);
+    
+    // For CTMC, check both exit code and indicators in output
+    const hasSuccessIndicators = outputBuffer.toLowerCase().includes('simulation_completed') ||
+                                  outputBuffer.toLowerCase().includes('results saved') ||
+                                  outputBuffer.toLowerCase().includes('risultati salvati in:') ||
+                                  outputBuffer.toLowerCase().includes('distribuzione transitoria') ||
+                                  outputBuffer.toLowerCase().includes('π(t=') ||
+                                  outputBuffer.toLowerCase().includes('(t=') ||
+                                  outputBuffer.toLowerCase().includes('mat2str') ||
+                                  outputBuffer.toLowerCase().includes('save(') ||
+                                  resultsExist;
+    
+    const finalData = {
+      success: (code === 0) || hasSuccessIndicators || resultsExist, // CTMC can succeed with warnings
+      progress: 100,
+      output: outputBuffer,
+      resultsPath: resultsExist ? resultsPath : null,
+      exitCode: code,
+      hasSuccessIndicators
+    };
+    
+    if (finalData.success) {
+      console.log('🎉 ✅ MATLAB CTMC analysis completed successfully!');
+      console.log(`📁 Results saved in: ${resultsPath || 'output directory'}`);
+    } else {
+      console.log(`❌ MATLAB CTMC analysis failed:`);
+      console.log(`   Exit code: ${code}`);
+      console.log(`   Results file: ${resultsExist ? 'Found' : 'Missing'}`);
+    }
+    
+    res.write(`data: ${JSON.stringify(finalData)}\n\n`);
+    res.end();
+  });
+
+  // Handle process errors
+  matlabProcess.on('error', (error) => {
+    console.error('💥 Failed to start MATLAB CTMC process:', error);
+    
+    const errorData = {
+      success: false,
+      progress: 0,
+      error: error.message,
+      output: `CTMC Process error: ${error.message}\n${outputBuffer}`
+    };
+    
+    res.write(`data: ${JSON.stringify(errorData)}\n\n`);
+    res.end();
+  });
+
+  // Handle client disconnect
+  res.req.on('close', () => {
+    console.log('👋 Client disconnected - terminating CTMC MATLAB process if running');
+    if (matlabProcess && !matlabProcess.killed) {
+      const pid = matlabProcess.pid;
+      console.log(`🔪 Client disconnect: Killing CTMC process tree for PID: ${pid}`);
+      
+      const { spawn } = require('child_process');
+      const killProcess = spawn('taskkill', ['/pid', pid, '/t', '/f'], {
+        stdio: 'inherit'
+      });
+      
+      killProcess.on('close', (code) => {
+        console.log(`🏁 Client disconnect CTMC kill completed with code: ${code}`);
+      });
+      
+      setTimeout(() => {
+        if (!matlabProcess.killed) {
+          matlabProcess.kill('SIGKILL');
+        }
+      }, 2000);
+    }
+  });
+}
+
+// Helper function to execute MATLAB simulation (SHyFTA)
 function executeMatlabSimulation(shyftaPath, outputDir, res) {
   const batPath = path.join(shyftaPath, 'runSHyFTA.bat');
   
@@ -323,20 +619,36 @@ app.post('/api/matlab/stop', (req, res) => {
   }
 });
 
-// Execute complete SHyFTA simulation with file copying and real-time streaming
+// Execute complete MATLAB simulation (SHyFTA or CTMC) with file copying and real-time streaming
 app.post('/api/matlab/execute-stream', async (req, res) => {
-  const { shyftaPath, modelName, modelContent, zftaContent } = req.body;
+  const { shyftaPath, modelName, modelContent, zftaContent, isCTMC } = req.body;
   
-  console.log(`🚀 Complete SHyFTA simulation requested:`);
-  console.log(`   📁 SHyFTA Path: ${shyftaPath}`);
-  console.log(`   📄 Model Name: ${modelName}`);
-  console.log(`   📝 Model Content: ${modelContent ? modelContent.length + ' chars' : 'missing'}`);
-  console.log(`   🔧 ZFTAMain Content: ${zftaContent ? zftaContent.length + ' chars' : 'missing'}`);
-  
-  if (!shyftaPath || !modelName || !modelContent || !zftaContent) {
-    const error = 'Missing required parameters: shyftaPath, modelName, modelContent, zftaContent';
-    console.error(`❌ ${error}`);
-    return res.status(400).json({ success: false, error });
+  if (isCTMC) {
+    // CTMC Mode
+    console.log(`🔬 CTMC analysis requested:`);
+    console.log(`   📁 CTMC Path: ${shyftaPath}`);
+    console.log(`   📄 Model Name: ${modelName}`);
+    console.log(`   📝 Model Content: ${modelContent ? modelContent.length + ' chars' : 'missing'}`);
+    console.log(`   🧪 Mode: CTMC (Continuous Time Markov Chain)`);
+    
+    if (!shyftaPath || !modelName || !modelContent) {
+      const error = 'Missing required CTMC parameters: shyftaPath, modelName, modelContent';
+      console.error(`❌ ${error}`);
+      return res.status(400).json({ success: false, error });
+    }
+  } else {
+    // SHyFTA Mode
+    console.log(`🚀 Complete SHyFTA simulation requested:`);
+    console.log(`   📁 SHyFTA Path: ${shyftaPath}`);
+    console.log(`   📄 Model Name: ${modelName}`);
+    console.log(`   📝 Model Content: ${modelContent ? modelContent.length + ' chars' : 'missing'}`);
+    console.log(`   🔧 ZFTAMain Content: ${zftaContent ? zftaContent.length + ' chars' : 'missing'}`);
+    
+    if (!shyftaPath || !modelName || !modelContent || !zftaContent) {
+      const error = 'Missing required SHyFTA parameters: shyftaPath, modelName, modelContent, zftaContent';
+      console.error(`❌ ${error}`);
+      return res.status(400).json({ success: false, error });
+    }
   }
 
   // Set up Server-Sent Events
@@ -348,23 +660,26 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
   });
 
   // Send initial status
+  const initialMessage = isCTMC ? 'Inizializzazione analisi CTMC...' : 'Inizializzazione simulazione SHyFTA...';
   res.write(`data: ${JSON.stringify({ 
     success: false, 
     progress: 0, 
-    output: 'Inizializzazione simulazione SHyFTA...' 
+    output: initialMessage
   })}\n\n`);
 
   try {
-    // Step 1: Verify SHyFTALib directory exists
+    // Step 1: Verify directory exists
     if (!fs.existsSync(shyftaPath)) {
-      throw new Error(`SHyFTALib directory not found: ${shyftaPath}`);
+      const dirType = isCTMC ? 'CTMC library' : 'SHyFTALib';
+      throw new Error(`${dirType} directory not found: ${shyftaPath}`);
     }
-    console.log(`✅ SHyFTALib directory verified: ${shyftaPath}`);
+    const dirType = isCTMC ? 'CTMC library' : 'SHyFTALib';
+    console.log(`✅ ${dirType} directory verified: ${shyftaPath}`);
     
     res.write(`data: ${JSON.stringify({ 
       success: false, 
       progress: 0, 
-      output: 'Directory SHyFTALib verificata...' 
+      output: `Directory ${dirType} verificata...` 
     })}\n\n`);
 
     // Step 2: Clear and create output directory
@@ -382,55 +697,104 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
       output: 'Cartella output preparata...' 
     })}\n\n`);
 
-    // Step 3: Copy model file to SHyFTALib (always overwrite to handle model name changes)
-    const modelFilePath = path.join(shyftaPath, modelName.endsWith('.m') ? modelName : `${modelName}.m`);
-    
-    // Remove any existing model files with different names to avoid conflicts
-    try {
-      const existingFiles = fs.readdirSync(shyftaPath);
-      const matlabFiles = existingFiles.filter(file => file.startsWith('initFaultTree_') && file.endsWith('.m'));
-      for (const oldFile of matlabFiles) {
-        const oldFilePath = path.join(shyftaPath, oldFile);
-        if (oldFilePath !== modelFilePath) {
-          fs.unlinkSync(oldFilePath);
-          console.log(`🗑️ Removed old model file: ${oldFile}`);
-        }
+    if (isCTMC) {
+      // CTMC Mode: Only copy CTMCSolver.m and execute it directly
+      console.log(`🔬 [CTMC Debug] Starting CTMC processing for: ${shyftaPath}`);
+      
+      const ctmcFilePath = path.join(shyftaPath, 'CTMCSolver.m');
+      fs.writeFileSync(ctmcFilePath, modelContent, 'utf8');
+      console.log(`🔬 CTMCSolver.m written: ${ctmcFilePath} (${modelContent.length} bytes)`);
+      
+      res.write(`data: ${JSON.stringify({ 
+        success: false, 
+        progress: 0, 
+        output: 'CTMCSolver.m configurato, avvio MATLAB...' 
+      })}\n\n`);
+
+      console.log(`🔬 [CTMC Debug] About to update batch file and execute CTMC`);
+
+      // Step: Update runCTMC.bat with correct paths
+      try {
+        await updateCTMCBatchFile(shyftaPath, 'CTMCSolver', res);
+        
+        res.write(`data: ${JSON.stringify({ 
+          success: false, 
+          progress: 0, 
+          output: 'File batch CTMC aggiornato, avvio MATLAB...' 
+        })}\n\n`);
+
+        console.log(`🔬 [CTMC Debug] About to call executeCTMCSimulation with:
+           - ctmcPath: ${shyftaPath}  
+           - outputDir: ${outputDir}
+           - response object: ${typeof res}`);
+
+        // Execute MATLAB for CTMC
+        executeCTMCSimulation(shyftaPath, outputDir, res);
+        console.log(`🔬 [CTMC Debug] executeCTMCSimulation called successfully`);
+        
+      } catch (error) {
+        console.error(`💥 [CTMC Debug] CTMC setup error:`, error);
+        res.write(`data: ${JSON.stringify({ 
+          success: false, 
+          error: error.message,
+          output: `Errore durante setup CTMC: ${error.message}` 
+        })}\n\n`);
+        res.end();
       }
-    } catch (cleanupError) {
-      console.warn('⚠️ Could not clean up old model files:', cleanupError.message);
+      
+    } else {
+      // SHyFTA Mode: Original logic
+      
+      // Step 3: Copy model file to SHyFTALib (always overwrite to handle model name changes)
+      const modelFilePath = path.join(shyftaPath, modelName.endsWith('.m') ? modelName : `${modelName}.m`);
+      
+      // Remove any existing model files with different names to avoid conflicts
+      try {
+        const existingFiles = fs.readdirSync(shyftaPath);
+        const matlabFiles = existingFiles.filter(file => file.startsWith('initFaultTree_') && file.endsWith('.m'));
+        for (const oldFile of matlabFiles) {
+          const oldFilePath = path.join(shyftaPath, oldFile);
+          if (oldFilePath !== modelFilePath) {
+            fs.unlinkSync(oldFilePath);
+            console.log(`🗑️ Removed old model file: ${oldFile}`);
+          }
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ Could not clean up old model files:', cleanupError.message);
+      }
+      
+      fs.writeFileSync(modelFilePath, modelContent, 'utf8');
+      console.log(`📄 Model file copied: ${modelFilePath}`);
+      
+      res.write(`data: ${JSON.stringify({ 
+        success: false, 
+        progress: 0, 
+        output: `File modello copiato: ${path.basename(modelFilePath)}` 
+      })}\n\n`);
+
+      // Step 4: Copy ZFTAMain.m to SHyFTALib
+      const zftaFilePath = path.join(shyftaPath, 'ZFTAMain.m');
+      fs.writeFileSync(zftaFilePath, zftaContent, 'utf8');
+      console.log(`🔧 ZFTAMain.m copied: ${zftaFilePath}`);
+      
+      res.write(`data: ${JSON.stringify({ 
+        success: false, 
+        progress: 0, 
+        output: 'ZFTAMain.m configurato e copiato...' 
+      })}\n\n`);
+
+      // Step 5: Update runSHyFTA.bat with correct paths
+      await updateBatchFile(shyftaPath, modelName, res);
+      
+      res.write(`data: ${JSON.stringify({ 
+        success: false, 
+        progress: 0, 
+        output: 'File batch aggiornato, avvio MATLAB...' 
+      })}\n\n`);
+
+      // Step 6: Execute MATLAB
+      executeMatlabSimulation(shyftaPath, outputDir, res);
     }
-    
-    fs.writeFileSync(modelFilePath, modelContent, 'utf8');
-    console.log(`📄 Model file copied: ${modelFilePath}`);
-    
-    res.write(`data: ${JSON.stringify({ 
-      success: false, 
-      progress: 0, 
-      output: `File modello copiato: ${path.basename(modelFilePath)}` 
-    })}\n\n`);
-
-    // Step 4: Copy ZFTAMain.m to SHyFTALib
-    const zftaFilePath = path.join(shyftaPath, 'ZFTAMain.m');
-    fs.writeFileSync(zftaFilePath, zftaContent, 'utf8');
-    console.log(`🔧 ZFTAMain.m copied: ${zftaFilePath}`);
-    
-    res.write(`data: ${JSON.stringify({ 
-      success: false, 
-      progress: 0, 
-      output: 'ZFTAMain.m configurato e copiato...' 
-    })}\n\n`);
-
-    // Step 5: Update runSHyFTA.bat with correct paths
-    await updateBatchFile(shyftaPath, modelName, res);
-    
-    res.write(`data: ${JSON.stringify({ 
-      success: false, 
-      progress: 0, 
-      output: 'File batch aggiornato, avvio MATLAB...' 
-    })}\n\n`);
-
-    // Step 6: Execute MATLAB
-    executeMatlabSimulation(shyftaPath, outputDir, res);
     
   } catch (error) {
     console.error('💥 Error during setup:', error);

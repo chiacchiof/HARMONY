@@ -108,6 +108,7 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({
       <div className="state-circle drag-handle">
         <div className="state-content">
           <div className="state-name">{state.name}</div>
+          <div className="state-id">Id: {parseInt(state.id.replace('state-', '')) || 0}</div>
           {state.rewardFunction !== 1 && (
             <div className="state-reward">R: {state.rewardFunction}</div>
           )}

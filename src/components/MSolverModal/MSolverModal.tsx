@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MarkovChainModel } from '../../types/MarkovChain';
+import { CTMCService, CTMCConfig, CTMCProgress } from '../../services/ctmc-service';
 import './MSolverModal.css';
 
 interface MSolverModalProps {
@@ -21,6 +22,7 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
   const [confidence, setConfidence] = useState(0.95);
   const [confidenceToggle, setConfidenceToggle] = useState(true);
   const [simulationEnabled, setSimulationEnabled] = useState(false);
+  const [solverMethod, setSolverMethod] = useState<'Transitorio' | 'Uniformizzazione' | 'Stazionario'>('Transitorio');
   
   // State for simulation
   const [isRunning, setIsRunning] = useState(false);
@@ -69,49 +71,46 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
   };
 
   const handleRunCTMC = async () => {
-    // Reset progress state
-    setIsRunning(true);
-    setIsCompleted(false);
-    setProgress(0);
-    setLogOutput('');
-    setCurrentStep('Inizializzazione CTMC...');
-
     try {
-      // Simulate CTMC execution - this would be replaced with actual backend call
-      setCurrentStep('Preparazione modello Markov...');
-      setProgress(20);
-      setLogOutput(prev => prev + 'Modello Markov caricato\n');
+      // Prepare CTMC configuration
+      const config: CTMCConfig = {
+        libraryDirectory,
+        timeT,
+        deltaT,
+        solverMethod,
+        iterations,
+        confidence,
+        confidenceToggle,
+        simulationEnabled
+      };
+
+      // Set up progress callback
+      CTMCService.setProgressCallback((progress: CTMCProgress) => {
+        setProgress(progress.progress);
+        setCurrentStep(progress.currentStep);
+        setLogOutput(progress.logOutput);
+        setIsRunning(progress.isRunning);
+        setIsCompleted(progress.isCompleted || false);
+      });
+
+      // Run the CTMC analysis
+      await CTMCService.runAnalysis(markovChainModel, config);
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setCurrentStep('Configurazione parametri di simulazione...');
-      setProgress(40);
-      setLogOutput(prev => prev + `Parametri configurati: t=${timeT}, Δt=${deltaT}\n`);
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setCurrentStep('Esecuzione analisi CTMC...');
-      setProgress(70);
-      setLogOutput(prev => prev + 'Analisi CTMC in corso...\n');
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setCurrentStep('Finalizzazione risultati...');
-      setProgress(100);
-      setLogOutput(prev => prev + 'Simulazione CTMC completata con successo!\n');
-      
-      setIsCompleted(true);
     } catch (error) {
       alert(`Errore durante l'analisi CTMC: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
-    } finally {
-      setIsRunning(false);
     }
   };
 
-  const handleStopSimulation = () => {
-    setIsRunning(false);
-    setCurrentStep('Simulazione interrotta');
-    setLogOutput(prev => prev + 'Simulazione interrotta dall\'utente\n');
+  const handleStopSimulation = async () => {
+    try {
+      await CTMCService.stopAnalysis();
+    } catch (error) {
+      console.error('Error stopping CTMC analysis:', error);
+      // Fallback to manual stop
+      setIsRunning(false);
+      setCurrentStep('Analisi interrotta');
+      setLogOutput(prev => prev + 'Analisi interrotta dall\'utente\n');
+    }
   };
 
   return (
@@ -240,6 +239,23 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
                 </span>
               </div>
             </div>
+
+            <div className="form-group">
+              <label>🔬 Metodo di Risoluzione:</label>
+              <select
+                value={solverMethod}
+                onChange={(e) => setSolverMethod(e.target.value as 'Transitorio' | 'Uniformizzazione' | 'Stazionario')}
+                disabled={isRunning || simulationEnabled}
+                className="solver-method-select"
+              >
+                <option value="Transitorio">Transitorio (expm)</option>
+                <option value="Uniformizzazione">Uniformizzazione</option>
+                <option value="Stazionario">Stazionario</option>
+              </select>
+              <small className="solver-help">
+                💡 Disponibile solo per risoluzione non simulativa (con transizioni esponenziali)
+              </small>
+            </div>
           </div>
 
           {/* Simulation Progress Section */}
@@ -329,19 +345,29 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
           )}
           
           {!isRunning && isCompleted && (
-            <button 
-              className="run-button primary" 
-              onClick={() => {
-                setIsCompleted(false);
-                setProgress(0);
-                setCurrentStep('');
-                setLogOutput('');
-                handleRunCTMC();
-              }}
-              disabled={!libraryDirectory}
-            >
-              🔄 Esegui Nuovamente
-            </button>
+            <>
+              <button 
+                className="results-button" 
+                onClick={() => {
+                  alert(`Risultati CTMC disponibili:\n\nMetodo: ${solverMethod}\nTempo: ${timeT}\nStati: ${markovChainModel.states.length}\n\nI risultati dettagliati sono salvati in output/results.mat\n\nPer una visualizzazione completa dei risultati, implementare il CTMC Results Viewer.`);
+                }}
+              >
+                📊 Visualizza Risultati CTMC
+              </button>
+              <button 
+                className="run-button primary" 
+                onClick={() => {
+                  setIsCompleted(false);
+                  setProgress(0);
+                  setCurrentStep('');
+                  setLogOutput('');
+                  handleRunCTMC();
+                }}
+                disabled={!libraryDirectory}
+              >
+                🔄 Esegui Nuovamente
+              </button>
+            </>
           )}
           
           {isRunning && (

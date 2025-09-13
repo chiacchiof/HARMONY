@@ -198,8 +198,8 @@ const MarkovChainEditor: React.FC = () => {
       sourceHandle: sourceHandle,
       targetHandle: targetHandle,
       probabilityDistribution: {
-        type: 'constant',
-        probability: 0.5
+        type: 'exponential',
+        lambda: 1.0
       }
     };
 

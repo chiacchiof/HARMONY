@@ -8,6 +8,7 @@ export interface MatlabExecutionRequest {
   modelName: string;
   modelContent: string;
   zftaContent: string;
+  isCTMC?: boolean; // Flag to indicate CTMC execution vs SHyFTA
 }
 
 export interface MatlabExecutionResponse {
@@ -66,6 +67,13 @@ export class MatlabExecutionService {
     try {
       console.log('🔧 Starting MATLAB with real-time monitoring...');
 
+      // Create abort controller for longer timeout on CTMC
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('⏰ MATLAB execution timeout after 60 seconds');
+        abortController.abort();
+      }, 60000); // 60 second timeout for MATLAB execution
+      
       // Use fetch with streaming for POST request with file content
       const response = await fetch(`${this.API_BASE_URL}/matlab/execute-stream`, {
         method: 'POST',
@@ -73,7 +81,8 @@ export class MatlabExecutionService {
           'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify(request),
+        signal: abortController.signal
       });
 
       if (!response.ok) {
@@ -177,7 +186,7 @@ export class MatlabExecutionService {
     try {
       const response = await fetch(`${this.API_BASE_URL}/health`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000) // 5 second timeout
+        signal: AbortSignal.timeout(10000) // 10 second timeout
       });
       return response.ok;
     } catch (error) {
