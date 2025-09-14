@@ -21,7 +21,7 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
   const [deltaT, setDeltaT] = useState(0.1);
   const [iterations, setIterations] = useState(1000);
   const [confidence, setConfidence] = useState(0.95);
-  const [confidenceToggle, setConfidenceToggle] = useState(true);
+  const [confidenceToggle, setConfidenceToggle] = useState(false);
   const [simulationEnabled, setSimulationEnabled] = useState(false);
   const [solverMethod, setSolverMethod] = useState<'Transitorio' | 'Uniformizzazione' | 'Stazionario'>('Transitorio');
   
@@ -110,12 +110,55 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
       await CTMCService.runAnalysis(markovChainModel, config);
       
     } catch (error) {
-      // Handle error through progress system instead of alert popup
+      // Handle error through progress system and show user-friendly popup
       setIsRunning(false);
       setIsCompleted(false);
       setProgress(0);
       setCurrentStep('❌ Errore durante analisi CTMC');
-      setLogOutput(`Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}\n\nPossibili soluzioni:\n1. Verifica che il backend sia attivo (node backend-server.js)\n2. Controlla il percorso della libreria CTMC\n3. Assicurati che MATLAB sia installato e nel PATH\n4. Riprova con un modello più semplice\n`);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
+      // Show user-friendly error popup based on error type
+      if (errorMessage.includes('Stati non collegati')) {
+        const stateMatch = errorMessage.match(/Stati non collegati trovati: ([^.]+)/);
+        const disconnectedStates = stateMatch ? stateMatch[1] : 'alcuni stati';
+        
+        alert(`⚠️ Problema con il Modello Markov\n\n` +
+              `Stato(i) isolato(i): ${disconnectedStates}\n\n` +
+              `Ogni stato deve avere almeno una transizione in ingresso o in uscita per il solver CTMC.\n\n` +
+              `Soluzioni:\n` +
+              `• Aggiungi transizioni per collegare ${disconnectedStates}\n` +
+              `• Oppure elimina ${disconnectedStates} se non necessario\n` +
+              `• Verifica che tutte le transizioni siano state create correttamente`);
+      } else if (errorMessage.includes('non è esponenziale')) {
+        alert(`⚠️ Problema con le Transizioni\n\n` +
+              `${errorMessage}\n\n` +
+              `Il solver CTMC richiede che tutte le transizioni abbiano distribuzione esponenziale.\n\n` +
+              `Soluzioni:\n` +
+              `• Cambia la distribuzione delle transizioni in 'Esponenziale'\n` +
+              `• Verifica i parametri λ (lambda) delle transizioni`);
+      } else if (errorMessage.includes('Backend non disponibile')) {
+        alert(`⚠️ Backend Non Disponibile\n\n` +
+              `Il backend per l'esecuzione MATLAB non è raggiungibile.\n\n` +
+              `Soluzioni:\n` +
+              `• Avvia il backend: node backend-server.js\n` +
+              `• Verifica che sia raggiungibile su localhost:3001\n` +
+              `• Controlla la connessione di rete`);
+      } else if (errorMessage.includes('Failed to fetch')) {
+        alert(`⚠️ Problema di Connessione\n\n` +
+              `Impossibile caricare i file necessari per l'analisi CTMC.\n\n` +
+              `Soluzioni:\n` +
+              `• Verifica la connessione internet\n` +
+              `• Ricarica la pagina e riprova\n` +
+              `• Controlla che tutti i file siano presenti`);
+      } else {
+        // Generic error popup
+        alert(`❌ Errore Analisi CTMC\n\n` +
+              `${errorMessage}\n\n` +
+              `Controlla la console per dettagli tecnici.`);
+      }
+      
+      setLogOutput(`Errore: ${errorMessage}\n\nPossibili soluzioni:\n1. Verifica che tutti gli stati siano collegati\n2. Controlla che tutte le transizioni siano esponenziali\n3. Verifica che il backend sia attivo (node backend-server.js)\n4. Controlla il percorso della libreria CTMC\n`);
     }
   };
 
@@ -158,13 +201,7 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
                   disabled={isRunning}
                   className="folder-name-input"
                 />
-                <button 
-                  className="select-folder-button"
-                  onClick={handleSelectDirectory}
-                  disabled={isRunning}
-                >
-                  📂 Seleziona
-                </button>
+                
               </div>
               <small className="folder-help">
                 💡 Inserisci il path assoluto della directory della libreria MSolver
@@ -197,38 +234,71 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>🔄 Iterazioni:</label>
-                <input
-                  type="number"
-                  value={iterations}
-                  onChange={(e) => setIterations(Number(e.target.value))}
-                  min="1"
-                  disabled={isRunning}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>📊 Intervallo di Confidenza:</label>
-                <div className="confidence-input">
+            {/* Simulation Settings Group */}
+            <div className="simulation-settings-group">
+              <div className="simulation-toggle-header">
+                <label className="toggle-switch">
                   <input
-                    type="number"
-                    value={confidence}
-                    onChange={(e) => setConfidence(Number(e.target.value))}
-                    min="0.01"
-                    max="0.99"
-                    step="0.01"
+                    type="checkbox"
+                    checked={simulationEnabled}
+                    onChange={(e) => setSimulationEnabled(e.target.checked)}
                     disabled={isRunning}
                   />
-                  <div className="toggle-group">
+                  <span className="toggle-slider"></span>
+                </label>
+                <span className="toggle-label">Abilita Simulazione</span>
+                <div className="tooltip-container">
+                  <span className="info-icon">ℹ️</span>
+                  <div className="tooltip">
+                    <strong>Simulazione vs Analitico:</strong><br/>
+                    • <strong>Simulazione ON:</strong> Usa algoritmi Monte Carlo per calcolare probabilità attraverso campionamento stocastico. Supporta tutti i tipi di distribuzione.<br/>
+                    • <strong>Simulazione OFF:</strong> Usa metodi analitici deterministici (expm, uniformizzazione). Solo per distribuzioni esponenziali.<br/>
+                    <em>I due metodi sono mutuamente esclusivi.</em>
+                  </div>
+                </div>
+                <span className="toggle-status">
+                  {simulationEnabled ? 'ABILITATA' : 'DISABILITATA'}
+                </span>
+              </div>
+              
+              <div className="simulation-parameters">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>🔄 Iterazioni:</label>
+                    <input
+                      type="number"
+                      value={iterations}
+                      onChange={(e) => setIterations(Number(e.target.value))}
+                      min="1"
+                      disabled={isRunning || !simulationEnabled}
+                      className={!simulationEnabled ? 'disabled-input' : ''}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>📊 Intervallo di Confidenza:</label>
+                    <input
+                      type="number"
+                      value={confidence}
+                      onChange={(e) => setConfidence(Number(e.target.value))}
+                      min="0.01"
+                      max="0.99"
+                      step="0.01"
+                      disabled={isRunning || !simulationEnabled}
+                      className={!simulationEnabled ? 'disabled-input' : ''}
+                    />
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <div className="stop-criteria-group">
                     <span className="toggle-label">Stop Criteria:</span>
                     <label className="toggle-switch">
                       <input
                         type="checkbox"
                         checked={confidenceToggle}
                         onChange={(e) => setConfidenceToggle(e.target.checked)}
-                        disabled={isRunning}
+                        disabled={isRunning || !simulationEnabled}
                       />
                       <span className="toggle-slider"></span>
                     </label>
@@ -241,37 +311,19 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
             </div>
 
             <div className="form-group">
-              <div className="simulation-toggle">
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={simulationEnabled}
-                    onChange={(e) => setSimulationEnabled(e.target.checked)}
-                    disabled={isRunning}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-                <span className="toggle-label">Abilita Simulazione</span>
-                <span className="toggle-status">
-                  {simulationEnabled ? 'ABILITATA' : 'DISABILITATA'}
-                </span>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>🔬 Metodo di Risoluzione:</label>
+              <label>🔬 Metodo di Risoluzione Analitica:</label>
               <select
                 value={solverMethod}
                 onChange={(e) => setSolverMethod(e.target.value as 'Transitorio' | 'Uniformizzazione' | 'Stazionario')}
                 disabled={isRunning || simulationEnabled}
-                className="solver-method-select"
+                className={`solver-method-select ${simulationEnabled ? 'disabled-input' : ''}`}
               >
                 <option value="Transitorio">Transitorio (expm)</option>
                 <option value="Uniformizzazione">Uniformizzazione</option>
                 <option value="Stazionario">Stazionario</option>
               </select>
               <small className="solver-help">
-                💡 Disponibile solo per risoluzione non simulativa (con transizioni esponenziali)
+                💡 {simulationEnabled ? 'Disabilitato durante la simulazione' : 'Disponibile solo per risoluzione analitica (con transizioni esponenziali)'}
               </small>
             </div>
           </div>

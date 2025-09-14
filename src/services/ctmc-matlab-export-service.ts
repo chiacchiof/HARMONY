@@ -36,6 +36,10 @@ export class CTMCMatlabExportService {
       return 'Il modello non contiene stati.';
     }
 
+    if (model.transitions.length === 0) {
+      return 'Il modello non contiene transizioni. Aggiungi almeno una transizione per connettere gli stati.';
+    }
+
     // Check if all states are connected (at least one incoming or outgoing transition)
     const connectedStates = new Set<string>();
     model.transitions.forEach(t => {
@@ -45,7 +49,13 @@ export class CTMCMatlabExportService {
 
     const disconnectedStates = model.states.filter(s => !connectedStates.has(s.id));
     if (disconnectedStates.length > 0) {
-      return `Stati non collegati trovati: ${disconnectedStates.map(s => s.name).join(', ')}. Tutti gli stati devono essere collegati per il solver CTMC.`;
+      console.log('🔍 [CTMC Validation] Disconnected states found:', {
+        disconnectedStates: disconnectedStates.map(s => ({ id: s.id, name: s.name })),
+        allStates: model.states.map(s => ({ id: s.id, name: s.name })),
+        allTransitions: model.transitions.map(t => ({ source: t.source, target: t.target }))
+      });
+      
+      return `Stati isolati: ${disconnectedStates.map(s => s.name).join(', ')}. \n\nOgni stato deve avere almeno una transizione in ingresso o in uscita.\n\nSoluzioni:\n• Collega questi stati con nuove transizioni\n• Oppure elimina gli stati non necessari`;
     }
 
     return null;
@@ -321,35 +331,67 @@ end
    */
   static async prepareFilesForBackend(model: MarkovChainModel, options: CTMCExportOptions): Promise<CTMCMatlabFiles> {
     try {
+      console.log('🔍 [CTMC Export] Starting prepareFilesForBackend with model:', {
+        states: model.states.length,
+        transitions: model.transitions.length,
+        options
+      });
+      
       // Validate exponential transitions
+      console.log('🔍 [CTMC Export] Validating exponential transitions...');
       const exponentialError = this.validateExponentialTransitions(model);
       if (exponentialError) {
+        console.error('❌ [CTMC Export] Exponential validation failed:', exponentialError);
         throw new Error(exponentialError);
       }
+      console.log('✅ [CTMC Export] Exponential transitions validated');
 
       // Validate connected states
+      console.log('🔍 [CTMC Export] Validating connected states...');
       const connectivityError = this.validateConnectedStates(model);
       if (connectivityError) {
+        console.error('❌ [CTMC Export] Connectivity validation failed:', connectivityError);
         throw new Error(connectivityError);
       }
+      console.log('✅ [CTMC Export] Connected states validated');
 
       // Generate model-specific MATLAB code
+      console.log('🔍 [CTMC Export] Generating MATLAB code...');
       const modelContent = this.generateCTMCMatlabCode(model, options);
+      console.log(`✅ [CTMC Export] MATLAB code generated: ${modelContent.length} chars`);
 
       // Read the CTMCSolver.m template and copy it
+      console.log('🔍 [CTMC Export] Fetching CTMCSolver.m template...');
       const response = await fetch('/assets/CTMCSolver.m');
+      if (!response.ok) {
+        console.error('❌ [CTMC Export] Failed to fetch CTMCSolver.m:', response.status, response.statusText);
+        throw new Error(`Failed to fetch CTMCSolver.m template: ${response.status} ${response.statusText}`);
+      }
+      
       let solverContent = await response.text();
+      console.log(`✅ [CTMC Export] CTMCSolver.m template fetched: ${solverContent.length} chars`);
 
       // If the solver template is empty or doesn't exist, use our base template
       if (!solverContent.trim()) {
+        console.log('⚠️ [CTMC Export] Template is empty, using generated code as fallback');
         solverContent = this.generateCTMCMatlabCode(model, options);
       }
 
-      console.log(`CTMC files prepared - Model: ${modelContent.length} chars, Solver: ${solverContent.length} chars`);
+      console.log(`✅ [CTMC Export] CTMC files prepared - Model: ${modelContent.length} chars, Solver: ${solverContent.length} chars`);
 
       return { modelContent, solverContent };
       
     } catch (error) {
+      console.error('❌ [CTMC Export] prepareFilesForBackend failed:', error);
+      console.error('❌ [CTMC Export] Full error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        model: {
+          states: model.states.length,
+          transitions: model.transitions.length
+        },
+        options
+      });
       throw new Error(`Failed to prepare CTMC files for backend: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

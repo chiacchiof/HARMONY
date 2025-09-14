@@ -52,7 +52,7 @@ export class CTMCService {
    */
   static async prepareFilesForBackend(markovChainModel: MarkovChainModel, config: CTMCConfig): Promise<CTMCMatlabFiles> {
     try {
-      console.log(`Preparing CTMC files for backend processing: ${config.libraryDirectory}`);
+      console.log(`📁 [CTMC] Preparing CTMC files for backend processing: ${config.libraryDirectory}`);
       
       // Convert config to CTMCExportOptions
       const exportOptions: CTMCExportOptions = {
@@ -63,15 +63,26 @@ export class CTMCService {
         filename: `ctmc-model-${new Date().toISOString().split('T')[0]}.m`,
         libraryDirectory: config.libraryDirectory
       };
+      
+      console.log('🔧 [CTMC] Export options:', exportOptions);
 
       // Generate MATLAB files
+      console.log('🔍 [CTMC] Calling CTMCMatlabExportService.prepareFilesForBackend...');
       const files = await CTMCMatlabExportService.prepareFilesForBackend(markovChainModel, exportOptions);
       
-      console.log(`CTMC files prepared - Model: ${files.modelContent.length} chars, Solver: ${files.solverContent.length} chars`);
+      console.log(`✅ [CTMC] CTMC files prepared - Model: ${files.modelContent.length} chars, Solver: ${files.solverContent.length} chars`);
       
       return files;
       
     } catch (error) {
+      console.error('❌ [CTMC] prepareFilesForBackend failed:', error);
+      console.error('❌ [CTMC] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        config,
+        modelStates: markovChainModel.states.length,
+        modelTransitions: markovChainModel.transitions.length
+      });
       throw new Error(`Failed to prepare CTMC files for backend: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -312,30 +323,53 @@ Risultati disponibili in output/results.mat
    */
   static async runAnalysis(markovChainModel: MarkovChainModel, config: CTMCConfig): Promise<void> {
     try {
+      console.log('🔄 [CTMC] Starting runAnalysis with config:', {
+        libraryDirectory: config.libraryDirectory,
+        timeT: config.timeT,
+        deltaT: config.deltaT,
+        solverMethod: config.solverMethod,
+        simulationEnabled: config.simulationEnabled,
+        statesCount: markovChainModel.states.length,
+        transitionsCount: markovChainModel.transitions.length
+      });
+      
       // Step 1: Validate inputs
+      console.log('🔍 [CTMC] Step 1: Validating configuration...');
       const validationError = this.validateConfig(config, markovChainModel);
       if (validationError) {
+        console.error('❌ [CTMC] Validation failed:', validationError);
         throw new Error(validationError);
       }
+      console.log('✅ [CTMC] Validation passed');
       
       this.updateProgress(0, 'Preparazione analisi CTMC...', 'Validazione configurazione e preparazione file...');
       
       // Step 2: Prepare MATLAB files for backend processing
+      console.log('🔍 [CTMC] Step 2: Preparing MATLAB files...');
       const files = await this.prepareFilesForBackend(markovChainModel, config);
+      console.log('✅ [CTMC] Files prepared successfully:', {
+        modelContentLength: files.modelContent.length,
+        solverContentLength: files.solverContent.length
+      });
       
       // Step 3: Clear output folder (reuse from SHyFTA service)
       this.updateProgress(10, 'Pulizia directory output...', 'Preparazione ambiente MATLAB...');
       
       // Step 4: Execute via backend with prepared files
+      console.log('🔍 [CTMC] Step 4: Executing MATLAB command...');
       await this.executeMatlabCommand(config.libraryDirectory, markovChainModel, config, files);
+      console.log('✅ [CTMC] MATLAB execution completed');
       
     } catch (error) {
+      console.error('❌ [CTMC] runAnalysis failed:', error);
+      console.error('❌ [CTMC] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
       this.isRunning = false;
       if (this.progressCallback) {
         this.progressCallback({
           progress: 0,
           currentStep: 'Errore durante la preparazione CTMC',
-          logOutput: `Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}\n`,
+          logOutput: `Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}\n\nStack trace:\n${error instanceof Error ? error.stack : 'N/A'}\n`,
           isRunning: false,
           isCompleted: false
         });
