@@ -51,6 +51,7 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
   // Controlla se ci sono risultati di simulazione disponibili
   const hasSimulationResults = MatlabResultsService.hasSimulationResults();
   const componentResults = MatlabResultsService.getComponentResults(element.id);
+  
 
   // Stato locale per il tipo di gate (per poter cambiare tipo in modal)
   const [gateTypeLocal, setGateTypeLocal] = useState<GateType | null>(null);
@@ -919,24 +920,28 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
         </div>
 
         <div className="modal-footer">
-          <button className="cancel-button" onClick={onClose}>
-            Annulla
-          </button>
+          <button className="cancel-button" onClick={onClose}>Annulla</button>
           
-          {/* Pulsante per visualizzare i risultati della simulazione */}
           {hasSimulationResults && componentResults && onShowResults && (
             <button 
-              className="results-button"
-              onClick={() => onShowResults!(element.id)}
+              onClick={() => onShowResults(element.id)}
+              style={{
+                display: 'inline-block',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                margin: '0 5px'
+              }}
               title="Visualizza risultati simulazione (PDF/CDF)"
             >
               📊 Risultati Simulazione
             </button>
           )}
           
-          <button className="save-button" onClick={handleSave}>
-            Salva
-          </button>
+          <button className="save-button" onClick={handleSave}>Salva</button>
         </div>
       </div>
     </div>

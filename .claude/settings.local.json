@@ -20,7 +20,8 @@
       "Read(//c//**)",
       "Bash(cat:*)",
       "Read(//c/SHyFTOO/**)",
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []

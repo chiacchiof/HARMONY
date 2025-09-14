@@ -39,6 +39,7 @@ const FaultTreeEditor: React.FC = () => {
   const [selectedResultsElementId, setSelectedResultsElementId] = useState<string | null>(null);
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [simulationResultsVersion, setSimulationResultsVersion] = useState(0);
   
   // Stato per tenere traccia del file aperto
   const [openedFile, setOpenedFile] = useState<{
@@ -112,6 +113,17 @@ const FaultTreeEditor: React.FC = () => {
       updateCountersFromModel(snapshot);
     }
   }, [getFaultTreeSnapshot, updateCountersFromModel]);
+
+  // Listener per aggiornamenti dei risultati simulazione
+  useEffect(() => {
+    const handleSimulationResultsLoaded = () => {
+      console.log('🔄 Simulation results loaded, updating UI');
+      setSimulationResultsVersion(prev => prev + 1);
+    };
+
+    window.addEventListener('simulationResultsLoaded', handleSimulationResultsLoaded);
+    return () => window.removeEventListener('simulationResultsLoaded', handleSimulationResultsLoaded);
+  }, []);
 
   // Gestione aggiunta eventi base
   const handleAddBaseEvent = useCallback(() => {
@@ -691,6 +703,7 @@ const FaultTreeEditor: React.FC = () => {
 
       {showParameterModal && selectedElement && (
         <ParameterModal
+          key={`${selectedElement.id}-${simulationResultsVersion}`}
           element={selectedElement}
           onSave={handleUpdateElement}
           onClose={() => {
