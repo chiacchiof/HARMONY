@@ -16,6 +16,7 @@ import { FaultTreeModification } from '../../types/ChatIntegration';
 import { FileService } from '../../services/file-service';
 import { useLLMConfig } from '../../contexts/LLMContext';
 import { useModelPersistence } from '../../contexts/ModelPersistenceContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useDeviceType } from '../../hooks/useDeviceType';
 import './FaultTreeEditor.css';
 
@@ -23,6 +24,7 @@ const FaultTreeEditor: React.FC = () => {
   const navigate = useNavigate();
   const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
   const { saveFaultTreeSnapshot, getFaultTreeSnapshot, clearSnapshots } = useModelPersistence();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const [faultTreeModel, setFaultTreeModel] = useState<FaultTreeModel>({
     events: [],
     gates: [],
@@ -38,7 +40,6 @@ const FaultTreeEditor: React.FC = () => {
   const [showComponentResultsModal, setShowComponentResultsModal] = useState(false);
   const [selectedResultsElementId, setSelectedResultsElementId] = useState<string | null>(null);
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [simulationResultsVersion, setSimulationResultsVersion] = useState(0);
   
   // Stato per tenere traccia del file aperto
@@ -388,8 +389,8 @@ const FaultTreeEditor: React.FC = () => {
 
   // Gestione toggle dark mode
   const handleToggleDarkMode = useCallback(() => {
-    setIsDarkMode(prev => !prev);
-  }, []);
+    toggleDarkMode();
+  }, [toggleDarkMode]);
 
   // Gestione navigazione tra editor
   const handleNavigateToMarkov = useCallback(() => {

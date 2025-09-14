@@ -13,12 +13,14 @@ import { MarkovChainModel, MarkovState, MarkovTransition } from '../../types/Mar
 import { FileService } from '../../services/file-service';
 import { useLLMConfig } from '../../contexts/LLMContext';
 import { useModelPersistence } from '../../contexts/ModelPersistenceContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import './MarkovChainEditor.css';
 
 const MarkovChainEditor: React.FC = () => {
   const navigate = useNavigate();
   const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
   const { saveMarkovChainSnapshot, getMarkovChainSnapshot, clearSnapshots } = useModelPersistence();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const [markovChainModel, setMarkovChainModel] = useState<MarkovChainModel>({
     states: [],
     transitions: []
@@ -30,7 +32,6 @@ const MarkovChainEditor: React.FC = () => {
   const [showMSolverModal, setShowMSolverModal] = useState(false);
   const [showCTMCResultsModal, setShowCTMCResultsModal] = useState(false);
   const [selectedResultsStateId, setSelectedResultsStateId] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
   
@@ -348,8 +349,8 @@ ${markovChainModel.transitions.map(transition => {
   }, [markovChainModel]);
 
   const handleToggleDarkMode = useCallback(() => {
-    setIsDarkMode(prev => !prev);
-  }, []);
+    toggleDarkMode();
+  }, [toggleDarkMode]);
 
   // Navigation handlers
   const handleNavigateToFaultTree = useCallback(() => {

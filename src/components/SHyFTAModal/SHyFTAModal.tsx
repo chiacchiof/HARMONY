@@ -38,6 +38,26 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   
   // State for retrieve results loading
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  
+  // State per tracciare se il modello è cambiato dall'ultima simulazione
+  const [modelChangedSinceLastRun, setModelChangedSinceLastRun] = useState(false);
+  const [lastSimulatedModel, setLastSimulatedModel] = useState<string | null>(null);
+
+  // Effetto per tracciare cambiamenti del modello
+  useEffect(() => {
+    const currentModelHash = JSON.stringify({
+      events: faultTreeModel.events.length,
+      gates: faultTreeModel.gates.length,
+      connections: faultTreeModel.connections.length,
+      eventsHash: faultTreeModel.events.map(e => e.id + e.name).join(''),
+      gatesHash: faultTreeModel.gates.map(g => g.id + g.name).join('')
+    });
+    
+    if (lastSimulatedModel && lastSimulatedModel !== currentModelHash) {
+      console.log('🔄 [SHyFTAModal] Model changed since last simulation - disabling retrieve results');
+      setModelChangedSinceLastRun(true);
+    }
+  }, [faultTreeModel, lastSimulatedModel]);
 
   // Load saved configuration and setup progress callback
   useEffect(() => {
@@ -60,7 +80,23 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
         setCurrentStep(progressData.currentStep);
         setLogOutput(prev => prev + progressData.logOutput);
         setIsRunning(progressData.isRunning);
-        setIsCompleted(progressData.isCompleted || false);
+        
+        const wasCompleted = progressData.isCompleted || false;
+        setIsCompleted(wasCompleted);
+        
+        // Se la simulazione è appena completata, salva l'hash del modello corrente
+        if (wasCompleted && !progressData.isRunning) {
+          const currentModelHash = JSON.stringify({
+            events: faultTreeModel.events.length,
+            gates: faultTreeModel.gates.length,
+            connections: faultTreeModel.connections.length,
+            eventsHash: faultTreeModel.events.map(e => e.id + e.name).join(''),
+            gatesHash: faultTreeModel.gates.map(g => g.id + g.name).join('')
+          });
+          setLastSimulatedModel(currentModelHash);
+          setModelChangedSinceLastRun(false);
+          console.log('✅ [SHyFTAModal] Simulation completed - model hash saved, retrieve results enabled');
+        }
       });
     }
     
@@ -127,6 +163,9 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     setProgress(0);
     setLogOutput('');
     setCurrentStep('Inizializzazione...');
+    
+    // Reset model change tracking (la nuova simulazione renderà i risultati validi)
+    setModelChangedSinceLastRun(false);
 
     try {
       await SHyFTAService.runSimulation(faultTreeModel, config);
@@ -369,13 +408,19 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
             {isRunning ? 'Chiudi quando completato' : 'Chiudi'}
           </button>
           
-          {/* Debug button to test results loading */}
+          {/* Retrieve Results button - abilitato solo dopo simulazione e se modello non è cambiato */}
           {!isRunning && (
             <button 
-              className="test-button"
-              onClick={handleTestResultsLoading}
-              title="Test caricamento risultati (usa dati mock)"
-              disabled={isLoadingResults}
+              className={`test-button ${(!isCompleted || modelChangedSinceLastRun) ? 'disabled' : ''}`}
+              onClick={(isCompleted && !modelChangedSinceLastRun) ? handleTestResultsLoading : undefined}
+              title={
+                !isCompleted 
+                  ? "Completa prima una simulazione SHyFTA per abilitare il caricamento dei risultati"
+                  : modelChangedSinceLastRun 
+                    ? "Il modello è cambiato dall'ultima simulazione. Esegui una nuova simulazione per abilitare il retrieve dei risultati."
+                    : "Carica risultati simulazione dal file results.mat"
+              }
+              disabled={isLoadingResults || !isCompleted || modelChangedSinceLastRun}
             >
               {isLoadingResults ? (
                 <span>⏳ Loading...</span>
