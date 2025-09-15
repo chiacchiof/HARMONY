@@ -426,7 +426,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     <div className={`right-panel ${isDarkMode ? 'dark-mode' : ''} ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="panel-header">
         <div className="header-content">
-          <h3>🤖 Assistente Fault Tree</h3>
+          <h3>🤖 Harmony AI</h3>
           <button 
             className="collapse-toggle"
             onClick={onToggleCollapse}
@@ -483,7 +483,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 <div key={message.id} className={`message ${message.sender}`}>
                   <div className="message-content">
                     <strong className="message-prefix">
-                      {message.sender === 'user' ? 'Tu: ' : 'AFT: '}
+                      {message.sender === 'user' ? 'Tu: ' : 'Harmony AI: '}
                     </strong>
                     {message.text.split('\n').map((line, index) => (
                       <React.Fragment key={index}>

@@ -58,24 +58,6 @@ const MSolverModal: React.FC<MSolverModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSelectDirectory = async () => {
-    try {
-      if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
-        const dirHandle = await (window as any).showDirectoryPicker();
-        setLibraryDirectory(dirHandle.name);
-        localStorage.setItem('msolver-library-directory', dirHandle.name);
-      } else {
-        // Fallback: ask user to input directory path manually
-        const dirPath = prompt('Inserisci il path della directory della libreria:\n(esempio: C:\\MSolver\\lib)');
-        if (dirPath && dirPath.trim()) {
-          setLibraryDirectory(dirPath.trim());
-          localStorage.setItem('msolver-library-directory', dirPath.trim());
-        }
-      }
-    } catch (error) {
-      console.error('Error selecting directory:', error);
-    }
-  };
 
   const handleRunCTMC = async () => {
     try {
