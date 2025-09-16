@@ -47,6 +47,46 @@
   border-radius: 12px 12px 0 0;
 }
 
+/* Advanced Settings Styles */
+.collapsible-header {
+  margin-bottom: 15px !important;
+  transition: all 0.2s ease;
+}
+
+.collapsible-header:hover {
+  color: #667eea;
+}
+
+.advanced-settings {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 15px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(-10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.advanced-settings .form-group {
+  margin-bottom: 15px;
+}
+
+.advanced-settings .help-text {
+  font-size: 0.8em;
+  color: #64748b;
+  margin-top: 4px;
+}
+
 .shyfta-modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
