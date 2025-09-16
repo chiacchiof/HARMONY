@@ -6,6 +6,14 @@ export interface SHyFTASettings {
   lastUsedModelName: string;
   // Impostazioni per l'analisi dei risultati
   resultsTimestep: number; // Delta temporale per calcoli PDF/CDF (default 1 ora)
+  // Advanced simulation parameters
+  percentageErrorTollerance?: number;
+  minIterationsForCI?: number;
+  maxIterationsForRobustness?: number;
+  stabilityCheckWindow?: number;
+  stabilityThreshold?: number;
+  convergenceCheckWindow?: number;
+  convergenceThreshold?: number;
 }
 
 const DEFAULT_SETTINGS: SHyFTASettings = {
@@ -14,7 +22,15 @@ const DEFAULT_SETTINGS: SHyFTASettings = {
   defaultConfidence: 0.95,
   defaultConfidenceToggle: true,
   lastUsedModelName: '',
-  resultsTimestep: 1.0 // 1 ora
+  resultsTimestep: 1.0, // 1 ora
+  // Advanced simulation parameters - optimized for low rates
+  percentageErrorTollerance: 5.0,
+  minIterationsForCI: 1000,
+  maxIterationsForRobustness: 1000000,
+  stabilityCheckWindow: 50,
+  stabilityThreshold: 0.1,
+  convergenceCheckWindow: 20,
+  convergenceThreshold: 0.15
 };
 
 const STORAGE_KEY = 'shyfta-settings';

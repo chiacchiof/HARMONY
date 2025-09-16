@@ -10,6 +10,14 @@ export interface SHyFTAConfig {
   confidence: number;
   confidenceToggle: boolean;
   missionTime: number;
+  // Advanced simulation parameters
+  percentageErrorTollerance?: number;
+  minIterationsForCI?: number;
+  maxIterationsForRobustness?: number;
+  stabilityCheckWindow?: number;
+  stabilityThreshold?: number;
+  convergenceCheckWindow?: number;
+  convergenceThreshold?: number;
 }
 
 export interface SHyFTAProgress {
@@ -29,6 +37,10 @@ export class SHyFTAService {
    * Set the progress callback function
    */
   static setProgressCallback(callback: (progress: SHyFTAProgress) => void) {
+    // Clear previous callback to prevent memory leaks
+    if (this.progressCallback) {
+      console.log('🧹 [SHyFTAService] Replacing existing progress callback');
+    }
     this.progressCallback = callback;
   }
 
@@ -76,7 +88,18 @@ iter = <ITER>;
 %% STOP CRITERIA PARAMETERS
 confidenceLevel = <CONFIDENCE>;
 stopCriteriaOn = <TRUEFALSE>;
-percentageErrorTollerance = 0.001;
+percentageErrorTollerance = <PERCENTAGE_ERROR_TOLLERANCE>;
+
+%% ADVANCED SIMULATION PARAMETERS (OPTIMIZED FOR LOW RATES)
+min_iterations_for_CI = <MIN_ITERATIONS_FOR_CI>;              % Iterazioni minime prima controlli CI
+max_iterations_for_robustness = <MAX_ITERATIONS_FOR_ROBUSTNESS>;   % Limite massimo iterazioni
+
+%% STABILITY AND CONVERGENCE PARAMETERS
+stability_check_window = <STABILITY_CHECK_WINDOW>;               % Finestra stabilità stime
+stability_threshold = <STABILITY_THRESHOLD>;                     % Soglia stabilità
+convergence_check_window = <CONVERGENCE_CHECK_WINDOW>;           % Finestra convergenza CI
+convergence_threshold = <CONVERGENCE_THRESHOLD>;                 % Soglia convergenza CI
+
 zvalue = norminv(1-((1-confidenceLevel)/2));
 err_iter = 0;
 muX =  0;
@@ -149,7 +172,21 @@ toc`;
         .replace(/<MODEL_NAME>/g, modelNameWithoutExt)
         .replace(/<ITER>/g, config.iterations.toString())
         .replace(/<CONFIDENCE>/g, config.confidence.toString())
-        .replace(/<TRUEFALSE>/g, config.confidenceToggle.toString());
+        .replace(/<TRUEFALSE>/g, config.confidenceToggle.toString())
+        .replace(/<PERC_ERR_TOLERANCE>/g, (config.percentageErrorTollerance || 5.0).toString())
+        .replace(/<PERCENTAGE_ERROR_TOLLERANCE>/g, (config.percentageErrorTollerance || 5.0).toString())
+        .replace(/<MIN_ITERATIONS_FOR_CI>/g, (config.minIterationsForCI || 1000).toString())
+        .replace(/<min_iterations_for_CI>/g, (config.minIterationsForCI || 1000).toString())
+        .replace(/<MAX_ITERATIONS_FOR_ROBUSTNESS>/g, (config.maxIterationsForRobustness || 1000000).toString())
+        .replace(/<max_iterations_for_robustness>/g, (config.maxIterationsForRobustness || 1000000).toString())
+        .replace(/<STABILITY_CHECK_WINDOW>/g, (config.stabilityCheckWindow || 50).toString())
+        .replace(/<stability_check_window>/g, (config.stabilityCheckWindow || 50).toString())
+        .replace(/<STABILITY_THRESHOLD>/g, (config.stabilityThreshold || 0.1).toString())
+        .replace(/<stability_threshold>/g, (config.stabilityThreshold || 0.1).toString())
+        .replace(/<CONVERGENCE_CHECK_WINDOW>/g, (config.convergenceCheckWindow || 20).toString())
+        .replace(/<convergence_check_window>/g, (config.convergenceCheckWindow || 20).toString())
+        .replace(/<CONVERGENCE_THRESHOLD>/g, (config.convergenceThreshold || 0.15).toString())
+        .replace(/<convergence_threshold>/g, (config.convergenceThreshold || 0.15).toString());
         
     } catch (error) {
       throw new Error(`Failed to generate ZFTAMain.m content: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -176,7 +213,21 @@ toc`;
         .replace(/<MODEL_NAME>/g, modelNameWithoutExt)
         .replace(/<ITER>/g, config.iterations.toString())
         .replace(/<CONFIDENCE>/g, config.confidence.toString())
-        .replace(/<TRUEFALSE>/g, config.confidenceToggle.toString());
+        .replace(/<TRUEFALSE>/g, config.confidenceToggle.toString())
+        .replace(/<PERC_ERR_TOLERANCE>/g, (config.percentageErrorTollerance || 5.0).toString())
+        .replace(/<PERCENTAGE_ERROR_TOLLERANCE>/g, (config.percentageErrorTollerance || 5.0).toString())
+        .replace(/<MIN_ITERATIONS_FOR_CI>/g, (config.minIterationsForCI || 1000).toString())
+        .replace(/<min_iterations_for_CI>/g, (config.minIterationsForCI || 1000).toString())
+        .replace(/<MAX_ITERATIONS_FOR_ROBUSTNESS>/g, (config.maxIterationsForRobustness || 1000000).toString())
+        .replace(/<max_iterations_for_robustness>/g, (config.maxIterationsForRobustness || 1000000).toString())
+        .replace(/<STABILITY_CHECK_WINDOW>/g, (config.stabilityCheckWindow || 50).toString())
+        .replace(/<stability_check_window>/g, (config.stabilityCheckWindow || 50).toString())
+        .replace(/<STABILITY_THRESHOLD>/g, (config.stabilityThreshold || 0.1).toString())
+        .replace(/<stability_threshold>/g, (config.stabilityThreshold || 0.1).toString())
+        .replace(/<CONVERGENCE_CHECK_WINDOW>/g, (config.convergenceCheckWindow || 20).toString())
+        .replace(/<convergence_check_window>/g, (config.convergenceCheckWindow || 20).toString())
+        .replace(/<CONVERGENCE_THRESHOLD>/g, (config.convergenceThreshold || 0.15).toString())
+        .replace(/<convergence_threshold>/g, (config.convergenceThreshold || 0.15).toString());
       
       console.log(`Files prepared for backend - Model: ${modelContent.length} chars, ZFTA: ${zftaContent.length} chars`);
       
@@ -294,49 +345,15 @@ toc`;
           }
         );
         
-        // Simulation completed via backend - try to load results
-        this.updateProgress(100, '✅ Simulazione completata! Caricamento risultati...', 
-          'MATLAB terminato automaticamente.\nCaricamento e analisi dei risultati in corso...');
-        
-        try {
-          console.log('🔄 [SHyFTAService] Starting automatic results loading...');
-          
-          // Get current settings for results processing
-          const settings = SHyFTAConfigService.loadSettings();
-          console.log(`   ⚙️ Settings: timestep=${settings.resultsTimestep}h`);
-          
-          // Try to load results automatically with configured parameters
-          const resultsLoaded = await MatlabResultsService.loadResultsAfterSimulation(
-            shyftaPath,
-            faultTreeModel.events,
-            faultTreeModel.gates,
-            config.missionTime,
-            config.iterations,
-            {
-              timestep: settings.resultsTimestep
-            }
-          );
-          
-          if (resultsLoaded) {
-            console.log('✅ [SHyFTAService] Results loaded successfully - UI should update now');
-            this.updateProgress(100, '🎉 Simulazione completata! Risultati caricati.', 
-              'Simulazione completata con successo!\nRisultati di affidabilità ora disponibili sui componenti.\nUsa "Risultati Simulazione" nei dettagli dei componenti per visualizzare PDF/CDF.');
-          } else {
-            console.log('⚠️ [SHyFTAService] Results loading failed - using fallback message');
-            this.updateProgress(100, '✅ Simulazione completata!', 
-              'MATLAB terminato automaticamente.\nControlla output/results.mat per i risultati.');
-          }
-        } catch (error) {
-          console.error('❌ [SHyFTAService] Error loading simulation results:', error);
-          this.updateProgress(100, '✅ Simulazione completata!', 
-            'MATLAB terminato automaticamente.\nControlla output/results.mat per i risultati.');
-        }
+        // Simulation completed via backend - do NOT auto-load results
+        this.updateProgress(100, '✅ Simulazione completata!', 
+          'MATLAB terminato automaticamente.\nUsa il pulsante "Retrieve Results" per caricare i risultati quando sei pronto.');
         
         if (this.progressCallback) {
           this.progressCallback({
             progress: 100,
-            currentStep: '🎉 Simulazione SHyFTA completata automaticamente!',
-            logOutput: 'Simulazione eseguita dal backend.\nRisultati di affidabilità disponibili sui componenti.\n',
+            currentStep: '🎉 Simulazione SHyFTA completata!',
+            logOutput: 'Simulazione eseguita dal backend.\nUsa "Retrieve Results" per caricare i dati di affidabilità.\n',
             isRunning: false,
             isCompleted: true
           });
@@ -526,6 +543,13 @@ toc`;
    * Reset simulation state (cleanup)
    */
   static resetSimulation(): void {
+    // Clean up all state to prevent memory leaks
+    this.isRunning = false;
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    
     if (this.progressCallback) {
       this.progressCallback({
         progress: 0,
@@ -534,6 +558,10 @@ toc`;
         isRunning: false
       });
     }
+    
+    // Clear callback to prevent memory leaks
+    this.progressCallback = null;
+    console.log('🧹 [SHyFTAService] Reset simulation state and cleared all references');
   }
 
   /**

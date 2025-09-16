@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { FaultTreeModel } from '../../types/FaultTree';
 import { SHyFTAService, SHyFTAConfig, SHyFTAProgress } from '../../services/shyfta-service';
 import { SHyFTAConfig as SHyFTAConfigService, SHyFTASettings } from '../../config/shyfta-config';
@@ -13,18 +13,62 @@ interface SHyFTAModalProps {
   missionTime?: number;
 }
 
+// Memoized log textarea component to prevent unnecessary re-renders
+const LogTextarea = memo(({ value, placeholder }: { value: string; placeholder: string }) => (
+  <textarea
+    value={value}
+    readOnly
+    rows={6}
+    placeholder={placeholder}
+    style={{ fontFamily: 'monospace', fontSize: '12px' }}
+  />
+));
+
+// Memoized progress bar component
+const ProgressBar = memo(({ progress }: { progress: number }) => (
+  <div className="progress-bar">
+    <div 
+      className="progress-fill" 
+      style={{ width: `${progress}%` }}
+    ></div>
+    <span className="progress-text">{progress.toFixed(1)}%</span>
+  </div>
+));
+
 const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   isOpen,
   onClose,
   faultTreeModel,
   missionTime = 500
 }) => {
+  // Enhanced close function with cleanup
+  const handleClose = () => {
+    // Clear any pending timeouts
+    if (progressUpdateTimeout.current) {
+      clearTimeout(progressUpdateTimeout.current);
+      progressUpdateTimeout.current = null;
+    }
+    // Clear progress callback and reset state to prevent memory leaks
+    SHyFTAService.resetSimulation();
+    console.log('🧹 [SHyFTAModal] Cleanup on close - reset simulation state');
+    onClose();
+  };
   // State for configuration
   const [shyftaLibFolder, setShyftaLibFolder] = useState('');
   const [iterations, setIterations] = useState(1000);
   const [confidence, setConfidence] = useState(0.95);
   const [confidenceToggle, setConfidenceToggle] = useState(true);
   const [resultsTimestep, setResultsTimestep] = useState(1.0);
+  
+  // Advanced simulation parameters
+  const [percentageErrorTollerance, setPercentageErrorTollerance] = useState(5.0);
+  const [minIterationsForCI, setMinIterationsForCI] = useState(1000);
+  const [maxIterationsForRobustness, setMaxIterationsForRobustness] = useState(1000000);
+  const [stabilityCheckWindow, setStabilityCheckWindow] = useState(50);
+  const [stabilityThreshold, setStabilityThreshold] = useState(0.1);
+  const [convergenceCheckWindow, setConvergenceCheckWindow] = useState(20);
+  const [convergenceThreshold, setConvergenceThreshold] = useState(0.15);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   
   // State for simulation
   const [isRunning, setIsRunning] = useState(false);
@@ -42,6 +86,90 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   // State per tracciare se il modello è cambiato dall'ultima simulazione
   const [modelChangedSinceLastRun, setModelChangedSinceLastRun] = useState(false);
   const [lastSimulatedModel, setLastSimulatedModel] = useState<string | null>(null);
+  const [hasSimulationResults, setHasSimulationResults] = useState(false);
+
+  // Refs for performance optimization
+  const lastUpdateTime = useRef(0);
+  const logBuffer = useRef('');
+  const progressUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Throttled progress update function
+  const throttledProgressUpdate = useCallback((progressData: SHyFTAProgress) => {
+    const now = Date.now();
+    
+    // Always update progress and running state immediately
+    setProgress(progressData.progress);
+    setIsRunning(progressData.isRunning);
+    setCurrentStep(progressData.currentStep);
+    
+    // Handle completion immediately
+    const wasCompleted = progressData.isCompleted || false;
+    if (wasCompleted !== isCompleted) {
+      setIsCompleted(wasCompleted);
+      
+      if (wasCompleted && !progressData.isRunning) {
+        const currentModelHash = JSON.stringify({
+          events: faultTreeModel.events.length,
+          gates: faultTreeModel.gates.length,
+          connections: faultTreeModel.connections.length,
+          eventsHash: faultTreeModel.events.map(e => e.id + e.name).join(''),
+          gatesHash: faultTreeModel.gates.map(g => g.id + g.name).join('')
+        });
+        setLastSimulatedModel(currentModelHash);
+        setModelChangedSinceLastRun(false);
+        setHasSimulationResults(true);
+        console.log('✅ [SHyFTAModal] Simulation completed - model hash saved, retrieve results enabled');
+      }
+    }
+    
+    // Also detect simulation end when progress reaches 100% but isCompleted might not be set yet
+    if (progressData.progress >= 100 && !progressData.isRunning && !hasSimulationResults) {
+      const currentModelHash = JSON.stringify({
+        events: faultTreeModel.events.length,
+        gates: faultTreeModel.gates.length,
+        connections: faultTreeModel.connections.length,
+        eventsHash: faultTreeModel.events.map(e => e.id + e.name).join(''),
+        gatesHash: faultTreeModel.gates.map(g => g.id + g.name).join('')
+      });
+      setLastSimulatedModel(currentModelHash);
+      setModelChangedSinceLastRun(false);
+      setHasSimulationResults(true);
+      console.log('✅ [SHyFTAModal] Simulation reached 100% - enabling retrieve results');
+    }
+    
+    // Throttle log updates to max 2 per second
+    if (progressData.logOutput) {
+      logBuffer.current += progressData.logOutput;
+      
+      if (now - lastUpdateTime.current > 500) { // Update logs max every 500ms
+        const currentLogs = logBuffer.current;
+        logBuffer.current = '';
+        lastUpdateTime.current = now;
+        
+        setLogOutput(prev => {
+          const newLogs = prev + currentLogs;
+          // Keep only last 10000 characters to prevent memory issues
+          return newLogs.length > 10000 ? newLogs.slice(-8000) : newLogs;
+        });
+      } else {
+        // Schedule an update if one isn't already scheduled
+        if (!progressUpdateTimeout.current) {
+          progressUpdateTimeout.current = setTimeout(() => {
+            const currentLogs = logBuffer.current;
+            logBuffer.current = '';
+            lastUpdateTime.current = Date.now();
+            progressUpdateTimeout.current = null;
+            
+            setLogOutput(prev => {
+              const newLogs = prev + currentLogs;
+              // Keep only last 10000 characters to prevent memory issues
+              return newLogs.length > 10000 ? newLogs.slice(-8000) : newLogs;
+            });
+          }, 500);
+        }
+      }
+    }
+  }, [faultTreeModel, isCompleted, hasSimulationResults]);
 
   // Effetto per tracciare cambiamenti del modello
   useEffect(() => {
@@ -56,8 +184,9 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     if (lastSimulatedModel && lastSimulatedModel !== currentModelHash) {
       console.log('🔄 [SHyFTAModal] Model changed since last simulation - disabling retrieve results');
       setModelChangedSinceLastRun(true);
+      setHasSimulationResults(false); // Reset results availability when model changes
     }
-  }, [faultTreeModel, lastSimulatedModel]);
+  }, [faultTreeModel.events, faultTreeModel.gates, faultTreeModel.connections, lastSimulatedModel]);
 
   // Load saved configuration and setup progress callback
   useEffect(() => {
@@ -74,35 +203,41 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       setConfidenceToggle(savedSettings.defaultConfidenceToggle);
       setResultsTimestep(savedSettings.resultsTimestep);
       
-      // Setup progress callback
-      SHyFTAService.setProgressCallback((progressData: SHyFTAProgress) => {
-        setProgress(progressData.progress);
-        setCurrentStep(progressData.currentStep);
-        setLogOutput(prev => prev + progressData.logOutput);
-        setIsRunning(progressData.isRunning);
-        
-        const wasCompleted = progressData.isCompleted || false;
-        setIsCompleted(wasCompleted);
-        
-        // Se la simulazione è appena completata, salva l'hash del modello corrente
-        if (wasCompleted && !progressData.isRunning) {
-          const currentModelHash = JSON.stringify({
-            events: faultTreeModel.events.length,
-            gates: faultTreeModel.gates.length,
-            connections: faultTreeModel.connections.length,
-            eventsHash: faultTreeModel.events.map(e => e.id + e.name).join(''),
-            gatesHash: faultTreeModel.gates.map(g => g.id + g.name).join('')
-          });
-          setLastSimulatedModel(currentModelHash);
-          setModelChangedSinceLastRun(false);
-          console.log('✅ [SHyFTAModal] Simulation completed - model hash saved, retrieve results enabled');
-        }
-      });
+      // Load advanced settings if available
+      if (savedSettings.percentageErrorTollerance !== undefined) {
+        setPercentageErrorTollerance(savedSettings.percentageErrorTollerance);
+      }
+      if (savedSettings.minIterationsForCI !== undefined) {
+        setMinIterationsForCI(savedSettings.minIterationsForCI);
+      }
+      if (savedSettings.maxIterationsForRobustness !== undefined) {
+        setMaxIterationsForRobustness(savedSettings.maxIterationsForRobustness);
+      }
+      if (savedSettings.stabilityCheckWindow !== undefined) {
+        setStabilityCheckWindow(savedSettings.stabilityCheckWindow);
+      }
+      if (savedSettings.stabilityThreshold !== undefined) {
+        setStabilityThreshold(savedSettings.stabilityThreshold);
+      }
+      if (savedSettings.convergenceCheckWindow !== undefined) {
+        setConvergenceCheckWindow(savedSettings.convergenceCheckWindow);
+      }
+      if (savedSettings.convergenceThreshold !== undefined) {
+        setConvergenceThreshold(savedSettings.convergenceThreshold);
+      }
+      
+      // Setup progress callback with throttling
+      SHyFTAService.setProgressCallback(throttledProgressUpdate);
     }
     
     return () => {
-      // Cleanup on unmount
-      SHyFTAService.setProgressCallback(() => {});
+      // Cleanup on unmount - clear callback completely and reset state
+      if (progressUpdateTimeout.current) {
+        clearTimeout(progressUpdateTimeout.current);
+        progressUpdateTimeout.current = null;
+      }
+      SHyFTAService.resetSimulation();
+      console.log('🧹 [SHyFTAModal] Cleaned up progress callback and reset simulation state');
     };
   }, [isOpen]);
 
@@ -139,7 +274,14 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     iterations,
     confidence,
     confidenceToggle,
-    missionTime
+    missionTime,
+    percentageErrorTollerance,
+    minIterationsForCI,
+    maxIterationsForRobustness,
+    stabilityCheckWindow,
+    stabilityThreshold,
+    convergenceCheckWindow,
+    convergenceThreshold
   });
 
 
@@ -154,6 +296,13 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       defaultConfidenceToggle: confidenceToggle,
       lastUsedModelName: 'ZFTATree.m',
       resultsTimestep,
+      percentageErrorTollerance,
+      minIterationsForCI,
+      maxIterationsForRobustness,
+      stabilityCheckWindow,
+      stabilityThreshold,
+      convergenceCheckWindow,
+      convergenceThreshold,
     };
     SHyFTAConfigService.saveSettings(currentSettings);
     
@@ -164,8 +313,9 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     setLogOutput('');
     setCurrentStep('Inizializzazione...');
     
-    // Reset model change tracking (la nuova simulazione renderà i risultati validi)
+    // Reset model change tracking and results availability (la nuova simulazione renderà i risultati validi)
     setModelChangedSinceLastRun(false);
+    setHasSimulationResults(false);
 
     try {
       await SHyFTAService.runSimulation(faultTreeModel, config);
@@ -231,11 +381,11 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   };
 
   return (
-    <div className="shyfta-modal-overlay" onClick={onClose}>
+    <div className="shyfta-modal-overlay" onClick={handleClose}>
       <div className="shyfta-modal" onClick={e => e.stopPropagation()}>
         <div className="shyfta-modal-header">
           <h2>🔬 SHyFTA Simulation</h2>
-          <button className="close-button" onClick={onClose}>×</button>
+          <button className="close-button" onClick={handleClose}>×</button>
         </div>
 
         <div className="shyfta-modal-content">
@@ -272,42 +422,186 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                 <input
                   type="number"
                   value={iterations}
-                  onChange={(e) => setIterations(Number(e.target.value))}
+                  onChange={(e) => {
+                    setIterations(Number(e.target.value));
+                    SHyFTAConfigService.updateSetting('defaultIterations', Number(e.target.value));
+                  }}
                   min="1"
                   disabled={isRunning}
                 />
               </div>
 
               <div className="form-group">
+                <label>📊 Tolleranza Errore Percentuale:</label>
+                <input
+                  type="number"
+                  value={percentageErrorTollerance}
+                  onChange={(e) => {
+                    setPercentageErrorTollerance(Number(e.target.value));
+                    SHyFTAConfigService.updateSetting('percentageErrorTollerance', Number(e.target.value));
+                  }}
+                  min="0.1"
+                  step="0.1"
+                  disabled={isRunning}
+                />
+                <small className="help-text">%</small>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
                 <label>📊 Intervallo di Confidenza:</label>
-                <div className="confidence-input">
-                  <input
-                    type="number"
-                    value={confidence}
-                    onChange={(e) => setConfidence(Number(e.target.value))}
-                    min="0.01"
-                    max="0.99"
-                    step="0.01"
-                    disabled={isRunning}
-                  />
-                  <div className="toggle-group">
-                    <span className="toggle-label">Stop Criteria:</span>
-                    <label className="toggle-switch">
-                      <input
-                        type="checkbox"
-                        checked={confidenceToggle}
-                        onChange={(e) => setConfidenceToggle(e.target.checked)}
-                        disabled={isRunning}
-                      />
-                      <span className="toggle-slider"></span>
-                    </label>
-                    <span className="toggle-status">
-                      {confidenceToggle ? 'ON' : 'OFF'}
-                    </span>
-                  </div>
+                <input
+                  type="number"
+                  value={confidence}
+                  onChange={(e) => {
+                    setConfidence(Number(e.target.value));
+                    SHyFTAConfigService.updateSetting('defaultConfidence', Number(e.target.value));
+                  }}
+                  min="0.01"
+                  max="0.99"
+                  step="0.01"
+                  disabled={isRunning}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Stop Criteria:</label>
+                <div className="toggle-group">
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={confidenceToggle}
+                      onChange={(e) => {
+                        setConfidenceToggle(e.target.checked);
+                        SHyFTAConfigService.updateSetting('defaultConfidenceToggle', e.target.checked);
+                      }}
+                      disabled={isRunning}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                  <span className="toggle-status">
+                    {confidenceToggle ? 'ON' : 'OFF'}
+                  </span>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Advanced Simulation Configuration */}
+          <div className="config-section">
+            <h3 
+              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+              className="collapsible-header"
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <span>{showAdvancedSettings ? '▼' : '▶'}</span>
+              ⚙️ Simulazione Avanzata
+            </h3>
+            
+            {showAdvancedSettings && (
+              <div className="advanced-settings">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>🔄 Min Iterazioni per CI:</label>
+                    <input
+                      type="number"
+                      value={minIterationsForCI}
+                      onChange={(e) => {
+                        setMinIterationsForCI(Number(e.target.value));
+                        SHyFTAConfigService.updateSetting('minIterationsForCI', Number(e.target.value));
+                      }}
+                      min="100"
+                      disabled={isRunning}
+                    />
+                    <small className="help-text">Iterazioni minime prima controlli CI</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>🛑 Max Iterazioni Robustezza:</label>
+                    <input
+                      type="number"
+                      value={maxIterationsForRobustness}
+                      onChange={(e) => {
+                        setMaxIterationsForRobustness(Number(e.target.value));
+                        SHyFTAConfigService.updateSetting('maxIterationsForRobustness', Number(e.target.value));
+                      }}
+                      min="10000"
+                      disabled={isRunning}
+                    />
+                    <small className="help-text">Limite massimo iterazioni</small>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>📏 Finestra Controllo Stabilità:</label>
+                    <input
+                      type="number"
+                      value={stabilityCheckWindow}
+                      onChange={(e) => {
+                        setStabilityCheckWindow(Number(e.target.value));
+                        SHyFTAConfigService.updateSetting('stabilityCheckWindow', Number(e.target.value));
+                      }}
+                      min="10"
+                      disabled={isRunning}
+                    />
+                    <small className="help-text">Finestra per controlli stabilità</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>🎯 Soglia Stabilità:</label>
+                    <input
+                      type="number"
+                      value={stabilityThreshold}
+                      onChange={(e) => {
+                        setStabilityThreshold(Number(e.target.value));
+                        SHyFTAConfigService.updateSetting('stabilityThreshold', Number(e.target.value));
+                      }}
+                      min="0.01"
+                      max="1.0"
+                      step="0.01"
+                      disabled={isRunning}
+                    />
+                    <small className="help-text">Soglia per controlli stabilità</small>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>📐 Finestra Convergenza CI:</label>
+                    <input
+                      type="number"
+                      value={convergenceCheckWindow}
+                      onChange={(e) => {
+                        setConvergenceCheckWindow(Number(e.target.value));
+                        SHyFTAConfigService.updateSetting('convergenceCheckWindow', Number(e.target.value));
+                      }}
+                      min="5"
+                      disabled={isRunning}
+                    />
+                    <small className="help-text">Finestra per controlli convergenza</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>🔍 Soglia Convergenza:</label>
+                    <input
+                      type="number"
+                      value={convergenceThreshold}
+                      onChange={(e) => {
+                        setConvergenceThreshold(Number(e.target.value));
+                        SHyFTAConfigService.updateSetting('convergenceThreshold', Number(e.target.value));
+                      }}
+                      min="0.01"
+                      max="1.0"
+                      step="0.01"
+                      disabled={isRunning}
+                    />
+                    <small className="help-text">Soglia per controlli convergenza CI</small>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Simulation Progress Section */}
@@ -317,13 +611,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
               
               <div className="progress-info">
                 <div className="current-step">{isCompleted ? 'Simulazione completata con successo!' : currentStep}</div>
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                  <span className="progress-text">{progress.toFixed(1)}%</span>
-                </div>
+                <ProgressBar progress={progress} />
               </div>
 
               <div className="log-output">
@@ -343,10 +631,8 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                     </button>
                   )}
                 </div>
-                <textarea
+                <LogTextarea
                   value={logOutput}
-                  readOnly
-                  rows={6}
                   placeholder="I log della simulazione appariranno qui..."
                 />
               </div>
@@ -362,7 +648,10 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                 <input
                   type="number"
                   value={resultsTimestep}
-                  onChange={(e) => setResultsTimestep(Number(e.target.value))}
+                  onChange={(e) => {
+                    setResultsTimestep(Number(e.target.value));
+                    SHyFTAConfigService.updateSetting('resultsTimestep', Number(e.target.value));
+                  }}
                   min="0.01"
                   step="0.1"
                   disabled={isRunning}
@@ -402,25 +691,25 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
         <div className="shyfta-modal-actions">
           <button 
             className="cancel-button" 
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isRunning}
           >
             {isRunning ? 'Chiudi quando completato' : 'Chiudi'}
           </button>
           
-          {/* Retrieve Results button - abilitato solo dopo simulazione e se modello non è cambiato */}
+          {/* Retrieve Results button - abilitato dopo simulazione (anche con stop criteria) */}
           {!isRunning && (
             <button 
-              className={`test-button ${(!isCompleted || modelChangedSinceLastRun) ? 'disabled' : ''}`}
-              onClick={(isCompleted && !modelChangedSinceLastRun) ? handleTestResultsLoading : undefined}
+              className={`test-button ${(!hasSimulationResults || modelChangedSinceLastRun) ? 'disabled' : ''}`}
+              onClick={(hasSimulationResults && !modelChangedSinceLastRun) ? handleTestResultsLoading : undefined}
               title={
-                !isCompleted 
+                !hasSimulationResults 
                   ? "Completa prima una simulazione SHyFTA per abilitare il caricamento dei risultati"
                   : modelChangedSinceLastRun 
                     ? "Il modello è cambiato dall'ultima simulazione. Esegui una nuova simulazione per abilitare il retrieve dei risultati."
                     : "Carica risultati simulazione dal file results.mat"
               }
-              disabled={isLoadingResults || !isCompleted || modelChangedSinceLastRun}
+              disabled={isLoadingResults || !hasSimulationResults || modelChangedSinceLastRun}
             >
               {isLoadingResults ? (
                 <span>⏳ Loading...</span>

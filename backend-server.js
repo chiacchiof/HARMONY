@@ -421,6 +421,48 @@ function executeMatlabSimulation(shyftaPath, outputDir, res) {
 
   console.log(`🎬 MATLAB process started with PID: ${matlabProcess.pid}`);
 
+  // File watcher for results.mat - complete simulation when file is created
+  const resultsPath = path.join(outputDir, 'results.mat');
+  let simulationCompleted = false;
+  
+  const checkResults = () => {
+    if (!simulationCompleted && fs.existsSync(resultsPath)) {
+      console.log('🎉 results.mat detected! Completing simulation...');
+      simulationCompleted = true;
+      
+      // Clean up the watcher immediately to prevent memory leaks
+      clearInterval(resultsWatcher);
+      console.log('🧹 Cleared results watcher interval');
+      
+      // Send completion signal
+      const finalData = {
+        success: true,
+        progress: 100,
+        output: outputBuffer,
+        resultsPath: resultsPath
+      };
+      
+      res.write(`data: ${JSON.stringify(finalData)}\n\n`);
+      res.end();
+      
+      // Clean up the process reference
+      if (currentMatlabProcess === matlabProcess) {
+        currentMatlabProcess = null;
+      }
+      
+      // Don't kill MATLAB immediately, let it finish naturally
+      console.log('✅ Simulation marked as completed, MATLAB can continue if needed');
+    }
+  };
+  
+  // Check every 10 seconds for results.mat
+  const resultsWatcher = setInterval(checkResults, 10000);
+  
+  // Clean up watcher when process ends
+  matlabProcess.on('close', () => {
+    clearInterval(resultsWatcher);
+  });
+
   // Listen to stdout for MATLAB progress
   matlabProcess.stdout.on('data', (data) => {
     const output = data.toString();
@@ -493,32 +535,37 @@ function executeMatlabSimulation(shyftaPath, outputDir, res) {
       currentMatlabProcess = null;
     }
     
-    // Check if results.mat exists in output directory
-    const resultsPath = path.join(outputDir, 'results.mat');
-    const resultsExist = fs.existsSync(resultsPath);
-    
-    console.log(`🔍 Checking results file: ${resultsPath}`);
-    console.log(`📊 Results file exists: ${resultsExist ? 'YES' : 'NO'}`);
-    
-    const finalData = {
-      success: code === 0 && resultsExist,
-      progress: 100,
-      output: outputBuffer,
-      resultsPath: resultsExist ? resultsPath : null,
-      exitCode: code
-    };
-    
-    if (code === 0 && resultsExist) {
-      console.log('🎉 ✅ MATLAB simulation completed successfully!');
-      console.log(`📁 Results saved in: ${resultsPath}`);
+    // Only send response if simulation wasn't already completed by file watcher
+    if (!simulationCompleted) {
+      // Check if results.mat exists in output directory
+      const resultsPath = path.join(outputDir, 'results.mat');
+      const resultsExist = fs.existsSync(resultsPath);
+      
+      console.log(`🔍 Checking results file: ${resultsPath}`);
+      console.log(`📊 Results file exists: ${resultsExist ? 'YES' : 'NO'}`);
+      
+      const finalData = {
+        success: code === 0 && resultsExist,
+        progress: 100,
+        output: outputBuffer,
+        resultsPath: resultsExist ? resultsPath : null,
+        exitCode: code
+      };
+      
+      if (code === 0 && resultsExist) {
+        console.log('🎉 ✅ MATLAB simulation completed successfully!');
+        console.log(`📁 Results saved in: ${resultsPath}`);
+      } else {
+        console.log(`❌ MATLAB simulation failed:`);
+        console.log(`   Exit code: ${code}`);
+        console.log(`   Results file: ${resultsExist ? 'Found' : 'Missing'}`);
+      }
+      
+      res.write(`data: ${JSON.stringify(finalData)}\n\n`);
+      res.end();
     } else {
-      console.log(`❌ MATLAB simulation failed:`);
-      console.log(`   Exit code: ${code}`);
-      console.log(`   Results file: ${resultsExist ? 'Found' : 'Missing'}`);
+      console.log('ℹ️ MATLAB process ended but simulation was already completed by file watcher');
     }
-    
-    res.write(`data: ${JSON.stringify(finalData)}\n\n`);
-    res.end();
   });
 
   // Handle process errors
@@ -539,6 +586,11 @@ function executeMatlabSimulation(shyftaPath, outputDir, res) {
   // Handle client disconnect
   res.req.on('close', () => {
     console.log('👋 Client disconnected - terminating MATLAB process if running');
+    
+    // Clean up the results watcher to prevent memory leaks
+    clearInterval(resultsWatcher);
+    console.log('🧹 Cleared results watcher on client disconnect');
+    
     if (matlabProcess && !matlabProcess.killed) {
       const pid = matlabProcess.pid;
       console.log(`🔪 Client disconnect: Killing process tree for PID: ${pid}`);
@@ -849,25 +901,25 @@ try
         end
     end
     
-    % Load only the variables we need
-    if ~isempty(tfailVars)
-        try
-            load('${resultsPath.replace(/\\/g, '/')}', tfailVars{:});
-            fprintf('Successfully loaded %d _tfail variables\\n', length(tfailVars));
-        catch ME
-            fprintf('Warning: Could not load all _tfail variables: %s\\n', ME.message);
-            % Fallback: load all and hope for the best
-            load('${resultsPath.replace(/\\/g, '/')}');
-        end
+    % Load all variables to ensure counter_i is available
+    load('${resultsPath.replace(/\\/g, '/')}');
+    fprintf('Loaded all variables from results.mat\\n');
+    
+    % Try to extract counter_i (actual iterations executed) from workspace
+    actualIterations = ${iterations}; % Default fallback
+    if exist('counter_i', 'var')
+        actualIterations = counter_i;
+        fprintf('Found counter_i = %d (actual iterations executed)\\n', counter_i);
     else
-        % Fallback: load all if no components specified
-        load('${resultsPath.replace(/\\/g, '/')}');
+        fprintf('counter_i not found, using default iterations = %d\\n', actualIterations);
     end
     
     % Initialize results structure
     results = struct();
     results.success = true;
     results.components = {};
+    results.actualIterations = actualIterations;
+    results.maxIterations = ${iterations};
     
     % Extract data for each component using _tfail variables
     fprintf('Looking for _tfail variables for each component...\\n');
@@ -892,9 +944,9 @@ try
                 compData.componentName = compName;
                 compData.componentType = 'Component';
                 compData.nFailures = nFailures;
-                compData.reliability = (${iterations} - nFailures) / ${iterations};
-                compData.unreliability = nFailures / ${iterations};
-                compData.totalIterations = ${iterations};
+                compData.reliability = (actualIterations - nFailures) / actualIterations;
+                compData.unreliability = nFailures / actualIterations;
+                compData.totalIterations = actualIterations;
                 compData.timeOfFailureArray = failureTimes;
                 
                 fprintf(' Processed component: %s (NFailure=%d)\\n', compName, nFailures);
@@ -906,7 +958,7 @@ try
                 if ~isempty(validTimes)
                     % CDF calculation for actual failures
                     for t = 1:length(timePoints)
-                        cdfData(t) = sum(validTimes <= timePoints(t)) / ${iterations};
+                        cdfData(t) = sum(validTimes <= timePoints(t)) / actualIterations;
                     end
                 end
                 
@@ -922,7 +974,7 @@ try
                         binStart = pdfTimePoints(i);
                         binEnd = pdfTimePoints(i+1);
                         failuresInBin = sum(validTimes >= binStart & validTimes < binEnd);
-                        pdfData(i) = failuresInBin / (${iterations} * ${timestep});
+                        pdfData(i) = failuresInBin / (actualIterations * ${timestep});
                     end
                 end
                 
@@ -938,7 +990,7 @@ try
                 compData.nFailures = 0;
                 compData.reliability = 1.0;
                 compData.unreliability = 0.0;
-                compData.totalIterations = ${iterations};
+                compData.totalIterations = actualIterations;
                 compData.timeOfFailureArray = [];
                 compData.cdfData = struct('time', [], 'probability', []);
                 compData.pdfData = struct('time', [], 'density', []);
@@ -1049,7 +1101,7 @@ exit;
           error: 'MATLAB extraction timeout' 
         });
       }
-    }, 30000); // 30 second timeout
+    }, 600000); // 10 minute timeout - increased for complex simulations
     
   } catch (error) {
     if (!responseSent) {
