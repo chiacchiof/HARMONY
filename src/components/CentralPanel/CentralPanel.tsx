@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -258,7 +258,12 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  
+
+  // Refs per gestione drag robusta
+  const isDraggingRef = useRef(false);
+  const dragUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastModelUpdateRef = useRef<FaultTreeModel>(faultTreeModel);
+
   // Stato per menu contestuale
   const [contextMenu, setContextMenu] = React.useState<{
     x: number;
@@ -266,14 +271,38 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     show: boolean;
   }>({ x: 0, y: 0, show: false });
 
-  // Aggiorna i nodi quando il modello cambia
+  // Aggiorna i nodi quando il modello cambia (ma non durante drag)
   React.useEffect(() => {
-    setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
+    // Evita aggiornamenti durante drag per prevenire flickering e scomparsa nodi
+    if (isDraggingRef.current) {
+      console.log('🚫 Skipping nodes update during drag');
+      return;
+    }
+
+    // Verifica se è realmente cambiato qualcosa di strutturale (non solo posizione)
+    const hasStructuralChanges =
+      lastModelUpdateRef.current.events.length !== faultTreeModel.events.length ||
+      lastModelUpdateRef.current.gates.length !== faultTreeModel.gates.length ||
+      lastModelUpdateRef.current.events.some((e, i) =>
+        !faultTreeModel.events[i] || e.id !== faultTreeModel.events[i].id || e.name !== faultTreeModel.events[i].name
+      ) ||
+      lastModelUpdateRef.current.gates.some((g, i) =>
+        !faultTreeModel.gates[i] || g.id !== faultTreeModel.gates[i].id || g.name !== faultTreeModel.gates[i].name
+      );
+
+    if (hasStructuralChanges) {
+      console.log('🔄 Updating nodes due to structural changes');
+      setNodes(initialNodes);
+    }
+
+    lastModelUpdateRef.current = faultTreeModel;
+  }, [initialNodes, setNodes, faultTreeModel]);
 
   // Aggiorna gli edge quando il modello cambia
   React.useEffect(() => {
-    setEdges(initialEdges);
+    if (!isDraggingRef.current) {
+      setEdges(initialEdges);
+    }
   }, [initialEdges, setEdges]);
 
   // Gestione connessione tra nodi
@@ -325,83 +354,116 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     }, eds));
   }, [faultTreeModel, onModelChange, onDeleteConnection, setEdges, isDarkMode]);
 
-  // Gestione spostamento nodi
+  // Gestione spostamento nodi con debouncing e stato drag
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
     // Prima applica i cambiamenti a React Flow
     onNodesChange(changes);
-    
+
+    // Rileva inizio/fine drag
+    const dragStartChanges = changes.filter(change => change.type === 'position' && change.dragging === true);
+    const dragEndChanges = changes.filter(change => change.type === 'position' && change.dragging === false);
+
+    if (dragStartChanges.length > 0) {
+      isDraggingRef.current = true;
+      console.log('🎯 Drag started - blocking model updates');
+    }
+
+    if (dragEndChanges.length > 0) {
+      isDraggingRef.current = false;
+      console.log('🎯 Drag ended - resuming model updates');
+    }
+
     // Filtra solo i cambiamenti di posizione validi
-    const positionChanges = changes.filter(change => 
-      change.type === 'position' && 
+    const positionChanges = changes.filter(change =>
+      change.type === 'position' &&
       change.position &&
-      typeof change.position.x === 'number' && 
+      typeof change.position.x === 'number' &&
       typeof change.position.y === 'number' &&
       Number.isFinite(change.position.x) &&
       Number.isFinite(change.position.y)
     );
-    
+
     if (positionChanges.length === 0) return;
-    
+
     // Verifica che non stiamo perdendo elementi durante l'aggiornamento
     const currentTotalElements = faultTreeModel.events.length + faultTreeModel.gates.length;
     if (currentTotalElements === 0) {
       console.warn('⚠️ Skipping position update: no elements in model');
       return;
     }
-    
-    // Aggiorna tutte le posizioni in una singola operazione per evitare race conditions
-    const updatedModel = {
-      ...faultTreeModel,
-      // Deep clone degli array per evitare mutazioni accidentali
-      events: [...faultTreeModel.events],
-      gates: [...faultTreeModel.gates],
-      connections: [...faultTreeModel.connections]
-    };
-    
-    let hasChanges = false;
-    
-    positionChanges.forEach(change => {
-      // Type guard: sappiamo che è un NodePositionChange perché filtrato
-      if (change.type !== 'position' || !change.position) return;
-      
-      const position = change.position;
-      
-      // Trova e aggiorna evento base
-      const eventIndex = updatedModel.events.findIndex(e => e.id === change.id);
-      if (eventIndex !== -1) {
-        updatedModel.events[eventIndex] = {
-          ...updatedModel.events[eventIndex],
-          position
-        };
-        hasChanges = true;
+
+    // Clear previous timeout
+    if (dragUpdateTimeoutRef.current) {
+      clearTimeout(dragUpdateTimeoutRef.current);
+    }
+
+    // Debounce model updates during drag
+    const updateModel = () => {
+      // Aggiorna tutte le posizioni in una singola operazione per evitare race conditions
+      const updatedModel = {
+        ...faultTreeModel,
+        // Deep clone degli array per evitare mutazioni accidentali
+        events: [...faultTreeModel.events],
+        gates: [...faultTreeModel.gates],
+        connections: [...faultTreeModel.connections]
+      };
+
+      let hasChanges = false;
+
+      positionChanges.forEach(change => {
+        // Type guard: sappiamo che è un NodePositionChange perché filtrato
+        if (change.type !== 'position' || !change.position) return;
+
+        const position = change.position;
+
+        // Trova e aggiorna evento base
+        const eventIndex = updatedModel.events.findIndex(e => e.id === change.id);
+        if (eventIndex !== -1) {
+          updatedModel.events[eventIndex] = {
+            ...updatedModel.events[eventIndex],
+            position
+          };
+          hasChanges = true;
+          return;
+        }
+
+        // Trova e aggiorna porta
+        const gateIndex = updatedModel.gates.findIndex(g => g.id === change.id);
+        if (gateIndex !== -1) {
+          updatedModel.gates[gateIndex] = {
+            ...updatedModel.gates[gateIndex],
+            position
+          };
+          hasChanges = true;
+        }
+      });
+
+      // Verifica finale: non aggiornare se abbiamo perso elementi
+      const finalTotalElements = updatedModel.events.length + updatedModel.gates.length;
+      if (finalTotalElements !== currentTotalElements) {
+        console.error('⚠️ Element count mismatch! Skipping update', {
+          original: currentTotalElements,
+          updated: finalTotalElements,
+          changes: positionChanges
+        });
         return;
       }
 
-      // Trova e aggiorna porta
-      const gateIndex = updatedModel.gates.findIndex(g => g.id === change.id);
-      if (gateIndex !== -1) {
-        updatedModel.gates[gateIndex] = {
-          ...updatedModel.gates[gateIndex],
-          position
-        };
-        hasChanges = true;
+      // Chiama onModelChange solo se ci sono stati cambiamenti validi
+      if (hasChanges) {
+        onModelChange(updatedModel);
       }
-    });
-    
-    // Verifica finale: non aggiornare se abbiamo perso elementi
-    const finalTotalElements = updatedModel.events.length + updatedModel.gates.length;
-    if (finalTotalElements !== currentTotalElements) {
-      console.error('⚠️ Element count mismatch! Skipping update', {
-        original: currentTotalElements,
-        updated: finalTotalElements,
-        changes: positionChanges
-      });
-      return;
-    }
-    
-    // Chiama onModelChange solo se ci sono stati cambiamenti validi
-    if (hasChanges) {
-      onModelChange(updatedModel);
+    };
+
+    // Se il drag è appena finito, aggiorna immediatamente
+    if (dragEndChanges.length > 0) {
+      updateModel();
+    } else if (isDraggingRef.current) {
+      // Durante il drag, debounce gli aggiornamenti
+      dragUpdateTimeoutRef.current = setTimeout(updateModel, 100);
+    } else {
+      // Non in drag, aggiorna immediatamente
+      updateModel();
     }
   }, [onNodesChange, faultTreeModel, onModelChange]);
 
@@ -507,13 +569,18 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
 
 
 
-  // Aggiungi listener per tasti
+  // Aggiungi listener per tasti e cleanup timeout
   React.useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('click', hideContextMenu);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('click', hideContextMenu);
+
+      // Cleanup timeout per evitare memory leak
+      if (dragUpdateTimeoutRef.current) {
+        clearTimeout(dragUpdateTimeoutRef.current);
+      }
     };
   }, [handleKeyDown, hideContextMenu]);
 
