@@ -71,6 +71,14 @@ const MarkovChainEditor: React.FC = () => {
     }
   }, [getMarkovChainSnapshot, markovChainModel.states.length, markovChainModel.transitions.length]);
 
+  // Salva automaticamente il snapshot ogni volta che il modello cambia
+  useEffect(() => {
+    // Solo se il modello non è vuoto, salva lo snapshot
+    if (markovChainModel.states.length > 0 || markovChainModel.transitions.length > 0) {
+      saveMarkovChainSnapshot(markovChainModel);
+    }
+  }, [markovChainModel, saveMarkovChainSnapshot]);
+
   // Add state handler
   const handleAddState = useCallback((position?: { x: number; y: number }) => {
     const newState: MarkovState = {

@@ -39,6 +39,7 @@ interface CentralPanelProps {
   isDarkMode: boolean;
   disableDeletion?: boolean;
   onReorganizeComponents: () => void;
+  getCurrentPositionsRef?: React.MutableRefObject<(() => FaultTreeModel) | null>;
 }
 
 const nodeTypes = {
@@ -195,7 +196,8 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   componentToPlace,
   isDarkMode,
   disableDeletion = false,
-  onReorganizeComponents
+  onReorganizeComponents,
+  getCurrentPositionsRef
 }) => {
   // Converti il modello in nodi e edge di React Flow
   const initialNodes: Node[] = useMemo(() => {
@@ -259,6 +261,35 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // Esponi funzione per ottenere le posizioni correnti
+  React.useEffect(() => {
+    if (getCurrentPositionsRef) {
+      getCurrentPositionsRef.current = () => {
+        const updatedModel = { ...faultTreeModel };
+
+        // Aggiorna le posizioni degli eventi base
+        updatedModel.events = faultTreeModel.events.map(event => {
+          const node = nodes.find(n => n.id === event.id);
+          if (node) {
+            return { ...event, position: node.position };
+          }
+          return event;
+        });
+
+        // Aggiorna le posizioni delle porte
+        updatedModel.gates = faultTreeModel.gates.map(gate => {
+          const node = nodes.find(n => n.id === gate.id);
+          if (node) {
+            return { ...gate, position: node.position };
+          }
+          return gate;
+        });
+
+        return updatedModel;
+      };
+    }
+  }, [getCurrentPositionsRef, nodes, faultTreeModel]);
+
   // Refs per gestione drag robusta
   const isDraggingRef = useRef(false);
   const dragUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -275,26 +306,9 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   React.useEffect(() => {
     // Evita aggiornamenti durante drag per prevenire flickering e scomparsa nodi
     if (isDraggingRef.current) {
-      console.log('🚫 Skipping nodes update during drag');
       return;
     }
-
-    // Verifica se è realmente cambiato qualcosa di strutturale (non solo posizione)
-    const hasStructuralChanges =
-      lastModelUpdateRef.current.events.length !== faultTreeModel.events.length ||
-      lastModelUpdateRef.current.gates.length !== faultTreeModel.gates.length ||
-      lastModelUpdateRef.current.events.some((e, i) =>
-        !faultTreeModel.events[i] || e.id !== faultTreeModel.events[i].id || e.name !== faultTreeModel.events[i].name
-      ) ||
-      lastModelUpdateRef.current.gates.some((g, i) =>
-        !faultTreeModel.gates[i] || g.id !== faultTreeModel.gates[i].id || g.name !== faultTreeModel.gates[i].name
-      );
-
-    if (hasStructuralChanges) {
-      console.log('🔄 Updating nodes due to structural changes');
-      setNodes(initialNodes);
-    }
-
+    setNodes(initialNodes);
     lastModelUpdateRef.current = faultTreeModel;
   }, [initialNodes, setNodes, faultTreeModel]);
 
@@ -365,12 +379,10 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
 
     if (dragStartChanges.length > 0) {
       isDraggingRef.current = true;
-      console.log('🎯 Drag started - blocking model updates');
     }
 
     if (dragEndChanges.length > 0) {
       isDraggingRef.current = false;
-      console.log('🎯 Drag ended - resuming model updates');
     }
 
     // Filtra solo i cambiamenti di posizione validi
@@ -460,7 +472,9 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       updateModel();
     } else if (isDraggingRef.current) {
       // Durante il drag, debounce gli aggiornamenti
-      dragUpdateTimeoutRef.current = setTimeout(updateModel, 100);
+      dragUpdateTimeoutRef.current = setTimeout(() => {
+        updateModel();
+      }, 50);
     } else {
       // Non in drag, aggiorna immediatamente
       updateModel();

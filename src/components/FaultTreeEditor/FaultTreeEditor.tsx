@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MenuBar from '../MenuBar/MenuBar';
 import LeftPanel from '../LeftPanel/LeftPanel';
@@ -94,6 +94,9 @@ const FaultTreeEditor: React.FC = () => {
   const [nextEventNumber, setNextEventNumber] = useState(1);
   const [nextGateNumber, setNextGateNumber] = useState(1);
 
+  // Ref per ottenere le posizioni correnti dal CentralPanel
+  const getCurrentPositionsRef = useRef<(() => FaultTreeModel) | null>(null);
+
   // Auto-collapse pannelli su dispositivi mobili/tablet
   useEffect(() => {
     if (deviceType === 'mobile' || deviceType === 'tablet') {
@@ -114,6 +117,14 @@ const FaultTreeEditor: React.FC = () => {
       updateCountersFromModel(snapshot);
     }
   }, [getFaultTreeSnapshot, updateCountersFromModel]);
+
+  // Salva automaticamente il snapshot ogni volta che il modello cambia
+  useEffect(() => {
+    // Solo se il modello non è vuoto, salva lo snapshot
+    if (faultTreeModel.events.length > 0 || faultTreeModel.gates.length > 0) {
+      saveFaultTreeSnapshot(faultTreeModel);
+    }
+  }, [faultTreeModel, saveFaultTreeSnapshot]);
 
   // Listener per aggiornamenti dei risultati simulazione
   useEffect(() => {
@@ -394,8 +405,22 @@ const FaultTreeEditor: React.FC = () => {
 
   // Gestione navigazione tra editor
   const handleNavigateToMarkov = useCallback(() => {
-    saveFaultTreeSnapshot(faultTreeModel);
-    navigate('/markov-chain-editor');
+    // Prima ottieni le posizioni correnti dal React Flow e aggiorna il modello
+    if (getCurrentPositionsRef.current) {
+      const modelWithCurrentPositions = getCurrentPositionsRef.current();
+      // Aggiorna il modello con le posizioni correnti
+      setFaultTreeModel(modelWithCurrentPositions);
+
+      // Salva lo snapshot e naviga nel prossimo render cycle
+      setTimeout(() => {
+        saveFaultTreeSnapshot(modelWithCurrentPositions);
+        navigate('/markov-chain-editor');
+      }, 0);
+    } else {
+      // Fallback al modello attuale
+      saveFaultTreeSnapshot(faultTreeModel);
+      navigate('/markov-chain-editor');
+    }
   }, [navigate, saveFaultTreeSnapshot, faultTreeModel]);
 
   const handleNavigateToFaultTree = useCallback(() => {
@@ -689,6 +714,7 @@ const FaultTreeEditor: React.FC = () => {
           isDarkMode={isDarkMode}
           disableDeletion={showParameterModal}
           onReorganizeComponents={handleReorganizeComponents}
+          getCurrentPositionsRef={getCurrentPositionsRef}
         />
         
         <RightPanel 
