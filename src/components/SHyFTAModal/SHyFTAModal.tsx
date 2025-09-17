@@ -96,34 +96,19 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   // Throttled progress update function
   const throttledProgressUpdate = useCallback((progressData: SHyFTAProgress) => {
     const now = Date.now();
-    
+
     // Always update progress and running state immediately
     setProgress(progressData.progress);
     setIsRunning(progressData.isRunning);
     setCurrentStep(progressData.currentStep);
-    
-    // Handle completion immediately
+
+    // Handle completion immediately - unified logic for both completion conditions
     const wasCompleted = progressData.isCompleted || false;
-    if (wasCompleted !== isCompleted) {
-      setIsCompleted(wasCompleted);
-      
-      if (wasCompleted && !progressData.isRunning) {
-        const currentModelHash = JSON.stringify({
-          events: faultTreeModel.events.length,
-          gates: faultTreeModel.gates.length,
-          connections: faultTreeModel.connections.length,
-          eventsHash: faultTreeModel.events.map(e => e.id + e.name).join(''),
-          gatesHash: faultTreeModel.gates.map(g => g.id + g.name).join('')
-        });
-        setLastSimulatedModel(currentModelHash);
-        setModelChangedSinceLastRun(false);
-        setHasSimulationResults(true);
-        console.log('✅ [SHyFTAModal] Simulation completed - model hash saved, retrieve results enabled');
-      }
-    }
-    
-    // Also detect simulation end when progress reaches 100% but isCompleted might not be set yet
-    if (progressData.progress >= 100 && !progressData.isRunning && !hasSimulationResults) {
+    const simulationFinished = wasCompleted || (progressData.progress >= 100 && !progressData.isRunning);
+
+    if (simulationFinished && !progressData.isRunning) {
+      setIsCompleted(true);
+
       const currentModelHash = JSON.stringify({
         events: faultTreeModel.events.length,
         gates: faultTreeModel.gates.length,
@@ -131,10 +116,12 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
         eventsHash: faultTreeModel.events.map(e => e.id + e.name).join(''),
         gatesHash: faultTreeModel.gates.map(g => g.id + g.name).join('')
       });
+
       setLastSimulatedModel(currentModelHash);
       setModelChangedSinceLastRun(false);
       setHasSimulationResults(true);
-      console.log('✅ [SHyFTAModal] Simulation reached 100% - enabling retrieve results');
+
+      console.log('✅ [SHyFTAModal] Simulation completed - model hash saved, retrieve results enabled');
     }
     
     // Throttle log updates to max 2 per second
@@ -169,7 +156,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
         }
       }
     }
-  }, [faultTreeModel, isCompleted, hasSimulationResults]);
+  }, [faultTreeModel]);
 
   // Effetto per tracciare cambiamenti del modello
   useEffect(() => {
@@ -423,8 +410,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   type="number"
                   value={iterations}
                   onChange={(e) => {
-                    setIterations(Number(e.target.value));
-                    SHyFTAConfigService.updateSetting('defaultIterations', Number(e.target.value));
+                    const value = e.target.value;
+                    if (value === '' || value === '0') {
+                      setIterations(1); // Default minimo
+                    } else {
+                      const numValue = Number(value);
+                      if (!isNaN(numValue) && numValue >= 1) {
+                        setIterations(numValue);
+                        SHyFTAConfigService.updateSetting('defaultIterations', numValue);
+                      }
+                    }
                   }}
                   min="1"
                   disabled={isRunning}
@@ -437,12 +432,21 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   type="number"
                   value={percentageErrorTollerance}
                   onChange={(e) => {
-                    setPercentageErrorTollerance(Number(e.target.value));
-                    SHyFTAConfigService.updateSetting('percentageErrorTollerance', Number(e.target.value));
+                    const value = e.target.value;
+                    if (value === '' || value === '0') {
+                      setPercentageErrorTollerance(0.1); // Default minimo
+                    } else {
+                      const numValue = Number(value);
+                      if (!isNaN(numValue) && numValue >= 0.1 && numValue <= 99.9) {
+                        setPercentageErrorTollerance(numValue);
+                        SHyFTAConfigService.updateSetting('percentageErrorTollerance', numValue/100);
+                      }
+                    }
                   }}
                   min="0.1"
+                  max="99.9"
                   step="0.1"
-                  disabled={isRunning}
+                  disabled={isRunning || !confidenceToggle}
                 />
                 <small className="help-text">%</small>
               </div>
@@ -455,13 +459,21 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   type="number"
                   value={confidence}
                   onChange={(e) => {
-                    setConfidence(Number(e.target.value));
-                    SHyFTAConfigService.updateSetting('defaultConfidence', Number(e.target.value));
+                    const value = e.target.value;
+                    if (value === '' || value === '0') {
+                      setConfidence(0.01); // Default minimo
+                    } else {
+                      const numValue = Number(value);
+                      if (!isNaN(numValue) && numValue >= 0.01 && numValue <= 0.99) {
+                        setConfidence(numValue);
+                        SHyFTAConfigService.updateSetting('defaultConfidence', numValue);
+                      }
+                    }
                   }}
                   min="0.01"
                   max="0.99"
                   step="0.01"
-                  disabled={isRunning}
+                  disabled={isRunning || !confidenceToggle}
                 />
               </div>
 
@@ -508,11 +520,19 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                       type="number"
                       value={minIterationsForCI}
                       onChange={(e) => {
-                        setMinIterationsForCI(Number(e.target.value));
-                        SHyFTAConfigService.updateSetting('minIterationsForCI', Number(e.target.value));
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          setMinIterationsForCI(100); // Default minimo
+                        } else {
+                          const numValue = Number(value);
+                          if (!isNaN(numValue) && numValue >= 100) {
+                            setMinIterationsForCI(numValue);
+                            SHyFTAConfigService.updateSetting('minIterationsForCI', numValue);
+                          }
+                        }
                       }}
                       min="100"
-                      disabled={isRunning}
+                      disabled={isRunning || !confidenceToggle}
                     />
                     <small className="help-text">Iterazioni minime prima controlli CI</small>
                   </div>
@@ -523,11 +543,19 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                       type="number"
                       value={maxIterationsForRobustness}
                       onChange={(e) => {
-                        setMaxIterationsForRobustness(Number(e.target.value));
-                        SHyFTAConfigService.updateSetting('maxIterationsForRobustness', Number(e.target.value));
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          setMaxIterationsForRobustness(10000); // Default minimo
+                        } else {
+                          const numValue = Number(value);
+                          if (!isNaN(numValue) && numValue >= 10000) {
+                            setMaxIterationsForRobustness(numValue);
+                            SHyFTAConfigService.updateSetting('maxIterationsForRobustness', numValue);
+                          }
+                        }
                       }}
                       min="10000"
-                      disabled={isRunning}
+                      disabled={isRunning || !confidenceToggle}
                     />
                     <small className="help-text">Limite massimo iterazioni</small>
                   </div>
@@ -540,11 +568,19 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                       type="number"
                       value={stabilityCheckWindow}
                       onChange={(e) => {
-                        setStabilityCheckWindow(Number(e.target.value));
-                        SHyFTAConfigService.updateSetting('stabilityCheckWindow', Number(e.target.value));
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          setStabilityCheckWindow(10); // Default minimo
+                        } else {
+                          const numValue = Number(value);
+                          if (!isNaN(numValue) && numValue >= 10) {
+                            setStabilityCheckWindow(numValue);
+                            SHyFTAConfigService.updateSetting('stabilityCheckWindow', numValue);
+                          }
+                        }
                       }}
                       min="10"
-                      disabled={isRunning}
+                      disabled={isRunning || !confidenceToggle}
                     />
                     <small className="help-text">Finestra per controlli stabilità</small>
                   </div>
@@ -555,13 +591,21 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                       type="number"
                       value={stabilityThreshold}
                       onChange={(e) => {
-                        setStabilityThreshold(Number(e.target.value));
-                        SHyFTAConfigService.updateSetting('stabilityThreshold', Number(e.target.value));
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          setStabilityThreshold(0.01); // Default minimo
+                        } else {
+                          const numValue = Number(value);
+                          if (!isNaN(numValue) && numValue >= 0.01 && numValue <= 1.0) {
+                            setStabilityThreshold(numValue);
+                            SHyFTAConfigService.updateSetting('stabilityThreshold', numValue);
+                          }
+                        }
                       }}
                       min="0.01"
                       max="1.0"
                       step="0.01"
-                      disabled={isRunning}
+                      disabled={isRunning || !confidenceToggle}
                     />
                     <small className="help-text">Soglia per controlli stabilità</small>
                   </div>
@@ -574,11 +618,19 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                       type="number"
                       value={convergenceCheckWindow}
                       onChange={(e) => {
-                        setConvergenceCheckWindow(Number(e.target.value));
-                        SHyFTAConfigService.updateSetting('convergenceCheckWindow', Number(e.target.value));
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          setConvergenceCheckWindow(5); // Default minimo
+                        } else {
+                          const numValue = Number(value);
+                          if (!isNaN(numValue) && numValue >= 5) {
+                            setConvergenceCheckWindow(numValue);
+                            SHyFTAConfigService.updateSetting('convergenceCheckWindow', numValue);
+                          }
+                        }
                       }}
                       min="5"
-                      disabled={isRunning}
+                      disabled={isRunning || !confidenceToggle}
                     />
                     <small className="help-text">Finestra per controlli convergenza</small>
                   </div>
@@ -589,13 +641,21 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                       type="number"
                       value={convergenceThreshold}
                       onChange={(e) => {
-                        setConvergenceThreshold(Number(e.target.value));
-                        SHyFTAConfigService.updateSetting('convergenceThreshold', Number(e.target.value));
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          setConvergenceThreshold(0.01); // Default minimo
+                        } else {
+                          const numValue = Number(value);
+                          if (!isNaN(numValue) && numValue >= 0.01 && numValue <= 1.0) {
+                            setConvergenceThreshold(numValue);
+                            SHyFTAConfigService.updateSetting('convergenceThreshold', numValue);
+                          }
+                        }
                       }}
                       min="0.01"
                       max="1.0"
                       step="0.01"
-                      disabled={isRunning}
+                      disabled={isRunning || !confidenceToggle}
                     />
                     <small className="help-text">Soglia per controlli convergenza CI</small>
                   </div>
@@ -649,8 +709,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   type="number"
                   value={resultsTimestep}
                   onChange={(e) => {
-                    setResultsTimestep(Number(e.target.value));
-                    SHyFTAConfigService.updateSetting('resultsTimestep', Number(e.target.value));
+                    const value = e.target.value;
+                    if (value === '' || value === '0') {
+                      setResultsTimestep(0.01); // Default minimo
+                    } else {
+                      const numValue = Number(value);
+                      if (!isNaN(numValue) && numValue >= 0.01) {
+                        setResultsTimestep(numValue);
+                        SHyFTAConfigService.updateSetting('resultsTimestep', numValue);
+                      }
+                    }
                   }}
                   min="0.01"
                   step="0.1"
