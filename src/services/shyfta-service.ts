@@ -1,7 +1,5 @@
 import { FaultTreeModel } from '../types/FaultTree';
 import { MatlabExportService } from './matlab-export-service';
-import { MatlabResultsService } from './matlab-results-service';
-import { SHyFTAConfig as SHyFTAConfigService } from '../config/shyfta-config';
 
 export interface SHyFTAConfig {
   shyftaLibFolder: string;
@@ -267,9 +265,37 @@ toc`;
     if (config.iterations <= 0) {
       return 'Il numero di iterazioni deve essere maggiore di 0';
     }
-    if (config.confidence <= 0 || config.confidence >= 1) {
-      return 'L\'intervallo di confidenza deve essere tra 0 e 1';
+
+    // Valida i parametri di confidenza solo se Stop Criteria è ON
+    if (config.confidenceToggle) {
+      if (config.confidence <= 0 || config.confidence >= 1) {
+        return 'L\'intervallo di confidenza deve essere tra 0 e 1';
+      }
+
+      // Validazioni aggiuntive per i parametri avanzati quando Stop Criteria è ON
+      if (config.percentageErrorTollerance !== undefined && (config.percentageErrorTollerance < 0.1 || config.percentageErrorTollerance > 99.9)) {
+        return 'La tolleranza errore percentuale deve essere tra 0.1% e 99.9%';
+      }
+      if (config.minIterationsForCI !== undefined && config.minIterationsForCI < 100) {
+        return 'Le iterazioni minime per CI devono essere almeno 100';
+      }
+      if (config.maxIterationsForRobustness !== undefined && config.maxIterationsForRobustness < 10000) {
+        return 'Le iterazioni massime per robustezza devono essere almeno 10000';
+      }
+      if (config.stabilityCheckWindow !== undefined && config.stabilityCheckWindow < 10) {
+        return 'La finestra di controllo stabilità deve essere almeno 10';
+      }
+      if (config.stabilityThreshold !== undefined && (config.stabilityThreshold < 0.01 || config.stabilityThreshold > 1.0)) {
+        return 'La soglia di stabilità deve essere tra 0.01 e 1.0';
+      }
+      if (config.convergenceCheckWindow !== undefined && config.convergenceCheckWindow < 5) {
+        return 'La finestra di convergenza CI deve essere almeno 5';
+      }
+      if (config.convergenceThreshold !== undefined && (config.convergenceThreshold < 0.01 || config.convergenceThreshold > 1.0)) {
+        return 'La soglia di convergenza deve essere tra 0.01 e 1.0';
+      }
     }
+
     if (faultTreeModel.events.length === 0 && faultTreeModel.gates.length === 0) {
       return 'Il modello di fault tree è vuoto';
     }

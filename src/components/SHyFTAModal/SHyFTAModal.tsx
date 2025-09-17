@@ -226,7 +226,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       SHyFTAService.resetSimulation();
       console.log('🧹 [SHyFTAModal] Cleaned up progress callback and reset simulation state');
     };
-  }, [isOpen]);
+  }, [isOpen, throttledProgressUpdate]);
 
   if (!isOpen) return null;
 
@@ -425,30 +425,25 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   disabled={isRunning}
                 />
               </div>
-
               <div className="form-group">
-                <label>📊 Tolleranza Errore Percentuale:</label>
-                <input
-                  type="number"
-                  value={percentageErrorTollerance}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || value === '0') {
-                      setPercentageErrorTollerance(0.1); // Default minimo
-                    } else {
-                      const numValue = Number(value);
-                      if (!isNaN(numValue) && numValue >= 0.1 && numValue <= 99.9) {
-                        setPercentageErrorTollerance(numValue);
-                        SHyFTAConfigService.updateSetting('percentageErrorTollerance', numValue/100);
-                      }
-                    }
-                  }}
-                  min="0.1"
-                  max="99.9"
-                  step="0.1"
-                  disabled={isRunning || !confidenceToggle}
-                />
-                <small className="help-text">%</small>
+                <label>Approssima con Intervallo di Confidenza</label>
+                <div className="toggle-group">
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={confidenceToggle}
+                      onChange={(e) => {
+                        setConfidenceToggle(e.target.checked);
+                        SHyFTAConfigService.updateSetting('defaultConfidenceToggle', e.target.checked);
+                      }}
+                      disabled={isRunning}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                  <span className="toggle-status">
+                    {confidenceToggle ? 'ON' : 'OFF'}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -476,26 +471,29 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   disabled={isRunning || !confidenceToggle}
                 />
               </div>
-
               <div className="form-group">
-                <label>Stop Criteria:</label>
-                <div className="toggle-group">
-                  <label className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={confidenceToggle}
-                      onChange={(e) => {
-                        setConfidenceToggle(e.target.checked);
-                        SHyFTAConfigService.updateSetting('defaultConfidenceToggle', e.target.checked);
-                      }}
-                      disabled={isRunning}
-                    />
-                    <span className="toggle-slider"></span>
-                  </label>
-                  <span className="toggle-status">
-                    {confidenceToggle ? 'ON' : 'OFF'}
-                  </span>
-                </div>
+                <label>📊 Tolleranza Errore Percentuale:</label>
+                <input
+                  type="number"
+                  value={percentageErrorTollerance}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || value === '0') {
+                      setPercentageErrorTollerance(0.1); // Default minimo
+                    } else {
+                      const numValue = Number(value);
+                      if (!isNaN(numValue) && numValue >= 0.1 && numValue <= 99.9) {
+                        setPercentageErrorTollerance(numValue);
+                        SHyFTAConfigService.updateSetting('percentageErrorTollerance', numValue/100);
+                      }
+                    }
+                  }}
+                  min="0.1"
+                  max="99.9"
+                  step="0.1"
+                  disabled={isRunning || !confidenceToggle}
+                />
+                <small className="help-text">%</small>
               </div>
             </div>
           </div>
