@@ -86,6 +86,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [resultsLoaded, setResultsLoaded] = useState(false);
   const [showConvergenceInfoModal, setShowConvergenceInfoModal] = useState(false);
+
+  // States for individual parameter info modals
+  const [showConfidenceInfoModal, setShowConfidenceInfoModal] = useState(false);
+  const [showErrorToleranceInfoModal, setShowErrorToleranceInfoModal] = useState(false);
+  const [showMinIterationsInfoModal, setShowMinIterationsInfoModal] = useState(false);
+  const [showMaxIterationsInfoModal, setShowMaxIterationsInfoModal] = useState(false);
+  const [showStabilityWindowInfoModal, setShowStabilityWindowInfoModal] = useState(false);
+  const [showStabilityThresholdInfoModal, setShowStabilityThresholdInfoModal] = useState(false);
+  const [showConvergenceWindowInfoModal, setShowConvergenceWindowInfoModal] = useState(false);
+  const [showConvergenceThresholdInfoModal, setShowConvergenceThresholdInfoModal] = useState(false);
   
   // State per tracciare se il modello è cambiato dall'ultima simulazione
   const [modelChangedSinceLastRun, setModelChangedSinceLastRun] = useState(false);
@@ -466,7 +476,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
 
             <div className="form-row">
               <div className="form-group">
-                <label>📊 Intervallo di Confidenza:</label>
+                <label>
+                  📊 Intervallo di Confidenza:
+                  <span
+                    className="info-icon"
+                    onClick={() => setShowConfidenceInfoModal(true)}
+                    style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                  >
+                    ℹ️
+                  </span>
+                </label>
                 <input
                   type="number"
                   value={confidence}
@@ -498,7 +517,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                 </div>
               </div>
               <div className="form-group">
-                <label>📊 Tolleranza Errore Percentuale:</label>
+                <label>
+                  📊 Tolleranza Errore Percentuale:
+                  <span
+                    className="info-icon"
+                    onClick={() => setShowErrorToleranceInfoModal(true)}
+                    style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                  >
+                    ℹ️
+                  </span>
+                </label>
                 <input
                   type="number"
                   value={percentageErrorTollerance}
@@ -549,7 +577,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
               <div className="advanced-settings">
                 <div className="form-row">
                   <div className="form-group">
-                    <label>🔄 Min Iterazioni per CI:</label>
+                    <label>
+                      🔄 Min Iterazioni per CI:
+                      <span
+                        className="info-icon"
+                        onClick={() => setShowMinIterationsInfoModal(true)}
+                        style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                      >
+                        ℹ️
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={minIterationsForCI}
@@ -572,7 +609,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   </div>
 
                   <div className="form-group">
-                    <label>🛑 Max Iterazioni Robustezza:</label>
+                    <label>
+                      🛑 Max Iterazioni Robustezza:
+                      <span
+                        className="info-icon"
+                        onClick={() => setShowMaxIterationsInfoModal(true)}
+                        style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                      >
+                        ℹ️
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={maxIterationsForRobustness}
@@ -597,7 +643,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>📏 Finestra Controllo Stabilità:</label>
+                    <label>
+                      📏 Finestra Controllo Stabilità:
+                      <span
+                        className="info-icon"
+                        onClick={() => setShowStabilityWindowInfoModal(true)}
+                        style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                      >
+                        ℹ️
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={stabilityCheckWindow}
@@ -620,7 +675,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   </div>
 
                   <div className="form-group">
-                    <label>🎯 Soglia Stabilità:</label>
+                    <label>
+                      🎯 Soglia Stabilità:
+                      <span
+                        className="info-icon"
+                        onClick={() => setShowStabilityThresholdInfoModal(true)}
+                        style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                      >
+                        ℹ️
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={stabilityThreshold}
@@ -647,7 +711,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>📐 Finestra Convergenza CI:</label>
+                    <label>
+                      📐 Finestra Convergenza CI:
+                      <span
+                        className="info-icon"
+                        onClick={() => setShowConvergenceWindowInfoModal(true)}
+                        style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                      >
+                        ℹ️
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={convergenceCheckWindow}
@@ -670,7 +743,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   </div>
 
                   <div className="form-group">
-                    <label>🔍 Soglia Convergenza:</label>
+                    <label>
+                      🔍 Soglia Convergenza:
+                      <span
+                        className="info-icon"
+                        onClick={() => setShowConvergenceThresholdInfoModal(true)}
+                        style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                      >
+                        ℹ️
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={convergenceThreshold}
@@ -922,70 +1004,12 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
 
               <div className="modal-body">
                 <div className="info-section">
-                  <h3>📊 COME FUNZIONA L'ALGORITMO DI CONVERGENZA</h3>
+                  <h3>📊 APPROSSIMA CON INTERVALLO DI CONFIDENZA</h3>
                   <p>
-                    La simulazione Monte Carlo controlla <strong>4 criteri di convergenza</strong> basati sui parametri che hai configurato.
-                    La simulazione si ferma quando il <strong>criterio principale è soddisfatto</strong> oppure quando raggiunge il <strong>limite massimo di iterazioni</strong>.
+                    Questa modalità attiva l'algoritmo Monte Carlo con <strong>criteri di convergenza automatici</strong>
+                    che fermano la simulazione quando viene raggiunta la precisione desiderata.
+                    Per informazioni dettagliate su ogni singolo parametro, clicca sull'icona ℹ️ accanto al parametro.
                   </p>
-                </div>
-
-                <div className="info-section">
-                  <h3>🎯 I 4 CRITERI E I TUOI PARAMETRI</h3>
-
-                  <div className="criterion-detail">
-                    <h4>1️⃣ PRECISION CI (Criterio Principale)</h4>
-                    <p><strong>Usa i parametri:</strong> 📊 Intervallo di Confidenza + 📊 Tolleranza Errore Percentuale</p>
-                    <p><strong>Come funziona:</strong> Calcola l'intervallo di confidenza (es. 95%) e verifica se è abbastanza stretto</p>
-                    <div className="example">
-                      <strong>Esempio con i tuoi parametri attuali:</strong><br/>
-                      • Intervallo Confidenza: {confidence * 100}%<br/>
-                      • Tolleranza Errore: {percentageErrorTollerance}%<br/>
-                      • Se probabilità stimata = 0.001 e errore = {percentageErrorTollerance}%<br/>
-                      • Errore accettabile = 0.001 × {percentageErrorTollerance/100} = {(0.001 * percentageErrorTollerance/100).toFixed(6)}<br/>
-                      • ✅ CONVERGE se larghezza CI ≤ {(0.001 * percentageErrorTollerance/100).toFixed(6)}
-                    </div>
-                  </div>
-
-                  <div className="criterion-detail">
-                    <h4>2️⃣ PRECISION RELATIVE (Criterio di Supporto)</h4>
-                    <p><strong>Usa il parametro:</strong> 📊 Soglia Convergenza (default: {(convergenceThreshold * 100).toFixed(1)}%)</p>
-                    <p><strong>Come funziona:</strong> Verifica che l'errore relativo dell'intervallo rispetto alla stima sia sotto soglia</p>
-                    <div className="example">
-                      <strong>Esempio pratico:</strong><br/>
-                      • Se probabilità stimata = 0.01 e CI = [0.008, 0.012]<br/>
-                      • Errore relativo = (0.012-0.008)/0.01 = 40%<br/>
-                      • ❌ NON converge se soglia = {(convergenceThreshold * 100).toFixed(1)}% (40% &gt; {(convergenceThreshold * 100).toFixed(1)}%)<br/>
-                      • ✅ CONVERGE se CI diventa [0.0098, 0.0102] → errore = 4%
-                    </div>
-                  </div>
-
-                  <div className="criterion-detail">
-                    <h4>3️⃣ ROBUSTNESS STATISTICAL (Criterio di Supporto)</h4>
-                    <p><strong>Usa il parametro:</strong> 📊 Soglia Stabilità (default: {(stabilityThreshold * 100).toFixed(1)}%)</p>
-                    <p><strong>Come funziona:</strong> Controlla che l'errore standard non vari troppo nelle ultime iterazioni</p>
-                    <div className="example">
-                      <strong>Esempio con i tuoi parametri:</strong><br/>
-                      • Soglia stabilità = {(stabilityThreshold * 100).toFixed(1)}%<br/>
-                      • Calcola la variazione dell'errore standard<br/>
-                      • Se std_error varia del 5% nelle ultime iterazioni:<br/>
-                      • ❌ NON converge (5% &gt; {(stabilityThreshold * 100).toFixed(1)}%)<br/>
-                      • ✅ CONVERGE se variazione scende sotto {(stabilityThreshold * 100).toFixed(1)}%
-                    </div>
-                  </div>
-
-                  <div className="criterion-detail">
-                    <h4>4️⃣ STABILITY TEMPORAL (Criterio di Supporto)</h4>
-                    <p><strong>Usa il parametro:</strong> 📊 Finestra Controllo Stabilità (default: {stabilityCheckWindow} iterazioni)</p>
-                    <p><strong>Come funziona:</strong> Verifica che la stima di probabilità sia stabile nelle ultime {stabilityCheckWindow} iterazioni</p>
-                    <div className="example">
-                      <strong>Esempio pratico:</strong><br/>
-                      • Finestra = {stabilityCheckWindow} iterazioni<br/>
-                      • Se nelle ultime {stabilityCheckWindow} iterazioni la probabilità oscilla:<br/>
-                      • [0.001, 0.0012, 0.0009, 0.0011, ...] → variazione 20%<br/>
-                      • ❌ NON converge (troppa oscillazione)<br/>
-                      • ✅ CONVERGE se oscillazione &lt; 2%
-                    </div>
-                  </div>
                 </div>
 
                 <div className="info-section">
@@ -1054,6 +1078,351 @@ Spiegami come questi parametri influenzano ciascun criterio, come ottimizzarli p
                 >
                   Chiudi
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Individual Parameter Info Modals */}
+
+        {/* Confidence Interval Info Modal */}
+        {showConfidenceInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowConfidenceInfoModal(false)}>
+            <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>📊 Intervallo di Confidenza</h2>
+                <button className="close-button" onClick={() => setShowConfidenceInfoModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>🎯 Cosa rappresenta</h3>
+                  <p>
+                    L'<strong>Intervallo di Confidenza</strong> definisce il livello di certezza statistica per l'approssimazione della probabilità del Top Event.
+                    Un valore di 0.95 (95%) significa che c'è il 95% di probabilità che il valore reale sia compreso nell'intervallo calcolato.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>📋 Valori tipici</h3>
+                  <div className="criterion-detail">
+                    <p><strong>• 0.90 (90%)</strong> - Standard per analisi generali</p>
+                    <p><strong>• 0.95 (95%)</strong> - Più conservativo, comunemente usato</p>
+                    <p><strong>• 0.99 (99%)</strong> - Molto conservativo per analisi critiche</p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>💡 Come scegliere</h3>
+                  <p>
+                    <strong>Più alto = maggiore confidenza ma intervalli più ampi</strong><br/>
+                    • Per analisi preliminari: 90%<br/>
+                    • Per studi di sicurezza: 95%<br/>
+                    • Per sistemi critici: 99%
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-modal-button" onClick={() => setShowConfidenceInfoModal(false)}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Tolerance Info Modal */}
+        {showErrorToleranceInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowErrorToleranceInfoModal(false)}>
+            <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>📊 Tolleranza Errore Percentuale</h2>
+                <button className="close-button" onClick={() => setShowErrorToleranceInfoModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>🎯 Cosa rappresenta</h3>
+                  <p>
+                    La <strong>Tolleranza Errore Percentuale</strong> definisce l'errore massimo accettabile come percentuale del valore stimato.
+                    Questo parametro controlla la precisione dell'approssimazione Monte Carlo.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>📋 Valori tipici per tipo di evento</h3>
+                  <div className="criterion-detail">
+                    <p><strong>• 1-2%</strong> - Precisione elevata per eventi rari (&lt; 0.001)</p>
+                    <p><strong>• 3-5%</strong> - Buona precisione per eventi moderati</p>
+                    <p><strong>• 5-10%</strong> - Precisione standard per analisi generali</p>
+                    <p><strong>• 10-20%</strong> - Analisi preliminari o eventi comuni</p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>💡 Impatto sulla simulazione</h3>
+                  <p>
+                    <strong>Più basso = maggiore precisione ma più iterazioni richieste</strong><br/>
+                    Se la probabilità stimata è 0.001 e la tolleranza è 5%:<br/>
+                    • Errore accettabile = 0.001 × 0.05 = 0.00005<br/>
+                    • L'intervallo di confidenza deve essere ≤ 0.00005
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-modal-button" onClick={() => setShowErrorToleranceInfoModal(false)}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Min Iterations Info Modal */}
+        {showMinIterationsInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowMinIterationsInfoModal(false)}>
+            <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>🔄 Min Iterazioni per CI</h2>
+                <button className="close-button" onClick={() => setShowMinIterationsInfoModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>🎯 Cosa rappresenta</h3>
+                  <p>
+                    Le <strong>Iterazioni Minime per CI</strong> definiscono il numero minimo di simulazioni Monte Carlo
+                    da eseguire prima di iniziare a controllare i criteri di convergenza degli intervalli di confidenza.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>📋 Perché serve</h3>
+                  <div className="criterion-detail">
+                    <p><strong>Stabilità Statistica:</strong> Con poche iterazioni gli intervalli sono instabili</p>
+                    <p><strong>Prevenzione Stop Prematuro:</strong> Evita che la simulazione si fermi troppo presto</p>
+                    <p><strong>Qualità Risultati:</strong> Garantisce una base statistica solida</p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>💡 Valori consigliati</h3>
+                  <p>
+                    <strong>• 500-1000:</strong> Per analisi veloci<br/>
+                    <strong>• 1000-2000:</strong> Standard per la maggior parte dei casi<br/>
+                    <strong>• 2000-5000:</strong> Per eventi molto rari o analisi critiche
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-modal-button" onClick={() => setShowMinIterationsInfoModal(false)}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Max Iterations Info Modal */}
+        {showMaxIterationsInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowMaxIterationsInfoModal(false)}>
+            <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>🛑 Max Iterazioni Robustezza</h2>
+                <button className="close-button" onClick={() => setShowMaxIterationsInfoModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>🎯 Cosa rappresenta</h3>
+                  <p>
+                    Il <strong>Limite Massimo di Iterazioni</strong> impedisce che la simulazione Monte Carlo
+                    continui indefinitamente se i criteri di convergenza non vengono mai raggiunti.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>📋 Quando entra in gioco</h3>
+                  <div className="criterion-detail">
+                    <p><strong>Protezione Timeout:</strong> Ferma simulazioni che non convergono</p>
+                    <p><strong>Eventi Molto Rari:</strong> Per probabilità &lt; 10⁻⁶ può servire molto tempo</p>
+                    <p><strong>Modelli Complessi:</strong> Alberi con molti elementi richiedono più iterazioni</p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>💡 Valori consigliati</h3>
+                  <p>
+                    <strong>• 100,000:</strong> Per modelli semplici e analisi veloci<br/>
+                    <strong>• 500,000:</strong> Standard per la maggior parte dei casi<br/>
+                    <strong>• 1,000,000+:</strong> Per eventi estremamente rari o modelli molto complessi
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-modal-button" onClick={() => setShowMaxIterationsInfoModal(false)}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stability Window Info Modal */}
+        {showStabilityWindowInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowStabilityWindowInfoModal(false)}>
+            <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>📏 Finestra Controllo Stabilità</h2>
+                <button className="close-button" onClick={() => setShowStabilityWindowInfoModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>🎯 Cosa rappresenta</h3>
+                  <p>
+                    La <strong>Finestra di Controllo Stabilità</strong> definisce su quante iterazioni consecutive
+                    valutare la stabilità temporale della stima di probabilità.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>📋 Come funziona</h3>
+                  <div className="criterion-detail">
+                    <p><strong>Controllo Oscillazioni:</strong> Verifica che la probabilità non oscilli troppo</p>
+                    <p><strong>Stabilità Temporale:</strong> Uno dei 4 criteri di convergenza</p>
+                    <p><strong>Finestra Mobile:</strong> Si sposta con le ultime N iterazioni</p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>💡 Esempio pratico</h3>
+                  <p>
+                    Con finestra = 50 iterazioni:<br/>
+                    • Controlla le ultime 50 stime di probabilità<br/>
+                    • Se oscillano entro ±2% → stabile<br/>
+                    • Se oscillano &gt;20% → instabile<br/>
+                    <strong>Valori tipici:</strong> 20-100 iterazioni
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-modal-button" onClick={() => setShowStabilityWindowInfoModal(false)}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stability Threshold Info Modal */}
+        {showStabilityThresholdInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowStabilityThresholdInfoModal(false)}>
+            <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>🎯 Soglia Stabilità</h2>
+                <button className="close-button" onClick={() => setShowStabilityThresholdInfoModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>🎯 Cosa rappresenta</h3>
+                  <p>
+                    La <strong>Soglia di Stabilità</strong> definisce la variazione percentuale massima accettabile
+                    dell'errore standard nelle iterazioni recenti per considerare la simulazione statisticamente robusta.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>📋 Come funziona</h3>
+                  <div className="criterion-detail">
+                    <p><strong>Criterio Robustezza:</strong> Uno dei 4 criteri di convergenza</p>
+                    <p><strong>Controllo Errore Standard:</strong> Verifica che σ non vari troppo</p>
+                    <p><strong>Stabilità Statistica:</strong> Indica affidabilità dei risultati</p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>💡 Esempio pratico</h3>
+                  <p>
+                    Con soglia = 10%:<br/>
+                    • Se l'errore standard varia del 5% → ✅ stabile<br/>
+                    • Se l'errore standard varia del 15% → ❌ instabile<br/>
+                    <strong>Valori tipici:</strong> 5-20% (default: 10%)
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-modal-button" onClick={() => setShowStabilityThresholdInfoModal(false)}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Convergence Window Info Modal */}
+        {showConvergenceWindowInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowConvergenceWindowInfoModal(false)}>
+            <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>📐 Finestra Convergenza CI</h2>
+                <button className="close-button" onClick={() => setShowConvergenceWindowInfoModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>🎯 Cosa rappresenta</h3>
+                  <p>
+                    La <strong>Finestra di Convergenza CI</strong> definisce su quante iterazioni consecutive
+                    controllare la convergenza dell'ampiezza dell'intervallo di confidenza.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>📋 Come funziona</h3>
+                  <div className="criterion-detail">
+                    <p><strong>Controllo Precisione:</strong> Verifica convergenza dell'intervallo di confidenza</p>
+                    <p><strong>Criterio Supporto:</strong> Uno dei 3 criteri di supporto alla convergenza</p>
+                    <p><strong>Ampiezza CI:</strong> Controlla che l'intervallo si stia restringendo</p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>💡 Valori consigliati</h3>
+                  <p>
+                    <strong>• 10-20:</strong> Per controlli frequenti ma meno stabili<br/>
+                    <strong>• 20-50:</strong> Buon compromesso stabilità/reattività (default: 20)<br/>
+                    <strong>• 50-100:</strong> Per controlli più stabili ma meno frequenti
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-modal-button" onClick={() => setShowConvergenceWindowInfoModal(false)}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Convergence Threshold Info Modal */}
+        {showConvergenceThresholdInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowConvergenceThresholdInfoModal(false)}>
+            <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>🔍 Soglia Convergenza</h2>
+                <button className="close-button" onClick={() => setShowConvergenceThresholdInfoModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>🎯 Cosa rappresenta</h3>
+                  <p>
+                    La <strong>Soglia di Convergenza</strong> definisce l'errore relativo massimo accettabile
+                    dell'intervallo di confidenza rispetto alla stima di probabilità per il criterio di precisione relativa.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>📋 Come funziona</h3>
+                  <div className="criterion-detail">
+                    <p><strong>Precisione Relativa:</strong> Uno dei 4 criteri di convergenza</p>
+                    <p><strong>Calcolo:</strong> (CI_max - CI_min) / probabilità_stimata</p>
+                    <p><strong>Controllo Qualità:</strong> Verifica che l'intervallo sia proporzionalmente stretto</p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>💡 Esempio pratico</h3>
+                  <p>
+                    Con soglia = 15% e probabilità = 0.01:<br/>
+                    • Se CI = [0.008, 0.012] → errore = 40% → ❌ non converge<br/>
+                    • Se CI = [0.0098, 0.0102] → errore = 4% → ✅ converge<br/>
+                    <strong>Valori tipici:</strong> 10-25% (default: 15%)
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-modal-button" onClick={() => setShowConvergenceThresholdInfoModal(false)}>Chiudi</button>
               </div>
             </div>
           </div>

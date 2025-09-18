@@ -964,3 +964,138 @@ input:focus + .toggle-slider {
     font-size: 12px;
   }
 }
+
+/* Individual Parameter Info Modals */
+.parameter-info-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  width: 70vw;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.parameter-info-modal .modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 12px 12px 0 0;
+}
+
+.parameter-info-modal .modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.parameter-info-modal .close-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.parameter-info-modal .close-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.parameter-info-modal .modal-body {
+  padding: 24px 30px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.parameter-info-modal .info-section {
+  margin-bottom: 24px;
+}
+
+.parameter-info-modal .info-section h3 {
+  color: #1e293b;
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 6px;
+}
+
+.parameter-info-modal .info-section p {
+  color: #475569;
+  line-height: 1.6;
+  margin: 0 0 8px 0;
+}
+
+.parameter-info-modal .criterion-detail {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.parameter-info-modal .criterion-detail p {
+  margin: 0 0 8px 0;
+}
+
+.parameter-info-modal .criterion-detail p:last-child {
+  margin-bottom: 0;
+}
+
+.parameter-info-modal .modal-footer {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  padding: 16px 30px;
+  display: flex;
+  justify-content: flex-end;
+  border-radius: 0 0 12px 12px;
+}
+
+.parameter-info-modal .close-modal-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.parameter-info-modal .close-modal-button:hover {
+  background: #5a6fd8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Responsive adjustments for parameter modals */
+@media (max-width: 768px) {
+  .parameter-info-modal {
+    width: 95vw;
+    max-height: 85vh;
+  }
+
+  .parameter-info-modal .modal-header,
+  .parameter-info-modal .modal-body,
+  .parameter-info-modal .modal-footer {
+    padding: 16px 20px;
+  }
+
+  .parameter-info-modal .modal-header h2 {
+    font-size: 18px;
+  }
+
+  .parameter-info-modal .criterion-detail {
+    padding: 12px;
+  }
+}
