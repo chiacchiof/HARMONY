@@ -84,6 +84,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   
   // State for retrieve results loading
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [resultsLoaded, setResultsLoaded] = useState(false);
   
   // State per tracciare se il modello è cambiato dall'ultima simulazione
   const [modelChangedSinceLastRun, setModelChangedSinceLastRun] = useState(false);
@@ -173,6 +174,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     if (lastSimulatedModel && lastSimulatedModel !== currentModelHash) {
       console.log('🔄 [SHyFTAModal] Model changed since last simulation - disabling retrieve results');
       setModelChangedSinceLastRun(true);
+      setResultsLoaded(false); // Reset results loaded state when model changes
       setHasSimulationResults(false); // Reset results availability when model changes
     }
   }, [faultTreeModel.events, faultTreeModel.gates, faultTreeModel.connections, lastSimulatedModel]);
@@ -304,6 +306,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     
     // Reset model change tracking and results availability (la nuova simulazione renderà i risultati validi)
     setModelChangedSinceLastRun(false);
+    setResultsLoaded(false); // Reset results loaded state when starting new simulation
     setHasSimulationResults(false);
 
     try {
@@ -349,8 +352,10 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
       );
       
       if (success) {
+        setResultsLoaded(true);
         alert('✅ Real results loaded from results.mat! Check console and components for actual data.');
       } else {
+        setResultsLoaded(false);
         alert('❌ Failed to load results - check console for details.');
       }
     } catch (error) {
@@ -791,12 +796,13 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
           {!isRunning && onShowCIResults && (() => {
             const simulationResults = MatlabResultsService.getCurrentResults();
             const hasCIData = simulationResults?.ciHistory && simulationResults.ciHistory.length > 0;
-            const isEnabled = hasSimulationResults && !modelChangedSinceLastRun && hasCIData;
+            const isEnabled = hasSimulationResults && !modelChangedSinceLastRun && resultsLoaded && hasCIData;
 
             // DEBUG MERDA!
             console.log('🤬 [SHyFTA CI Button Debug]', {
               hasSimulationResults,
               modelChangedSinceLastRun,
+              resultsLoaded,
               simulationResults: !!simulationResults,
               ciHistory: simulationResults?.ciHistory,
               ciHistoryLength: simulationResults?.ciHistory?.length || 0,
@@ -814,9 +820,11 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                     ? "Esegui prima una simulazione SHyFTA per abilitare l'analisi CI"
                     : modelChangedSinceLastRun
                       ? "Il modello è cambiato. Esegui una nuova simulazione per abilitare l'analisi CI."
-                      : !hasCIData
-                        ? "Nessun dato CI trovato. Abilita 'Approssima con intervallo di confidenza' e riesegui la simulazione."
-                        : "Visualizza analisi confidence interval della simulazione"
+                      : !resultsLoaded
+                        ? "Premi prima 'Retrieve Results' per caricare i risultati della simulazione"
+                        : !hasCIData
+                          ? "Nessun dato CI trovato. Abilita 'Approssima con intervallo di confidenza' e riesegui la simulazione."
+                          : "Visualizza analisi confidence interval della simulazione"
                 }
               >
                 📈 CI Analysis
@@ -824,20 +832,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
             );
           })()}
 
-          {/* BOTTONE DI TEST TEMPORANEO - per verificare che la modal funzioni */}
-          {!isRunning && onShowCIResults && (
-            <button
-              className="test-button"
-              onClick={() => {
-                console.log('🧪 Test CI Modal - forcing open with mock data');
-                onShowCIResults();
-              }}
-              title="TEST: Apri CI modal con dati mock"
-              style={{ backgroundColor: '#e74c3c' }}
-            >
-              🧪 TEST CI
-            </button>
-          )}
 
           {!isRunning && !isCompleted && (
             <button 

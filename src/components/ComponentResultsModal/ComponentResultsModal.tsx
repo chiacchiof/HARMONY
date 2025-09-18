@@ -15,6 +15,12 @@ const ComponentResultsModal: React.FC<ComponentResultsModalProps> = ({
 }) => {
   const [results, setResults] = useState<ComponentSimulationResults | null>(null);
   const [activeTab, setActiveTab] = useState<'summary' | 'cdf' | 'pdf'>('summary');
+  const [tooltip, setTooltip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    content: string;
+  }>({ visible: false, x: 0, y: 0, content: '' });
 
   useEffect(() => {
     if (isOpen && elementId) {
@@ -27,6 +33,29 @@ const ComponentResultsModal: React.FC<ComponentResultsModalProps> = ({
 
   const formatNumber = (n: number, decimals: number = 3): string => {
     return parseFloat(n.toFixed(decimals)).toString();
+  };
+
+  const handleMouseEnter = (event: React.MouseEvent, content: string) => {
+    setTooltip({
+      visible: true,
+      x: event.clientX + 10,
+      y: event.clientY - 10,
+      content
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltip({ visible: false, x: 0, y: 0, content: '' });
+  };
+
+  const handleMouseMove = (event: React.MouseEvent) => {
+    if (tooltip.visible) {
+      setTooltip(prev => ({
+        ...prev,
+        x: event.clientX + 10,
+        y: event.clientY - 10
+      }));
+    }
   };
 
   const renderSummary = () => (
@@ -148,6 +177,30 @@ const ComponentResultsModal: React.FC<ComponentResultsModalProps> = ({
             
             {/* Linea del grafico */}
             <path d={pathData} fill="none" stroke={type === 'cdf' ? "#3498db" : "#e74c3c"} strokeWidth="2"/>
+
+            {/* Punti dati interattivi con tooltip */}
+            {data.map((d, i) => {
+              const x = margin.left + (d.time / maxX) * chartWidth;
+              const y = margin.top + chartHeight - ((type === 'cdf' ? (d as any).probability : (d as any).density) / maxY) * chartHeight;
+              const yValue = type === 'cdf' ? (d as any).probability : (d as any).density;
+              const yLabel = type === 'cdf' ? 'Probabilità' : 'Densità';
+
+              return (
+                <circle
+                  key={i}
+                  cx={x}
+                  cy={y}
+                  r={3}
+                  fill={type === 'cdf' ? "#3498db" : "#e74c3c"}
+                  stroke="white"
+                  strokeWidth={1}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={(e) => handleMouseEnter(e, `Tempo: ${formatNumber(d.time, 1)} ore\n${yLabel}: ${formatNumber(yValue, type === 'cdf' ? 4 : 6)}`)}
+                  onMouseLeave={handleMouseLeave}
+                  onMouseMove={handleMouseMove}
+                />
+              );
+            })}
             
             {/* Etichette assi */}
             <text x={margin.left + chartWidth/2} y={height - 10} textAnchor="middle" className="axis-label">
@@ -231,6 +284,29 @@ const ComponentResultsModal: React.FC<ComponentResultsModalProps> = ({
             Chiudi
           </button>
         </div>
+
+        {/* Custom Tooltip */}
+        {tooltip.visible && (
+          <div
+            style={{
+              position: 'fixed',
+              left: tooltip.x,
+              top: tooltip.y,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              color: 'white',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              pointerEvents: 'none',
+              zIndex: 10000,
+              whiteSpace: 'pre-line',
+              maxWidth: '300px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}
+          >
+            {tooltip.content}
+          </div>
+        )}
       </div>
     </div>
   );
