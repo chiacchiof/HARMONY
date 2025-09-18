@@ -1000,7 +1000,35 @@ try
             end
         end
     end
-    
+
+    % Extract CI_history if available
+    fprintf('Looking for CI_history...\\n');
+    if exist('CI_history', 'var') && ~isempty(CI_history)
+        fprintf('Found CI_history with %d entries\\n', length(CI_history));
+
+        % Convert CI_history struct array to cell array for JSON compatibility
+        ciHistoryArray = [];
+        for i = 1:length(CI_history)
+            ciPoint = struct();
+            ciPoint.iteration = CI_history(i).iteration;
+            ciPoint.p_failure = CI_history(i).p_failure;
+            ciPoint.mean_estimate = CI_history(i).mean_estimate;
+            ciPoint.CI_lower = CI_history(i).CI_lower;
+            ciPoint.CI_upper = CI_history(i).CI_upper;
+            ciPoint.CI_width = CI_history(i).CI_width;
+            ciPoint.accepted_error = CI_history(i).accepted_error;
+            ciPoint.std_error = CI_history(i).std_error;
+
+            ciHistoryArray = [ciHistoryArray; ciPoint];
+        end
+
+        results.ciHistory = ciHistoryArray;
+        fprintf('✅ CI_history added to results (%d points)\\n', length(ciHistoryArray));
+    else
+        fprintf('❌ CI_history not found or empty\\n');
+        results.ciHistory = [];
+    end
+
     % Save results as JSON
     jsonStr = jsonencode(results);
     fid = fopen('temp_results.json', 'w');

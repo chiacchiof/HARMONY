@@ -6,6 +6,7 @@ import CentralPanel from '../CentralPanel/CentralPanel';
 import RightPanel from '../RightPanel/RightPanel';
 import ParameterModal from '../ParameterModal/ParameterModal';
 import ComponentResultsModal from '../ComponentResultsModal/ComponentResultsModal';
+import CIResultsModal from '../CIResultsModal/CIResultsModal';
 import SaveModal from '../SaveModal/SaveModal';
 import LLMConfigModal from '../LLMConfigModal/LLMConfigModal';
 import MatlabExportModal from '../MatlabExportModal/MatlabExportModal';
@@ -38,6 +39,7 @@ const FaultTreeEditor: React.FC = () => {
   const [showSHyFTAModal, setShowSHyFTAModal] = useState(false);
   const [showNewModelConfirmation, setShowNewModelConfirmation] = useState(false);
   const [showComponentResultsModal, setShowComponentResultsModal] = useState(false);
+  const [showCIResultsModal, setShowCIResultsModal] = useState(false);
   const [selectedResultsElementId, setSelectedResultsElementId] = useState<string | null>(null);
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
   const [simulationResultsVersion, setSimulationResultsVersion] = useState(0);
@@ -266,6 +268,12 @@ const FaultTreeEditor: React.FC = () => {
   const handleShowResults = useCallback((elementId: string) => {
     setSelectedResultsElementId(elementId);
     setShowComponentResultsModal(true);
+    setShowParameterModal(false); // Chiudi il modal dei parametri
+  }, []);
+
+  // Gestione visualizzazione risultati CI
+  const handleShowCIResults = useCallback(() => {
+    setShowCIResultsModal(true);
     setShowParameterModal(false); // Chiudi il modal dei parametri
   }, []);
 
@@ -766,6 +774,7 @@ const FaultTreeEditor: React.FC = () => {
         onClose={() => setShowSHyFTAModal(false)}
         faultTreeModel={faultTreeModel}
         missionTime={missionTime}
+        onShowCIResults={handleShowCIResults}
       />
 
       <ConfirmationModal
@@ -786,6 +795,11 @@ const FaultTreeEditor: React.FC = () => {
           setSelectedResultsElementId(null);
         }}
         elementId={selectedResultsElementId}
+      />
+
+      <CIResultsModal
+        isOpen={showCIResultsModal}
+        onClose={() => setShowCIResultsModal(false)}
       />
     </div>
   );

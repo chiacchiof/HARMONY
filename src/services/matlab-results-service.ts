@@ -1,5 +1,17 @@
 import { BaseEvent, Gate } from '../types/FaultTree';
 
+// Interface per i dati di confidence interval
+export interface CIHistoryPoint {
+  iteration: number;
+  p_failure: number;
+  mean_estimate: number;
+  CI_lower: number;
+  CI_upper: number;
+  CI_width: number;
+  accepted_error: number;
+  std_error: number;
+}
+
 // Interface per i risultati di simulazione di un componente
 export interface ComponentSimulationResults {
   componentId: string;
@@ -23,6 +35,7 @@ export interface SimulationResults {
   timestep: number; // Timestep configurabile (default 1 ora)
   components: ComponentSimulationResults[];
   resultsFilePath?: string; // Path al file results.mat
+  ciHistory?: CIHistoryPoint[]; // Dati confidence interval se abilitati
 }
 
 // Configurazione per l'elaborazione dei risultati
@@ -85,7 +98,10 @@ export class MatlabResultsService {
       }
       
       const backendResults = await response.json();
-      
+
+      console.log('🔥 [DEBUG] Backend response received:', backendResults);
+      console.log('🔥 [DEBUG] CI data in response:', backendResults.ciHistory);
+
       if (!backendResults.success) {
         throw new Error(`Backend parsing failed: ${backendResults.error}`);
       }
@@ -155,7 +171,8 @@ export class MatlabResultsService {
         totalIterations: iterations,
         timestep: config.timestep,
         components,
-        resultsFilePath: filePath
+        resultsFilePath: filePath,
+        ciHistory: this.convertBackendCIHistory(backendResults.ciHistory)
       };
       
       this.simulationResults = results;
@@ -197,20 +214,73 @@ export class MatlabResultsService {
     if (!backendData || !backendData.time || !Array.isArray(backendData.time)) {
       return [];
     }
-    
+
     const times = backendData.time;
     const densities = backendData.density;
-    
+
     if (!densities || !Array.isArray(densities) || times.length !== densities.length) {
       return [];
     }
-    
+
     const result = [];
     for (let i = 0; i < times.length; i++) {
       result.push({ time: times[i], density: densities[i] });
     }
-    
+
     return result;
+  }
+
+  /**
+   * Convert backend CI history data format to frontend format
+   */
+  private static convertBackendCIHistory(backendData: any): CIHistoryPoint[] | undefined {
+    console.log('🔥 [CI] convertBackendCIHistory called with:', backendData);
+    console.log('🔥 [CI] Type:', typeof backendData);
+    console.log('🔥 [CI] Is array:', Array.isArray(backendData));
+
+    if (!backendData) {
+      console.log('🔍 [CI] No CI history data found in backend results - returning undefined');
+      return undefined;
+    }
+
+    // MATLAB può inviare un singolo oggetto invece di un array quando c'è 1 solo elemento
+    let dataArray: any[];
+    if (Array.isArray(backendData)) {
+      dataArray = backendData;
+    } else if (typeof backendData === 'object') {
+      console.log('🔧 [CI] Converting single CI object to array');
+      dataArray = [backendData];
+    } else {
+      console.log('🔍 [CI] Invalid CI data type - returning undefined');
+      return undefined;
+    }
+
+    console.log(`🔍 [CI] Converting ${dataArray.length} CI history points`);
+
+    const result: CIHistoryPoint[] = [];
+    for (let i = 0; i < dataArray.length; i++) {
+      const point = dataArray[i];
+      console.log(`🔥 [CI] Processing point ${i}:`, point);
+
+      if (point && typeof point === 'object') {
+        const converted = {
+          iteration: point.iteration || 0,
+          p_failure: point.p_failure || 0,
+          mean_estimate: point.mean_estimate || 0,
+          CI_lower: point.CI_lower || 0,
+          CI_upper: point.CI_upper || 0,
+          CI_width: point.CI_width || 0,
+          accepted_error: point.accepted_error || 0,
+          std_error: point.std_error || 0
+        };
+        console.log(`🔥 [CI] Converted point ${i}:`, converted);
+        result.push(converted);
+      }
+    }
+
+    console.log(`✅ [CI] Final converted result:`, result);
+    console.log(`✅ [CI] Converted ${result.length} CI history points`);
+    return result.length > 0 ? result : undefined;
   }
   
 

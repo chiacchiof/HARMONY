@@ -51,6 +51,7 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
   // Controlla se ci sono risultati di simulazione disponibili
   const hasSimulationResults = MatlabResultsService.hasSimulationResults();
   const componentResults = MatlabResultsService.getComponentResults(element.id);
+
   
 
   // Stato locale per il tipo di gate (per poter cambiare tipo in modal)
@@ -923,7 +924,7 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
           <button className="cancel-button" onClick={onClose}>Annulla</button>
           
           {hasSimulationResults && componentResults && onShowResults && (
-            <button 
+            <button
               onClick={() => onShowResults(element.id)}
               style={{
                 display: 'inline-block',
@@ -940,6 +941,7 @@ const ParameterModal: React.FC<ParameterModalProps> = ({ element, onSave, onClos
               📊 Risultati Simulazione
             </button>
           )}
+
           
           <button className="save-button" onClick={handleSave}>Salva</button>
         </div>

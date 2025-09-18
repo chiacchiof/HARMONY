@@ -11,6 +11,7 @@ interface SHyFTAModalProps {
   onClose: () => void;
   faultTreeModel: FaultTreeModel;
   missionTime?: number;
+  onShowCIResults?: () => void; // Callback per mostrare i risultati CI
 }
 
 // Memoized log textarea component to prevent unnecessary re-renders
@@ -39,7 +40,8 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   isOpen,
   onClose,
   faultTreeModel,
-  missionTime = 500
+  missionTime = 500,
+  onShowCIResults
 }) => {
   // Enhanced close function with cleanup
   const handleClose = () => {
@@ -784,7 +786,59 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
               )}
             </button>
           )}
-          
+
+          {/* CI Analysis button - sempre visibile, abilitato solo con dati CI */}
+          {!isRunning && onShowCIResults && (() => {
+            const simulationResults = MatlabResultsService.getCurrentResults();
+            const hasCIData = simulationResults?.ciHistory && simulationResults.ciHistory.length > 0;
+            const isEnabled = hasSimulationResults && !modelChangedSinceLastRun && hasCIData;
+
+            // DEBUG MERDA!
+            console.log('🤬 [SHyFTA CI Button Debug]', {
+              hasSimulationResults,
+              modelChangedSinceLastRun,
+              simulationResults: !!simulationResults,
+              ciHistory: simulationResults?.ciHistory,
+              ciHistoryLength: simulationResults?.ciHistory?.length || 0,
+              hasCIData,
+              isEnabled
+            });
+
+            return (
+              <button
+                className={`test-button ${!isEnabled ? 'disabled' : ''}`}
+                onClick={isEnabled ? onShowCIResults : undefined}
+                disabled={!isEnabled}
+                title={
+                  !hasSimulationResults
+                    ? "Esegui prima una simulazione SHyFTA per abilitare l'analisi CI"
+                    : modelChangedSinceLastRun
+                      ? "Il modello è cambiato. Esegui una nuova simulazione per abilitare l'analisi CI."
+                      : !hasCIData
+                        ? "Nessun dato CI trovato. Abilita 'Approssima con intervallo di confidenza' e riesegui la simulazione."
+                        : "Visualizza analisi confidence interval della simulazione"
+                }
+              >
+                📈 CI Analysis
+              </button>
+            );
+          })()}
+
+          {/* BOTTONE DI TEST TEMPORANEO - per verificare che la modal funzioni */}
+          {!isRunning && onShowCIResults && (
+            <button
+              className="test-button"
+              onClick={() => {
+                console.log('🧪 Test CI Modal - forcing open with mock data');
+                onShowCIResults();
+              }}
+              title="TEST: Apri CI modal con dati mock"
+              style={{ backgroundColor: '#e74c3c' }}
+            >
+              🧪 TEST CI
+            </button>
+          )}
+
           {!isRunning && !isCompleted && (
             <button 
               className="run-button primary" 

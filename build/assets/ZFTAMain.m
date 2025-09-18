@@ -109,7 +109,9 @@ exit_reason = 'max_iterations';  % Default: tutte le iterazioni completate
 
 for counter_i=2:iter
     pct = counter_i/iter*100;               % percentuale completata
-    fprintf('\rAvanzamento: %6.2f%%%%', pct);  % \r torna a inizio riga e sovrascrive
+    if mod(counter_i, 100) == 0
+     fprintf('\rAvanzamento: %6.2f%%%%', pct);  % \r torna a inizio riga e sovrascrive
+    end
     drawnow;                        % obbliga l’aggiornamento della Console
     if(~stopCriteriaMet)
         reinit;
