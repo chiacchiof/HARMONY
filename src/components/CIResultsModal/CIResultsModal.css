@@ -185,3 +185,99 @@
     height: auto;
   }
 }
+
+/* Convergence criteria badges */
+.convergence-criteria {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.criterion-badge {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: help;
+}
+
+.criterion-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.criterion-badge.met {
+  border-color: #28a745;
+  background: #d4edda;
+}
+
+.criterion-badge.not-met {
+  border-color: #dc3545;
+  background: #f8d7da;
+}
+
+.criterion-badge.max-iterations {
+  border-color: #ffc107;
+  background: #fff3cd;
+}
+
+.criterion-badge .criterion-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.criterion-badge .criterion-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.criterion-badge .criterion-value {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.criterion-badge.met .criterion-value {
+  color: #155724;
+}
+
+.criterion-badge.not-met .criterion-value {
+  color: #721c24;
+}
+
+.criterion-badge.max-iterations .criterion-value {
+  color: #856404;
+}
+
+.criterion-badge .criterion-icon {
+  font-size: 16px;
+  margin-right: 6px;
+}
+
+/* Responsive adjustments for criteria badges */
+@media (max-width: 768px) {
+  .convergence-criteria {
+    grid-template-columns: 1fr;
+  }
+
+  .criterion-badge {
+    padding: 10px;
+  }
+
+  .criterion-badge .criterion-title {
+    font-size: 12px;
+  }
+
+  .criterion-badge .criterion-value {
+    font-size: 13px;
+  }
+}

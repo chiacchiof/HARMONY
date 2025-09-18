@@ -813,7 +813,37 @@ const CIResultsModal: React.FC<CIResultsModalProps> = ({
 
   const renderStatistics = () => {
     const lastPoint = ciHistory[ciHistory.length - 1];
-    const converged = lastPoint.accepted_error > 0 && lastPoint.CI_width <= lastPoint.accepted_error;
+
+    // Calcola i 4 criteri di convergenza
+    const mainCriterion = lastPoint.accepted_error > 0 && lastPoint.CI_width <= lastPoint.accepted_error;
+
+    // Criterio di precisione relativa
+    const relativePrecision = lastPoint.mean_estimate > 1e-6
+      ? lastPoint.CI_width / lastPoint.mean_estimate
+      : lastPoint.CI_width / 1e-5;
+    const precisionCriterion = lastPoint.mean_estimate > 1e-6
+      ? relativePrecision <= 0.25
+      : lastPoint.CI_width <= 1e-5;
+
+    // Criterio di robustezza statistica (stima dell'effective sample size)
+    const estimatedSampleSize = lastPoint.iteration * lastPoint.mean_estimate * (1 - lastPoint.mean_estimate);
+    const robustnessCriterion = estimatedSampleSize >= 10;
+
+    // Criterio di stabilità (usa gli ultimi 10 punti se disponibili)
+    let stabilityCriterion = false;
+    if (ciHistory.length >= 10) {
+      const recentEstimates = ciHistory.slice(-10).map(p => p.mean_estimate);
+      const mean = recentEstimates.reduce((a, b) => a + b, 0) / recentEstimates.length;
+      if (mean > 0) {
+        const variance = recentEstimates.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (recentEstimates.length - 1);
+        const coefficientOfVariation = Math.sqrt(variance) / mean;
+        stabilityCriterion = coefficientOfVariation < 0.1; // < 10%
+      }
+    }
+
+    // Determine il tipo di stop
+    const maxIterationsReached = lastPoint.iteration >= 50000; // Assumiamo un limite ragionevole
+    const overallConverged = mainCriterion;
 
     return (
       <div className="ci-statistics">
@@ -852,10 +882,52 @@ const CIResultsModal: React.FC<CIResultsModalProps> = ({
               }
             </div>
           </div>
-          <div className={`stat-card convergence-status ${converged ? 'converged' : 'not-converged'}`}>
+          {/* Criterio principale di stop */}
+          <div className={`stat-card convergence-status ${maxIterationsReached ? 'max-iterations' : overallConverged ? 'converged' : 'not-converged'}`}>
             <div className="stat-label">Criterio di Stop</div>
-            <div className="stat-value">
-              {converged ? '✓ RAGGIUNTO' : '✗ NON raggiunto'}
+            <div className="stat-value" title={maxIterationsReached ? "Raggiunto limite massimo iterazioni" : overallConverged ? "Convergenza raggiunta tramite criteri CI" : "Convergenza non ancora raggiunta"}>
+              {maxIterationsReached ? '🔄 Iterazioni Completate' : overallConverged ? '✓ Convergenza Raggiunta' : '⏳ IN CORSO'}
+            </div>
+          </div>
+
+          {/* 4 Criteri di convergenza dettagliati */}
+          <div className={`stat-card criterion-badge ${mainCriterion ? 'met' : 'not-met'}`}>
+            <div className="stat-label">1️⃣ Precisione CI</div>
+            <div
+              className="stat-value"
+              title={`Larghezza CI (${formatNumber(lastPoint.CI_width, 6)}) ${mainCriterion ? '≤' : '>'} Errore Accettabile (${formatNumber(lastPoint.accepted_error, 6)})\n\nQuesto criterio verifica se l'intervallo di confidenza è sufficientemente stretto rispetto alla tolleranza di errore impostata.`}
+            >
+              {mainCriterion ? '✓ SODDISFATTO' : '✗ NON soddisfatto'}
+            </div>
+          </div>
+
+          <div className={`stat-card criterion-badge ${precisionCriterion ? 'met' : 'not-met'}`}>
+            <div className="stat-label">2️⃣ Precisione Relativa</div>
+            <div
+              className="stat-value"
+              title={`Precisione relativa: ${formatNumber(relativePrecision * 100, 1)}% ${precisionCriterion ? '≤' : '>'} 25%\n\nQuesto criterio verifica che l'errore relativo sia inferiore al 25% della stima media, garantendo una precisione ragionevole.`}
+            >
+              {precisionCriterion ? '✓ SODDISFATTO' : '✗ NON soddisfatto'}
+            </div>
+          </div>
+
+          <div className={`stat-card criterion-badge ${robustnessCriterion ? 'met' : 'not-met'}`}>
+            <div className="stat-label">3️⃣ Robustezza Statistica</div>
+            <div
+              className="stat-value"
+              title={`Effective Sample Size: ${formatNumber(estimatedSampleSize, 1)} ${robustnessCriterion ? '≥' : '<'} 10\n\nQuesto criterio verifica che ci siano abbastanza "successi ponderati" (n×p×(1-p)) per garantire stime statisticamente robuste.`}
+            >
+              {robustnessCriterion ? '✓ SODDISFATTO' : '✗ NON soddisfatto'}
+            </div>
+          </div>
+
+          <div className={`stat-card criterion-badge ${stabilityCriterion ? 'met' : 'not-met'}`}>
+            <div className="stat-label">4️⃣ Stabilità Temporale</div>
+            <div
+              className="stat-value"
+              title={`Coefficiente di Variazione: ${ciHistory.length >= 10 ? formatNumber((Math.sqrt(ciHistory.slice(-10).map(p => p.mean_estimate).reduce((sum, val, i, arr) => sum + Math.pow(val - arr.reduce((a, b) => a + b, 0) / arr.length, 2), 0) / 9) / (ciHistory.slice(-10).map(p => p.mean_estimate).reduce((a, b) => a + b, 0) / 10)) * 100, 1) + '%' : 'N/A'} ${stabilityCriterion ? '<' : '≥'} 10%\n\nQuesto criterio verifica che le stime recenti siano stabili nel tempo, con bassa variabilità negli ultimi 10 punti.`}
+            >
+              {ciHistory.length >= 10 ? (stabilityCriterion ? '✓ SODDISFATTO' : '✗ NON soddisfatto') : 'N/A (dati insufficienti)'}
             </div>
           </div>
         </div>
