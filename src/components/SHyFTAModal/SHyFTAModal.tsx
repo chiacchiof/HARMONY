@@ -518,7 +518,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
               </div>
               <div className="form-group">
                 <label>
-                  📊 Tolleranza Errore Percentuale:
+                  📊 Tolleranza Errore Percentuale (%):
                   <span
                     className="info-icon"
                     onClick={() => setShowErrorToleranceInfoModal(true)}
@@ -547,7 +547,6 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   step="0.1"
                   disabled={isRunning || !confidenceToggle}
                 />
-                <small className="help-text">%</small>
                 <div className="field-help">
                   <small className="help-text">
                     📋 <strong>Valori tipici:</strong><br/>
@@ -1133,7 +1132,7 @@ Spiegami come questi parametri influenzano ciascun criterio, come ottimizzarli p
           <div className="modal-overlay" onClick={() => setShowErrorToleranceInfoModal(false)}>
             <div className="parameter-info-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h2>📊 Tolleranza Errore Percentuale</h2>
+                <h2>📊 Tolleranza Errore Percentuale </h2>
                 <button className="close-button" onClick={() => setShowErrorToleranceInfoModal(false)}>×</button>
               </div>
               <div className="modal-body">

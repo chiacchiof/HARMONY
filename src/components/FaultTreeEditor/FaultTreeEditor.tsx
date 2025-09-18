@@ -18,6 +18,7 @@ import { FileService } from '../../services/file-service';
 import { useLLMConfig } from '../../contexts/LLMContext';
 import { useModelPersistence } from '../../contexts/ModelPersistenceContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePanel } from '../../contexts/PanelContext';
 import { useDeviceType } from '../../hooks/useDeviceType';
 import './FaultTreeEditor.css';
 
@@ -26,6 +27,7 @@ const FaultTreeEditor: React.FC = () => {
   const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
   const { saveFaultTreeSnapshot, getFaultTreeSnapshot, clearSnapshots } = useModelPersistence();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { isRightPanelCollapsed, toggleRightPanel } = usePanel();
   const [faultTreeModel, setFaultTreeModel] = useState<FaultTreeModel>({
     events: [],
     gates: [],
@@ -89,8 +91,6 @@ const FaultTreeEditor: React.FC = () => {
   // Stato per pannello sinistro collassato
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
 
-  // Stato per pannello destro collassato
-  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
 
   // Contatori globali per nomi univoci (incrementali, non decrementano mai)
   const [nextEventNumber, setNextEventNumber] = useState(1);
@@ -99,15 +99,14 @@ const FaultTreeEditor: React.FC = () => {
   // Ref per ottenere le posizioni correnti dal CentralPanel
   const getCurrentPositionsRef = useRef<(() => FaultTreeModel) | null>(null);
 
-  // Auto-collapse pannelli su dispositivi mobili/tablet
+  // Auto-collapse pannello sinistro su dispositivi mobili/tablet
+  // Il pannello destro mantiene lo stato condiviso del contesto
   useEffect(() => {
     if (deviceType === 'mobile' || deviceType === 'tablet') {
       setIsLeftPanelCollapsed(true);
-      setIsRightPanelCollapsed(true);
     } else {
-      // Su desktop, mantieni lo stato precedente o espandi
+      // Su desktop, espandi il pannello sinistro
       setIsLeftPanelCollapsed(false);
-      setIsRightPanelCollapsed(false);
     }
   }, [deviceType]);
 
@@ -446,8 +445,8 @@ const FaultTreeEditor: React.FC = () => {
 
   // Gestione toggle pannello destro
   const handleToggleRightPanel = useCallback(() => {
-    setIsRightPanelCollapsed(prev => !prev);
-  }, []);
+    toggleRightPanel();
+  }, [toggleRightPanel]);
 
   // Gestione esportazione codice
   const handleExportCode = useCallback(async () => {

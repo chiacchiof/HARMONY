@@ -14,6 +14,7 @@ import { FileService } from '../../services/file-service';
 import { useLLMConfig } from '../../contexts/LLMContext';
 import { useModelPersistence } from '../../contexts/ModelPersistenceContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePanel } from '../../contexts/PanelContext';
 import './MarkovChainEditor.css';
 
 const MarkovChainEditor: React.FC = () => {
@@ -21,6 +22,7 @@ const MarkovChainEditor: React.FC = () => {
   const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
   const { saveMarkovChainSnapshot, getMarkovChainSnapshot, clearSnapshots } = useModelPersistence();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { isRightPanelCollapsed, toggleRightPanel } = usePanel();
   const [markovChainModel, setMarkovChainModel] = useState<MarkovChainModel>({
     states: [],
     transitions: []
@@ -33,7 +35,6 @@ const MarkovChainEditor: React.FC = () => {
   const [showCTMCResultsModal, setShowCTMCResultsModal] = useState(false);
   const [selectedResultsStateId, setSelectedResultsStateId] = useState<string | null>(null);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
-  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
   
   // Click-to-place functionality
   const [clickToPlaceMode, setClickToPlaceMode] = useState(false);
@@ -396,8 +397,8 @@ ${markovChainModel.transitions.map(transition => {
   }, []);
 
   const handleToggleRightPanel = useCallback(() => {
-    setIsRightPanelCollapsed(prev => !prev);
-  }, []);
+    toggleRightPanel();
+  }, [toggleRightPanel]);
 
   // Reorganize states to center
   const handleReorganizeComponents = useCallback(() => {
