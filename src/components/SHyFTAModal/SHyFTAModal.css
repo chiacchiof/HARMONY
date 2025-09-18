@@ -244,6 +244,42 @@
   font-style: italic;
 }
 
+/* Field help - informazioni dettagliate sui campi */
+.field-help {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.field-help .help-text {
+  margin: 0;
+  font-style: normal;
+  color: #475569;
+}
+
+.field-help strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* Dark mode support for field help */
+.dark-mode .field-help {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.dark-mode .field-help .help-text {
+  color: #cbd5e1;
+}
+
+.dark-mode .field-help strong {
+  color: #f1f5f9;
+}
+
 .dark-mode .folder-help,
 .dark-mode .help-text {
   color: #9ca3af;

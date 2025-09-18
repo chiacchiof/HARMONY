@@ -477,6 +477,15 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   step="0.01"
                   disabled={isRunning || !confidenceToggle}
                 />
+                <div className="field-help">
+                  <small className="help-text">
+                    📋 <strong>Valori tipici:</strong><br/>
+                    • <strong>0.90 (90%)</strong> - Standard per analisi generali<br/>
+                    • <strong>0.95 (95%)</strong> - Più conservativo, comunemente usato<br/>
+                    • <strong>0.99 (99%)</strong> - Molto conservativo per analisi critiche<br/>
+                    💡 Più alto = intervallo più ampio ma maggiore confidenza
+                  </small>
+                </div>
               </div>
               <div className="form-group">
                 <label>📊 Tolleranza Errore Percentuale:</label>
@@ -501,6 +510,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                   disabled={isRunning || !confidenceToggle}
                 />
                 <small className="help-text">%</small>
+                <div className="field-help">
+                  <small className="help-text">
+                    📋 <strong>Valori tipici:</strong><br/>
+                    • <strong>1-2%</strong> - Precisione elevata (eventi rari &lt; 0.001)<br/>
+                    • <strong>3-5%</strong> - Buona precisione (eventi moderati)<br/>
+                    • <strong>5-10%</strong> - Precisione standard per analisi generali<br/>
+                    • <strong>10-20%</strong> - Analisi preliminari o eventi comuni<br/>
+                    💡 Più basso = maggiore precisione ma più iterazioni
+                  </small>
+                </div>
               </div>
             </div>
           </div>
