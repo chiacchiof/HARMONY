@@ -85,6 +85,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
   // State for retrieve results loading
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [resultsLoaded, setResultsLoaded] = useState(false);
+  const [showConvergenceInfoModal, setShowConvergenceInfoModal] = useState(false);
   
   // State per tracciare se il modello è cambiato dall'ultima simulazione
   const [modelChangedSinceLastRun, setModelChangedSinceLastRun] = useState(false);
@@ -433,7 +434,16 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                 />
               </div>
               <div className="form-group">
-                <label>Approssima con Intervallo di Confidenza</label>
+                <label>
+                  Approssima con Intervallo di Confidenza
+                  <span
+                    className="info-icon"
+                    onClick={() => setShowConvergenceInfoModal(true)}
+                    style={{ cursor: 'pointer', marginLeft: '8px', fontSize: '14px' }}
+                  >
+                    ℹ️
+                  </span>
+                </label>
                 <div className="toggle-group">
                   <label className="toggle-switch">
                     <input
@@ -895,6 +905,159 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
           onConfirm={handleConfirmStop}
           simulationProgress={progress}
         />
+
+        {/* Convergence Criteria Info Modal */}
+        {showConvergenceInfoModal && (
+          <div className="modal-overlay" onClick={() => setShowConvergenceInfoModal(false)}>
+            <div className="convergence-info-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>📊 Criteri di Convergenza per Intervalli di Confidenza</h2>
+                <button
+                  className="close-button"
+                  onClick={() => setShowConvergenceInfoModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3>📊 COME FUNZIONA L'ALGORITMO DI CONVERGENZA</h3>
+                  <p>
+                    La simulazione Monte Carlo controlla <strong>4 criteri di convergenza</strong> basati sui parametri che hai configurato.
+                    La simulazione si ferma quando il <strong>criterio principale è soddisfatto</strong> oppure quando raggiunge il <strong>limite massimo di iterazioni</strong>.
+                  </p>
+                </div>
+
+                <div className="info-section">
+                  <h3>🎯 I 4 CRITERI E I TUOI PARAMETRI</h3>
+
+                  <div className="criterion-detail">
+                    <h4>1️⃣ PRECISION CI (Criterio Principale)</h4>
+                    <p><strong>Usa i parametri:</strong> 📊 Intervallo di Confidenza + 📊 Tolleranza Errore Percentuale</p>
+                    <p><strong>Come funziona:</strong> Calcola l'intervallo di confidenza (es. 95%) e verifica se è abbastanza stretto</p>
+                    <div className="example">
+                      <strong>Esempio con i tuoi parametri attuali:</strong><br/>
+                      • Intervallo Confidenza: {confidence * 100}%<br/>
+                      • Tolleranza Errore: {percentageErrorTollerance}%<br/>
+                      • Se probabilità stimata = 0.001 e errore = {percentageErrorTollerance}%<br/>
+                      • Errore accettabile = 0.001 × {percentageErrorTollerance/100} = {(0.001 * percentageErrorTollerance/100).toFixed(6)}<br/>
+                      • ✅ CONVERGE se larghezza CI ≤ {(0.001 * percentageErrorTollerance/100).toFixed(6)}
+                    </div>
+                  </div>
+
+                  <div className="criterion-detail">
+                    <h4>2️⃣ PRECISION RELATIVE (Criterio di Supporto)</h4>
+                    <p><strong>Usa il parametro:</strong> 📊 Soglia Convergenza (default: {(convergenceThreshold * 100).toFixed(1)}%)</p>
+                    <p><strong>Come funziona:</strong> Verifica che l'errore relativo dell'intervallo rispetto alla stima sia sotto soglia</p>
+                    <div className="example">
+                      <strong>Esempio pratico:</strong><br/>
+                      • Se probabilità stimata = 0.01 e CI = [0.008, 0.012]<br/>
+                      • Errore relativo = (0.012-0.008)/0.01 = 40%<br/>
+                      • ❌ NON converge se soglia = {(convergenceThreshold * 100).toFixed(1)}% (40% &gt; {(convergenceThreshold * 100).toFixed(1)}%)<br/>
+                      • ✅ CONVERGE se CI diventa [0.0098, 0.0102] → errore = 4%
+                    </div>
+                  </div>
+
+                  <div className="criterion-detail">
+                    <h4>3️⃣ ROBUSTNESS STATISTICAL (Criterio di Supporto)</h4>
+                    <p><strong>Usa il parametro:</strong> 📊 Soglia Stabilità (default: {(stabilityThreshold * 100).toFixed(1)}%)</p>
+                    <p><strong>Come funziona:</strong> Controlla che l'errore standard non vari troppo nelle ultime iterazioni</p>
+                    <div className="example">
+                      <strong>Esempio con i tuoi parametri:</strong><br/>
+                      • Soglia stabilità = {(stabilityThreshold * 100).toFixed(1)}%<br/>
+                      • Calcola la variazione dell'errore standard<br/>
+                      • Se std_error varia del 5% nelle ultime iterazioni:<br/>
+                      • ❌ NON converge (5% &gt; {(stabilityThreshold * 100).toFixed(1)}%)<br/>
+                      • ✅ CONVERGE se variazione scende sotto {(stabilityThreshold * 100).toFixed(1)}%
+                    </div>
+                  </div>
+
+                  <div className="criterion-detail">
+                    <h4>4️⃣ STABILITY TEMPORAL (Criterio di Supporto)</h4>
+                    <p><strong>Usa il parametro:</strong> 📊 Finestra Controllo Stabilità (default: {stabilityCheckWindow} iterazioni)</p>
+                    <p><strong>Come funziona:</strong> Verifica che la stima di probabilità sia stabile nelle ultime {stabilityCheckWindow} iterazioni</p>
+                    <div className="example">
+                      <strong>Esempio pratico:</strong><br/>
+                      • Finestra = {stabilityCheckWindow} iterazioni<br/>
+                      • Se nelle ultime {stabilityCheckWindow} iterazioni la probabilità oscilla:<br/>
+                      • [0.001, 0.0012, 0.0009, 0.0011, ...] → variazione 20%<br/>
+                      • ❌ NON converge (troppa oscillazione)<br/>
+                      • ✅ CONVERGE se oscillazione &lt; 2%
+                    </div>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>🔄 REGOLE DI STOP DELLA SIMULAZIONE</h3>
+                  <div className="criterion-detail">
+                    <h4>📋 Opzione 1: CONVERGENZA RAGGIUNTA</h4>
+                    <p><strong>Criterio Principale</strong> soddisfatto + <strong>almeno 2 dei 3 criteri di supporto</strong> soddisfatti</p>
+
+                    <h4>📋 Opzione 2: ITERAZIONI COMPLETATE</h4>
+                    <p>Raggiunto il limite di <strong>Iterazioni Massime</strong> anche se non converge</p>
+
+                    <h4>📋 Protezione Minima</h4>
+                    <p>La verifica dei criteri inizia solo dopo <strong>Iterazioni Minime CI: {minIterationsForCI.toLocaleString()}</strong></p>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h3>🎛️ OTTIMIZZAZIONE DEI PARAMETRI</h3>
+                  <div className="criterion-detail">
+                    <h4>🎯 Per Eventi Rari (probabilità &lt; 0.001)</h4>
+                    <p>• Tolleranza Errore: 1-2%<br/>• Soglia Convergenza: 10-15%<br/>• Soglia Stabilità: 5-10%</p>
+
+                    <h4>🎯 Per Eventi Moderati (probabilità 0.001-0.1)</h4>
+                    <p>• Tolleranza Errore: 3-5%<br/>• Soglia Convergenza: 15-20%<br/>• Soglia Stabilità: 10-15%</p>
+
+                    <h4>🎯 Per Analisi Veloci</h4>
+                    <p>• Tolleranza Errore: 5-10%<br/>• Iterazioni Minime CI: 500<br/>• Finestra Stabilità: 30</p>
+                  </div>
+                </div>
+
+                <div className="info-section copy-section">
+                  <h3>📝 TESTO PER HARMONY LLM</h3>
+                  <div className="copy-text">
+                    <textarea
+                      readOnly
+                      value={`Spiegami in dettaglio l'algoritmo di convergenza per simulazioni Monte Carlo con intervalli di confidenza. Il sistema usa 4 criteri basati sui seguenti parametri configurabili:
+
+PARAMETRI CONFIGURABILI:
+- Intervallo di Confidenza: ${(confidence * 100).toFixed(0)}%
+- Tolleranza Errore Percentuale: ${percentageErrorTollerance}%
+- Iterazioni Minime CI: ${minIterationsForCI.toLocaleString()}
+- Iterazioni Massime: ${iterations.toLocaleString()}
+- Soglia Convergenza: ${(convergenceThreshold * 100).toFixed(1)}%
+- Soglia Stabilità: ${(stabilityThreshold * 100).toFixed(1)}%
+- Finestra Controllo Stabilità: ${stabilityCheckWindow} iterazioni
+- Finestra Controllo Convergenza: ${convergenceCheckWindow} iterazioni
+
+I 4 CRITERI SONO:
+1. Precision CI: confronta larghezza intervallo confidenza con errore accettabile
+2. Precision Relative: errore relativo vs soglia convergenza
+3. Robustness Statistical: stabilità errore standard vs soglia stabilità
+4. Stability Temporal: stabilità stime nelle ultime iterazioni
+
+Spiegami come questi parametri influenzano ciascun criterio, come ottimizzarli per eventi rari vs comuni, e perché la simulazione si ferma quando criterio principale + 2/3 supporto sono soddisfatti vs limite iterazioni.`}
+                      onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                    />
+                    <p className="copy-hint">👆 Clicca per selezionare tutto il testo e copiarlo</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  className="close-modal-button"
+                  onClick={() => setShowConvergenceInfoModal(false)}
+                >
+                  Chiudi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
