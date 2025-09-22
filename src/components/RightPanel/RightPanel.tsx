@@ -528,13 +528,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
                       className="quick-button"
                       onClick={() => handleQuickExample('Genera una catena di Markov per modellare la disponibilità di un server con riparazione')}
                     >
-                      🖥️ Server con Riparazione
+                      🖥️ Server Riparabile
                     </button>
                     <button 
                       className="quick-button"
                       onClick={() => handleQuickExample('Modella una markov chain per un sistema ridondante con 2 componenti identici')}
                     >
-                      🔄 Sistema Ridondante
+                      🔄 Sistema Ridondato
                     </button>
                   </>
                 ) : (

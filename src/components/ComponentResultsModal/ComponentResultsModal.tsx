@@ -176,7 +176,7 @@ const ComponentResultsModal: React.FC<ComponentResultsModalProps> = ({
             <line x1={margin.left} y1={margin.top} x2={margin.left} y2={margin.top + chartHeight} stroke="#333" strokeWidth="2"/>
             
             {/* Linea del grafico */}
-            <path d={pathData} fill="none" stroke={type === 'cdf' ? "#3498db" : "#e74c3c"} strokeWidth="2"/>
+            <path d={pathData} fill="none" stroke={type === 'cdf' ? "#007bff" : "#e74c3c"} strokeWidth="1.5"/>
 
             {/* Punti dati interattivi con tooltip */}
             {data.map((d, i) => {
@@ -190,11 +190,9 @@ const ComponentResultsModal: React.FC<ComponentResultsModalProps> = ({
                   key={i}
                   cx={x}
                   cy={y}
-                  r={3}
-                  fill={type === 'cdf' ? "#3498db" : "#e74c3c"}
-                  stroke="white"
-                  strokeWidth={1}
-                  style={{ cursor: 'pointer' }}
+                  r={1.5}
+                  fill={type === 'cdf' ? "#007bff" : "#e74c3c"}
+                  style={{ cursor: 'pointer', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }}
                   onMouseEnter={(e) => handleMouseEnter(e, `Tempo: ${formatNumber(d.time, 1)} ore\n${yLabel}: ${formatNumber(yValue, type === 'cdf' ? 4 : 6)}`)}
                   onMouseLeave={handleMouseLeave}
                   onMouseMove={handleMouseMove}

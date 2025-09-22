@@ -20,7 +20,13 @@ import './MarkovChainEditor.css';
 const MarkovChainEditor: React.FC = () => {
   const navigate = useNavigate();
   const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
-  const { saveMarkovChainSnapshot, getMarkovChainSnapshot, clearSnapshots } = useModelPersistence();
+  const {
+    saveMarkovChainSnapshot,
+    getMarkovChainSnapshot,
+    clearSnapshots,
+    saveMarkovChainOpenedFile,
+    getMarkovChainOpenedFile
+  } = useModelPersistence();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { isRightPanelCollapsed, toggleRightPanel } = usePanel();
   const [markovChainModel, setMarkovChainModel] = useState<MarkovChainModel>({
@@ -42,6 +48,9 @@ const MarkovChainEditor: React.FC = () => {
   const [nextStateNumber, setNextStateNumber] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isRestoringFromSnapshot, setIsRestoringFromSnapshot] = useState(false);
+
+  // Ottieni il file aperto dal context
+  const openedFile = getMarkovChainOpenedFile();
 
 
   // Helper function to update state counter
@@ -226,32 +235,77 @@ const MarkovChainEditor: React.FC = () => {
   // File operations handlers for MenuBar
   const handleSaveFile = useCallback(async () => {
     try {
-      await FileService.saveModelWithMetadata(markovChainModel, 'markov-chain');
+      const result = await FileService.saveModelWithMetadata(markovChainModel, 'markov-chain');
+      saveMarkovChainOpenedFile(result);
       alert('Markov Chain salvato con successo!');
     } catch (error) {
       alert(`Errore durante il salvataggio: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     }
-  }, [markovChainModel]);
+  }, [markovChainModel, saveMarkovChainOpenedFile]);
 
-  const handleOpenWithFileSystem = useCallback(() => {
-    // Create file input for opening files
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        try {
-          const { model } = await FileService.openModelWithValidation(file, 'markov-chain');
-          setMarkovChainModel(model as MarkovChainModel);
-          alert('Markov Chain caricato con successo!');
-        } catch (error) {
-          alert(`Errore nel caricamento del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+  const handleOpenWithFileSystem = useCallback(async () => {
+    if (typeof window !== 'undefined' && 'showOpenFilePicker' in window) {
+      try {
+        const [fileHandle] = await (window as any).showOpenFilePicker({
+          types: [{
+            description: 'JSON Files',
+            accept: {
+              'application/json': ['.json']
+            }
+          }]
+        });
+
+        const file = await fileHandle.getFile();
+        const { model } = await FileService.openModelWithValidation(file, 'markov-chain');
+        setMarkovChainModel(model as MarkovChainModel);
+
+        saveMarkovChainOpenedFile({
+          url: URL.createObjectURL(file),
+          filename: file.name,
+          fileHandle: fileHandle
+        });
+
+        alert('Markov Chain caricato con successo!');
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // L'utente ha annullato la selezione
+          return;
         }
+        if (error instanceof Error && error.name === 'NotAllowedError') {
+          // L'utente ha negato i permessi
+          alert('Permessi negati per l\'accesso ai file. Usa il pulsante "Apri" per selezionare manualmente un file.');
+          return;
+        }
+        // Se c'è un errore diverso dall'annullamento o permessi negati, mostra l'errore ma non aprire il fallback
+        console.error('Errore durante l\'apertura del file:', error);
+        alert(`Errore durante l'apertura del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
       }
-    };
-    input.click();
-  }, []);
+    } else {
+      // Fallback al metodo tradizionale solo se l'API non è supportata
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          try {
+            const { model } = await FileService.openModelWithValidation(file, 'markov-chain');
+            setMarkovChainModel(model as MarkovChainModel);
+
+            saveMarkovChainOpenedFile({
+              url: URL.createObjectURL(file),
+              filename: file.name
+            });
+
+            alert('Markov Chain caricato con successo!');
+          } catch (error) {
+            alert(`Errore nel caricamento del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+          }
+        }
+      };
+      input.click();
+    }
+  }, [saveMarkovChainOpenedFile]);
 
   const handleExportCode = useCallback(() => {
     // Export as text representation
@@ -353,9 +407,10 @@ ${markovChainModel.transitions.map(transition => {
       if (window.confirm('Are you sure you want to create a new model? All unsaved changes will be lost.')) {
         setMarkovChainModel({ states: [], transitions: [] });
         setSelectedElement(null);
+        saveMarkovChainOpenedFile(null); // Reset del file aperto
       }
     }
-  }, [markovChainModel]);
+  }, [markovChainModel, saveMarkovChainOpenedFile]);
 
   const handleToggleDarkMode = useCallback(() => {
     toggleDarkMode();
@@ -442,7 +497,7 @@ ${markovChainModel.transitions.map(transition => {
         onToggleDarkMode={handleToggleDarkMode}
         onNewModel={handleNewModel}
         onClearAllModels={clearSnapshots}
-        openedFile={null}
+        openedFile={openedFile}
         currentEditor="markov-chain"
         onNavigateToFaultTree={handleNavigateToFaultTree}
         onNavigateToMarkov={handleNavigateToMarkov}

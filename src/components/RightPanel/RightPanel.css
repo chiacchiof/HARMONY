@@ -1,5 +1,5 @@
 .right-panel {
-  width: 550px;
+  width: 450px;
   height: calc(100vh - 60px);
   background-color: var(--bg-secondary-light);
   border-left: 1px solid var(--border-light);

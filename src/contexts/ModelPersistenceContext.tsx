@@ -1,12 +1,24 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+interface OpenedFileInfo {
+  url: string;
+  filename: string;
+  fileHandle?: FileSystemFileHandle;
+}
+
 interface ModelPersistenceContextType {
   faultTreeSnapshot: string | null;
   markovChainSnapshot: string | null;
+  faultTreeOpenedFile: OpenedFileInfo | null;
+  markovChainOpenedFile: OpenedFileInfo | null;
   saveFaultTreeSnapshot: (model: any) => void;
   saveMarkovChainSnapshot: (model: any) => void;
   getFaultTreeSnapshot: () => any | null;
   getMarkovChainSnapshot: () => any | null;
+  saveFaultTreeOpenedFile: (fileInfo: OpenedFileInfo | null) => void;
+  saveMarkovChainOpenedFile: (fileInfo: OpenedFileInfo | null) => void;
+  getFaultTreeOpenedFile: () => OpenedFileInfo | null;
+  getMarkovChainOpenedFile: () => OpenedFileInfo | null;
   clearSnapshots: () => void;
 }
 
@@ -15,6 +27,8 @@ const ModelPersistenceContext = createContext<ModelPersistenceContextType | unde
 export const ModelPersistenceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [faultTreeSnapshot, setFaultTreeSnapshot] = useState<string | null>(null);
   const [markovChainSnapshot, setMarkovChainSnapshot] = useState<string | null>(null);
+  const [faultTreeOpenedFile, setFaultTreeOpenedFile] = useState<OpenedFileInfo | null>(null);
+  const [markovChainOpenedFile, setMarkovChainOpenedFile] = useState<OpenedFileInfo | null>(null);
 
   const saveFaultTreeSnapshot = (model: any) => {
     if (model && (model.events?.length > 0 || model.gates?.length > 0)) {
@@ -52,18 +66,42 @@ export const ModelPersistenceProvider: React.FC<{ children: ReactNode }> = ({ ch
     return null;
   };
 
+  const saveFaultTreeOpenedFile = (fileInfo: OpenedFileInfo | null) => {
+    setFaultTreeOpenedFile(fileInfo);
+  };
+
+  const saveMarkovChainOpenedFile = (fileInfo: OpenedFileInfo | null) => {
+    setMarkovChainOpenedFile(fileInfo);
+  };
+
+  const getFaultTreeOpenedFile = () => {
+    return faultTreeOpenedFile;
+  };
+
+  const getMarkovChainOpenedFile = () => {
+    return markovChainOpenedFile;
+  };
+
   const clearSnapshots = () => {
     setFaultTreeSnapshot(null);
     setMarkovChainSnapshot(null);
+    setFaultTreeOpenedFile(null);
+    setMarkovChainOpenedFile(null);
   };
 
   const value: ModelPersistenceContextType = {
     faultTreeSnapshot,
     markovChainSnapshot,
+    faultTreeOpenedFile,
+    markovChainOpenedFile,
     saveFaultTreeSnapshot,
     saveMarkovChainSnapshot,
     getFaultTreeSnapshot,
     getMarkovChainSnapshot,
+    saveFaultTreeOpenedFile,
+    saveMarkovChainOpenedFile,
+    getFaultTreeOpenedFile,
+    getMarkovChainOpenedFile,
     clearSnapshots
   };
 

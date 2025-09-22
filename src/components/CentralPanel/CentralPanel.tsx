@@ -117,7 +117,6 @@ const ReactFlowComponent: React.FC<{
        onConnect={onConnect}
        nodeTypes={nodeTypes}
        edgeTypes={edgeTypes}
-       fitView
        attributionPosition="bottom-left"
        deleteKeyCode={null}
        selectionOnDrag={!componentToPlace && !isLocked}
@@ -160,10 +159,6 @@ const ReactFlowComponent: React.FC<{
            className="react-flow__controls-button"
            onClick={() => {
              onReorganizeComponents();
-             // Dopo la riorganizzazione, chiama fit view
-             setTimeout(() => {
-               reactFlowInstance.fitView();
-             }, 100);
            }}
            title="Riorganizza tutti i componenti al centro"
          >
@@ -308,16 +303,54 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     if (isDraggingRef.current) {
       return;
     }
-    setNodes(initialNodes);
+
+    // Sincronizza solo se ci sono cambiamenti strutturali (aggiunta/rimozione elementi)
+    // non per semplici aggiornamenti di connessioni
+    const currentElementCount = nodes.length;
+    const modelElementCount = faultTreeModel.events.length + faultTreeModel.gates.length;
+
+    if (currentElementCount !== modelElementCount) {
+      // Solo se il numero di elementi è cambiato, ricrea i nodi
+      setNodes(initialNodes);
+    } else {
+      // Altrimenti, aggiorna solo i dati dei nodi esistenti senza ricrearli
+      setNodes(currentNodes =>
+        currentNodes.map(node => {
+          const modelEvent = faultTreeModel.events.find(e => e.id === node.id);
+          const modelGate = faultTreeModel.gates.find(g => g.id === node.id);
+          const element = modelEvent || modelGate;
+
+          if (element) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                event: modelEvent,
+                gate: modelGate
+              }
+            };
+          }
+          return node;
+        })
+      );
+    }
+
     lastModelUpdateRef.current = faultTreeModel;
-  }, [initialNodes, setNodes, faultTreeModel]);
+  }, [initialNodes, setNodes, faultTreeModel, nodes.length]);
 
   // Aggiorna gli edge quando il modello cambia
   React.useEffect(() => {
     if (!isDraggingRef.current) {
-      setEdges(initialEdges);
+      // Controlla se gli edge sono effettivamente cambiati
+      const currentConnectionIds = edges.map(e => e.id).sort();
+      const modelConnectionIds = faultTreeModel.connections.map(c => c.id).sort();
+
+      // Solo aggiorna se la lista di connessioni è effettivamente cambiata
+      if (JSON.stringify(currentConnectionIds) !== JSON.stringify(modelConnectionIds)) {
+        setEdges(initialEdges);
+      }
     }
-  }, [initialEdges, setEdges]);
+  }, [initialEdges, setEdges, edges, faultTreeModel.connections]);
 
   // Gestione connessione tra nodi
   const onConnect = useCallback((connection: Connection) => {
@@ -346,27 +379,11 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       );
     }
 
+    // Il handleModelChange nel FaultTreeEditor si occuperà di preservare le posizioni correnti
     onModelChange(updatedModel);
 
-    // Aggiorna React Flow
-    setEdges((eds) => addEdge({
-      ...connection,
-      id: newConnection.id,
-      type: 'deleteButtonEdge',
-      animated: true,
-      style: { 
-        stroke: isDarkMode ? '#e0e0e0' : '#2c3e50', 
-        strokeWidth: 2 
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: isDarkMode ? '#e0e0e0' : '#2c3e50',
-      },
-      data: {
-        onDelete: onDeleteConnection
-      }
-    }, eds));
-  }, [faultTreeModel, onModelChange, onDeleteConnection, setEdges, isDarkMode]);
+    // Non aggiornare React Flow direttamente - lascia che l'useEffect gestisca la sincronizzazione
+  }, [faultTreeModel, onModelChange, onDeleteConnection, isDarkMode]);
 
   // Gestione spostamento nodi con debouncing e stato drag
   const handleNodesChange = useCallback((changes: NodeChange[]) => {

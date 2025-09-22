@@ -25,7 +25,13 @@ import './FaultTreeEditor.css';
 const FaultTreeEditor: React.FC = () => {
   const navigate = useNavigate();
   const { showLLMConfigModal, setShowLLMConfigModal, updateLLMConfig } = useLLMConfig();
-  const { saveFaultTreeSnapshot, getFaultTreeSnapshot, clearSnapshots } = useModelPersistence();
+  const {
+    saveFaultTreeSnapshot,
+    getFaultTreeSnapshot,
+    clearSnapshots,
+    saveFaultTreeOpenedFile,
+    getFaultTreeOpenedFile
+  } = useModelPersistence();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { isRightPanelCollapsed, toggleRightPanel } = usePanel();
   const [faultTreeModel, setFaultTreeModel] = useState<FaultTreeModel>({
@@ -46,12 +52,8 @@ const FaultTreeEditor: React.FC = () => {
   const [missionTime, setMissionTime] = useState(500); // Default mission time in hours
   const [simulationResultsVersion, setSimulationResultsVersion] = useState(0);
   
-  // Stato per tenere traccia del file aperto
-  const [openedFile, setOpenedFile] = useState<{
-    url: string;
-    filename: string;
-    fileHandle?: FileSystemFileHandle;
-  } | null>(null);
+  // Ottieni il file aperto dal context
+  const openedFile = getFaultTreeOpenedFile();
   
   // Rilevamento automatico del dispositivo
   const deviceType = useDeviceType();
@@ -242,6 +244,32 @@ const FaultTreeEditor: React.FC = () => {
     setComponentToPlace(null); // Reset componente selezionato
   }, []);
 
+  // Gestione aggiornamento modello con preservazione posizioni correnti
+  const handleModelChange = useCallback((newModel: FaultTreeModel) => {
+    // Prima ottieni le posizioni correnti dal CentralPanel se disponibile
+    if (getCurrentPositionsRef.current) {
+      const modelWithCurrentPositions = getCurrentPositionsRef.current();
+
+      // Merge il nuovo modello con le posizioni correnti
+      const updatedModel = {
+        ...newModel,
+        events: newModel.events.map(event => {
+          const currentEvent = modelWithCurrentPositions.events.find(e => e.id === event.id);
+          return currentEvent ? { ...event, position: currentEvent.position } : event;
+        }),
+        gates: newModel.gates.map(gate => {
+          const currentGate = modelWithCurrentPositions.gates.find(g => g.id === gate.id);
+          return currentGate ? { ...gate, position: currentGate.position } : gate;
+        })
+      };
+
+      setFaultTreeModel(updatedModel);
+    } else {
+      // Fallback al modello originale se non è possibile ottenere le posizioni correnti
+      setFaultTreeModel(newModel);
+    }
+  }, []);
+
   // Gestione aggiornamento parametri
   const handleUpdateElement = useCallback((updatedElement: BaseEvent | Gate) => {
     if (updatedElement.type === 'basic-event') {
@@ -280,12 +308,12 @@ const FaultTreeEditor: React.FC = () => {
   const handleSaveFile = useCallback(async () => {
     try {
       const result = await FileService.saveModelWithMetadata(faultTreeModel, 'fault-tree');
-      setOpenedFile(result);
+      saveFaultTreeOpenedFile(result);
       alert('Fault Tree salvato con successo!');
     } catch (error) {
       alert(`Errore durante il salvataggio: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     }
-  }, [faultTreeModel]);
+  }, [faultTreeModel, saveFaultTreeOpenedFile]);
 
   // Gestione apertura file
   const handleOpenFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -296,7 +324,7 @@ const FaultTreeEditor: React.FC = () => {
         setFaultTreeModel(model as FaultTreeModel);
         updateCountersFromModel(model as FaultTreeModel);
         
-        setOpenedFile({
+        saveFaultTreeOpenedFile({
           url: URL.createObjectURL(file),
           filename: file.name
         });
@@ -306,7 +334,7 @@ const FaultTreeEditor: React.FC = () => {
         alert(`Errore nel caricamento del file: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
       }
     }
-  }, [updateCountersFromModel]);
+  }, [updateCountersFromModel, saveFaultTreeOpenedFile]);
 
   // Gestione apertura file con File System Access (per sovrascrittura)
   const handleOpenFileWithFileSystem = useCallback(async () => {
@@ -326,7 +354,7 @@ const FaultTreeEditor: React.FC = () => {
         setFaultTreeModel(model as FaultTreeModel);
         updateCountersFromModel(model as FaultTreeModel);
         
-        setOpenedFile({
+        saveFaultTreeOpenedFile({
           url: URL.createObjectURL(file),
           filename: file.name,
           fileHandle: fileHandle
@@ -355,7 +383,7 @@ const FaultTreeEditor: React.FC = () => {
       fileInput.onchange = (e) => handleOpenFile(e as any);
       fileInput.click();
     }
-  }, [handleOpenFile, updateCountersFromModel]);
+  }, [handleOpenFile, updateCountersFromModel, saveFaultTreeOpenedFile]);
 
   // Gestione esportazione XML
   const handleExportXML = useCallback(async () => {
@@ -657,10 +685,10 @@ const FaultTreeEditor: React.FC = () => {
     setSelectedElement(null);
     setShowParameterModal(false);
     setComponentToPlace(null);
-    setOpenedFile(null); // Reset del file aperto
+    saveFaultTreeOpenedFile(null); // Reset del file aperto
     setNextEventNumber(1); // Reset contatore eventi
     setNextGateNumber(1); // Reset contatore porte
-  }, []);
+  }, [saveFaultTreeOpenedFile]);
 
   // Gestione nuovo modello
   const handleNewModel = useCallback(() => {
@@ -710,10 +738,10 @@ const FaultTreeEditor: React.FC = () => {
           onToggleCollapse={handleToggleLeftPanel}
         />
         
-        <CentralPanel 
+        <CentralPanel
           faultTreeModel={faultTreeModel}
           onElementClick={handleElementClick}
-          onModelChange={setFaultTreeModel}
+          onModelChange={handleModelChange}
           onDeleteElement={handleDeleteElement}
           onDeleteConnection={handleDeleteConnection}
           onPanelClick={handlePanelClick}
