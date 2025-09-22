@@ -143,12 +143,12 @@ const MenuBar: React.FC<MenuBarProps> = ({
           {isDarkMode ? '☀️' : '🌙'} {isDarkMode ? 'Light' : 'Dark'}
         </button>
 
-        <button 
+        <button
           className={`menu-button shyfta ${currentEditor !== 'fault-tree' ? 'disabled' : ''}`}
           onClick={currentEditor === 'fault-tree' ? onShowSHyFTA : undefined}
           disabled={currentEditor !== 'fault-tree'}
         >
-          🔬 SHyFTA
+          🔬 HDFT
         </button>
 
         <button 

@@ -235,13 +235,18 @@ const MarkovChainEditor: React.FC = () => {
   // File operations handlers for MenuBar
   const handleSaveFile = useCallback(async () => {
     try {
-      const result = await FileService.saveModelWithMetadata(markovChainModel, 'markov-chain');
+      const result = await FileService.saveModelWithOverwrite(
+        markovChainModel,
+        'markov-chain',
+        openedFile?.fileHandle,
+        openedFile?.filename
+      );
       saveMarkovChainOpenedFile(result);
       alert('Markov Chain salvato con successo!');
     } catch (error) {
       alert(`Errore durante il salvataggio: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     }
-  }, [markovChainModel, saveMarkovChainOpenedFile]);
+  }, [markovChainModel, saveMarkovChainOpenedFile, openedFile]);
 
   const handleOpenWithFileSystem = useCallback(async () => {
     if (typeof window !== 'undefined' && 'showOpenFilePicker' in window) {

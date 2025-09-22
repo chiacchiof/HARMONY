@@ -307,13 +307,18 @@ const FaultTreeEditor: React.FC = () => {
   // Gestione salvataggio file
   const handleSaveFile = useCallback(async () => {
     try {
-      const result = await FileService.saveModelWithMetadata(faultTreeModel, 'fault-tree');
+      const result = await FileService.saveModelWithOverwrite(
+        faultTreeModel,
+        'fault-tree',
+        openedFile?.fileHandle,
+        openedFile?.filename
+      );
       saveFaultTreeOpenedFile(result);
       alert('Fault Tree salvato con successo!');
     } catch (error) {
       alert(`Errore durante il salvataggio: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     }
-  }, [faultTreeModel, saveFaultTreeOpenedFile]);
+  }, [faultTreeModel, saveFaultTreeOpenedFile, openedFile]);
 
   // Gestione apertura file
   const handleOpenFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -9,7 +9,55 @@ export interface FileExportOptions {
 }
 
 export class FileService {
-  
+
+  /**
+   * Salva un modello sovrascrivendo un file esistente (con conferma) o creando un nuovo file
+   */
+  static async saveModelWithOverwrite(
+    model: FaultTreeModel | MarkovChainModel,
+    modelType: 'fault-tree' | 'markov-chain',
+    existingFileHandle?: FileSystemFileHandle,
+    existingFilename?: string
+  ): Promise<{ url: string; filename: string; fileHandle?: FileSystemFileHandle }> {
+
+    // Se abbiamo un file handle esistente, chiedi conferma per sovrascrivere
+    if (existingFileHandle && existingFilename) {
+      const confirmOverwrite = window.confirm(
+        `Vuoi sovrascrivere il file esistente "${existingFilename}"?\n\nClicca OK per sovrascrivere o Annulla per salvare come nuovo file.`
+      );
+
+      if (confirmOverwrite) {
+        // Sovrascrivi il file esistente
+        const modelWithMetadata: ModelWithMetadata = {
+          _metadata: createModelMetadata(modelType),
+          ...model
+        } as ModelWithMetadata;
+
+        const dataStr = JSON.stringify(modelWithMetadata, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+        try {
+          const writable = await (existingFileHandle as any).createWritable();
+          await writable.write(dataBlob);
+          await writable.close();
+
+          return {
+            url: '',
+            filename: existingFilename,
+            fileHandle: existingFileHandle
+          };
+        } catch (error) {
+          console.error('Errore durante la sovrascrittura:', error);
+          // Se la sovrascrittura fallisce, ricadi al salvataggio normale
+        }
+      }
+    }
+
+    // Se non c'è file esistente o l'utente ha scelto di non sovrascrivere,
+    // usa il metodo normale che apre il file picker
+    return this.saveModelWithMetadata(model, modelType);
+  }
+
   /**
    * Salva un modello con metadati in formato JSON
    */

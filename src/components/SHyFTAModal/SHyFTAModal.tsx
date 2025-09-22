@@ -389,7 +389,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     <div className="shyfta-modal-overlay" onClick={handleClose}>
       <div className="shyfta-modal" onClick={e => e.stopPropagation()}>
         <div className="shyfta-modal-header">
-          <h2>🔬 SHyFTA Simulation</h2>
+          <h2>🔬 HDFT Simulation</h2>
           <button className="close-button" onClick={handleClose}>×</button>
         </div>
 
@@ -887,7 +887,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
               onClick={(hasSimulationResults && !modelChangedSinceLastRun) ? handleTestResultsLoading : undefined}
               title={
                 !hasSimulationResults 
-                  ? "Completa prima una simulazione SHyFTA per abilitare il caricamento dei risultati"
+                  ? "Completa prima una simulazione HDFT per abilitare il caricamento dei risultati"
                   : modelChangedSinceLastRun 
                     ? "Il modello è cambiato dall'ultima simulazione. Esegui una nuova simulazione per abilitare il retrieve dei risultati."
                     : "Carica risultati simulazione dal file results.mat"
@@ -927,7 +927,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
                 disabled={!isEnabled}
                 title={
                   !hasSimulationResults
-                    ? "Esegui prima una simulazione SHyFTA per abilitare l'analisi CI"
+                    ? "Esegui prima una simulazione HDFT per abilitare l'analisi CI"
                     : modelChangedSinceLastRun
                       ? "Il modello è cambiato. Esegui una nuova simulazione per abilitare l'analisi CI."
                       : !resultsLoaded
@@ -949,7 +949,7 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
               onClick={handleRunSimulation}
               disabled={!shyftaLibFolder}
             >
-              🚀 Run SHyFTA
+              🚀 Run HDFT
             </button>
           )}
           

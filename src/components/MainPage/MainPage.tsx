@@ -17,8 +17,9 @@ const MainPage: React.FC = () => {
     <div className="main-page">
       <div className="login-container">
         <div className="login-form">
-          <h1>SHIFTAI</h1>
-          <h2>Dynamic Fault Tree & Markov Chain Editor</h2>
+          <h1>HARMONY</h1>
+          <h2>Hybrid Availability and Reliability MOdelliNg sYstems</h2>
+          <h3>Dynamic Hybrid Fault Tree & Markov Chain</h3>
           
           <form onSubmit={handleLogin}>
             <div className="form-group">
