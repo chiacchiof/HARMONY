@@ -582,7 +582,7 @@ end
     if (!options.libraryDirectory.trim()) {
       return 'Seleziona una directory libreria valida';
     }
-    
+
     if (options.timeT <= 0) {
       return 'Il tempo t deve essere maggiore di 0';
     }
@@ -591,10 +591,10 @@ end
       return 'Il modello CTMC è vuoto';
     }
 
-    // Validate exponential distributions
-    const exponentialError = this.validateExponentialTransitions(model);
-    if (exponentialError) {
-      return exponentialError;
+    // Validate transitions based on simulation mode
+    const transitionError = this.validateTransitionDistributions(model, options.simulationEnabled || false);
+    if (transitionError) {
+      return transitionError;
     }
 
     // Validate connectivity
