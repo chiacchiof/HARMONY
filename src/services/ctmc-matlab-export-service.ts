@@ -1,10 +1,14 @@
 import { MarkovChainModel } from '../types/MarkovChain';
+import { DistributionType } from '../types/FaultTree';
 
 export interface CTMCExportOptions {
   timeT: number;
   deltaT?: number;
   solverMethod: 'Transitorio' | 'Uniformizzazione' | 'Stazionario';
   simulationEnabled?: boolean;
+  iterations?: number;      // Number of Monte Carlo iterations
+  confidence?: number;       // Confidence level for simulation (not used yet, for future)
+  confidenceToggle?: boolean; // Toggle confidence intervals (not used yet, for future)
   filename?: string;
   libraryDirectory: string;
 }
@@ -17,15 +21,37 @@ export interface CTMCMatlabFiles {
 export class CTMCMatlabExportService {
   
   /**
-   * Validates that all transitions have exponential distributions
+   * Validates that all transitions have appropriate distributions
+   * For analytical solvers: only exponential
+   * For simulation: exponential, weibull, normal (mapped to lognormal), constant (mapped to deterministic)
+   */
+  static validateTransitionDistributions(model: MarkovChainModel, simulationEnabled: boolean): string | null {
+    if (simulationEnabled) {
+      // Simulation supports the current type system: exponential, weibull, normal, constant
+      // These will be mapped to MATLAB simulation distributions
+      const supportedTypes: DistributionType[] = ['exponential', 'weibull', 'normal', 'constant'];
+      for (const transition of model.transitions) {
+        if (!supportedTypes.includes(transition.probabilityDistribution.type)) {
+          return `Transizione ${transition.source} → ${transition.target} ha distribuzione non supportata: ${transition.probabilityDistribution.type}. Tipi supportati: ${supportedTypes.join(', ')}.`;
+        }
+      }
+      return null;
+    } else {
+      // Analytical solvers only support exponential
+      for (const transition of model.transitions) {
+        if (transition.probabilityDistribution.type !== 'exponential') {
+          return `Transizione ${transition.source} → ${transition.target} non è esponenziale (tipo: ${transition.probabilityDistribution.type}). Solo transizioni esponenziali sono supportate per la risoluzione CTMC analitica.`;
+        }
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Validates that all transitions have exponential distributions (for backward compatibility)
    */
   static validateExponentialTransitions(model: MarkovChainModel): string | null {
-    for (const transition of model.transitions) {
-      if (transition.probabilityDistribution.type !== 'exponential') {
-        return `Transizione ${transition.source} → ${transition.target} non è esponenziale (tipo: ${transition.probabilityDistribution.type}). Solo transizioni esponenziali sono supportate per la risoluzione CTMC.`;
-      }
-    }
-    return null;
+    return this.validateTransitionDistributions(model, false);
   }
 
   /**
@@ -62,7 +88,87 @@ export class CTMCMatlabExportService {
   }
 
   /**
-   * Generates the MATLAB states and transitions arrays
+   * Generates the MATLAB transitions cell array for simulation
+   */
+  static generateSimulationTransitions(model: MarkovChainModel): { transitionsDef: string; stateCount: number } {
+    // Sort states by ID for consistent ordering
+    const sortedStates = [...model.states].sort((a, b) => {
+      const aId = parseInt(a.id.replace('state-', '')) || 0;
+      const bId = parseInt(b.id.replace('state-', '')) || 0;
+      return aId - bId;
+    });
+
+    const stateCount = sortedStates.length;
+
+    // Create state index mapping (MATLAB uses 1-based indexing)
+    const stateIndexMap = new Map<string, number>();
+    sortedStates.forEach((state, index) => {
+      stateIndexMap.set(state.id, index + 1);
+    });
+
+    // Initialize transitions cell array
+    const transitionLines: string[] = [];
+    transitionLines.push(`% Initialize transitions cell array`);
+    transitionLines.push(`numStates = ${stateCount};`);
+    transitionLines.push(`transitions = cell(numStates, numStates);`);
+    transitionLines.push(``);
+
+    // Fill in transitions with distribution information
+    model.transitions.forEach(transition => {
+      const fromIndex = stateIndexMap.get(transition.source);
+      const toIndex = stateIndexMap.get(transition.target);
+
+      if (fromIndex && toIndex) {
+        const dist = transition.probabilityDistribution;
+        let distType = '';
+        let params = '';
+
+        // Map distribution type to MATLAB format
+        // Frontend types: exponential, weibull, normal, constant
+        // MATLAB simulation types: exp, weibull, lognormal, deterministic
+        switch (dist.type) {
+          case 'exponential':
+            distType = 'exp';
+            params = `[${dist.lambda}]`;
+            break;
+          case 'weibull':
+            // WeibullDistribution has k (shape), lambda (scale), mu (location)
+            // MATLAB weibull expects [shape, scale]
+            distType = 'weibull';
+            params = `[${dist.k}, ${dist.lambda}]`; // shape, scale
+            break;
+          case 'normal':
+            // Map normal to lognormal for simulation
+            // NormalDistribution has mu (mean), sigma (std dev)
+            // MATLAB lognormal expects [mu, sigma]
+            distType = 'lognormal';
+            params = `[${dist.mu}, ${dist.sigma}]`; // mu, sigma
+            break;
+          case 'constant':
+            // Map constant probability to deterministic time
+            // ConstantDistribution has probability
+            // Use a fixed time value of 1.0 (can be adjusted)
+            distType = 'deterministic';
+            params = `[1.0]`; // fixed time value
+            break;
+          default:
+            // Fallback to exponential with lambda=1
+            distType = 'exp';
+            params = `[1]`;
+        }
+
+        transitionLines.push(`transitions{${fromIndex}, ${toIndex}}.type = '${distType}';`);
+        transitionLines.push(`transitions{${fromIndex}, ${toIndex}}.params = ${params};`);
+        transitionLines.push(``);
+      }
+    });
+
+    const transitionsDef = transitionLines.join('\n');
+    return { transitionsDef, stateCount };
+  }
+
+  /**
+   * Generates the MATLAB states and transitions arrays (for analytical solvers)
    */
   static generateStatesAndTransitions(model: MarkovChainModel): { statesDef: string; transitionsDef: string; stateCount: number } {
     // Sort states by ID for consistent ordering (states = 0:n-1)
@@ -107,9 +213,82 @@ export class CTMCMatlabExportService {
   }
 
   /**
+   * Generates MATLAB code for Monte Carlo simulation
+   */
+  static generateSimulationMatlabCode(model: MarkovChainModel, options: CTMCExportOptions): string {
+    const { transitionsDef, stateCount } = this.generateSimulationTransitions(model);
+
+    // Find initial state or default to first state
+    const initialState = model.states.find(s => s.isInitial);
+    let initialStateIndex = 0; // Default to state 0
+
+    if (initialState) {
+      const stateId = parseInt(initialState.id.replace('state-', ''));
+      if (!isNaN(stateId)) {
+        initialStateIndex = stateId;
+      }
+    }
+
+    // Create initial distribution vector
+    const initialDistribution = Array(stateCount).fill(0);
+    if (initialStateIndex >= 0 && initialStateIndex < stateCount) {
+      initialDistribution[initialStateIndex] = 1;
+    } else {
+      initialDistribution[0] = 1;
+      console.warn(`[CTMC Simulation] Initial state index ${initialStateIndex} out of bounds, using state 0`);
+    }
+
+    const pi0Def = `pi0 = [${initialDistribution.join(' ')}];`;
+
+    // Simulation parameters
+    const T = options.timeT;
+    const N = options.iterations || 1000;
+    const deltaT = options.deltaT || 0.1;
+
+    // Generate complete MATLAB simulation code
+    const matlabCode = `%% CTMC Simulation Solver - Generated by SHIFTAI
+% Modello: ${model.states.length} stati, ${model.transitions.length} transizioni
+% Metodo: Monte Carlo Simulation
+% Tempo: ${T}, Iterazioni: ${N}
+
+% 1. Definizione delle transizioni con distribuzioni generiche
+${transitionsDef}
+
+% 2. Distribuzione iniziale
+${pi0Def}
+
+% 3. Parametri di simulazione
+T = ${T};           % Tempo finale
+N = ${N};           % Numero di iterazioni Monte Carlo
+deltaT = ${deltaT};  % Granularità temporale
+
+% 4. Esecuzione della simulazione Monte Carlo
+fprintf("\\n=== Simulazione Monte Carlo CTMC ===\\n");
+fprintf("Tempo finale: %.2f\\n", T);
+fprintf("Iterazioni: %d\\n", N);
+fprintf("Time step: %.4f\\n\\n", deltaT);
+
+[pi_T, timeSteps, probabilityMatrix] = CTMCSimSolver(transitions, pi0, T, N, deltaT);
+
+% 5. Risultati finali
+fprintf("\\n=== Risultati Finali ===\\n");
+fprintf("Distribuzione al tempo T=%.2f:\\n", T);
+fprintf("π(T) = %s\\n", mat2str(pi_T, 6));
+`;
+
+    return matlabCode;
+  }
+
+  /**
    * Generates the complete MATLAB code for CTMC solving
    */
   static generateCTMCMatlabCode(model: MarkovChainModel, options: CTMCExportOptions): string {
+    // Check if simulation mode is enabled
+    if (options.simulationEnabled) {
+      return this.generateSimulationMatlabCode(model, options);
+    }
+
+    // Otherwise, generate analytical solver code
     const { statesDef, transitionsDef, stateCount } = this.generateStatesAndTransitions(model);
 
     // Find initial state or default to first state
@@ -337,14 +516,14 @@ end
         options
       });
       
-      // Validate exponential transitions
-      console.log('🔍 [CTMC Export] Validating exponential transitions...');
-      const exponentialError = this.validateExponentialTransitions(model);
-      if (exponentialError) {
-        console.error('❌ [CTMC Export] Exponential validation failed:', exponentialError);
-        throw new Error(exponentialError);
+      // Validate transitions (exponential for analytical, any supported for simulation)
+      console.log(`🔍 [CTMC Export] Validating transitions (simulation=${options.simulationEnabled})...`);
+      const transitionError = this.validateTransitionDistributions(model, options.simulationEnabled || false);
+      if (transitionError) {
+        console.error('❌ [CTMC Export] Transition validation failed:', transitionError);
+        throw new Error(transitionError);
       }
-      console.log('✅ [CTMC Export] Exponential transitions validated');
+      console.log('✅ [CTMC Export] Transitions validated');
 
       // Validate connected states
       console.log('🔍 [CTMC Export] Validating connected states...');
