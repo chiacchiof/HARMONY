@@ -39,22 +39,69 @@ function Test-Command {
     }
 }
 
+# Funzione per scaricare repository da GitHub (ZIP o Git)
+function Download-Repository {
+    param(
+        [string]$RepoUrl,
+        [string]$DestinationPath,
+        [string]$RepoName,
+        [bool]$UseGit
+    )
+
+    if ($UseGit) {
+        # Usa Git clone
+        Write-Host "  Clonazione con Git..." -ForegroundColor Gray
+        git clone $RepoUrl $DestinationPath 2>&1 | Out-Null
+        return $LASTEXITCODE -eq 0
+    } else {
+        # Scarica ZIP da GitHub
+        try {
+            $zipUrl = $RepoUrl -replace '\.git$', '/archive/refs/heads/main.zip'
+            $zipFile = Join-Path $env:TEMP "$RepoName.zip"
+            $extractPath = Join-Path $env:TEMP "$RepoName-extract"
+
+            Write-Host "  Scarico ZIP da GitHub..." -ForegroundColor Gray
+            Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -UseBasicParsing
+
+            Write-Host "  Estrazione file..." -ForegroundColor Gray
+            if (Test-Path $extractPath) {
+                Remove-Item -Path $extractPath -Recurse -Force
+            }
+            Expand-Archive -Path $zipFile -DestinationPath $extractPath -Force
+
+            # Sposta il contenuto (GitHub crea una cartella NOME-main)
+            $extractedFolder = Get-ChildItem -Path $extractPath -Directory | Select-Object -First 1
+            if (Test-Path $DestinationPath) {
+                Remove-Item -Path $DestinationPath -Recurse -Force
+            }
+            Move-Item -Path $extractedFolder.FullName -Destination $DestinationPath -Force
+
+            # Pulizia
+            Remove-Item -Path $zipFile -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+
+            return $true
+        }
+        catch {
+            Write-Host "  [X] Errore: $($_.Exception.Message)" -ForegroundColor Red
+            return $false
+        }
+    }
+}
+
 # ============================================
 # 1. VERIFICA PREREQUISITI
 # ============================================
 Write-Host "[1/6] Verifica prerequisiti..." -ForegroundColor Yellow
 Write-Host ""
 
-# Verifica Git
-if (-not (Test-Command "git")) {
-    Write-Host "[X] ERRORE: Git non installato!" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Scarica e installa Git da: https://git-scm.com/download/win" -ForegroundColor White
-    Write-Host ""
-    Read-Host "Premi INVIO per chiudere"
-    exit 1
+# Verifica Git (opzionale - useremo download ZIP se non disponibile)
+$useGit = Test-Command "git"
+if ($useGit) {
+    Write-Host "[OK] Git trovato: $(git --version)" -ForegroundColor Green
+} else {
+    Write-Host "[!] Git non trovato - uso download diretto da GitHub" -ForegroundColor Yellow
 }
-Write-Host "[OK] Git trovato: $(git --version)" -ForegroundColor Green
 
 # Verifica Node.js
 if (-not (Test-Command "node")) {
@@ -145,19 +192,18 @@ Write-Host ""
 
 $harmonyPath = Join-Path $installPath "Harmony"
 if (Test-Path $harmonyPath) {
-    Write-Host "[!] Harmony gia presente, aggiorno..." -ForegroundColor Yellow
-    Set-Location $harmonyPath
-    git pull origin main
+    Write-Host "[!] Harmony gia presente, salto download..." -ForegroundColor Yellow
 } else {
-    Write-Host "Clonazione repository Harmony..." -ForegroundColor White
-    git clone $harmonyRepo $harmonyPath
-    if ($LASTEXITCODE -ne 0) {
+    $success = Download-Repository -RepoUrl $harmonyRepo -DestinationPath $harmonyPath -RepoName "Harmony" -UseGit $useGit
+    if (-not $success) {
         Write-Host "[X] ERRORE durante il download di Harmony" -ForegroundColor Red
-        Read-Host "Premi INVIO per chiudere"
+        if (-not $NonInteractive) {
+            Read-Host "Premi INVIO per chiudere"
+        }
         exit 1
     }
 }
-Write-Host "[OK] Harmony scaricato con successo!" -ForegroundColor Green
+Write-Host "[OK] Harmony pronto!" -ForegroundColor Green
 Write-Host ""
 
 # ============================================
@@ -168,19 +214,18 @@ Write-Host ""
 
 $shyftooPath = Join-Path $installPath "SHyFTOO"
 if (Test-Path $shyftooPath) {
-    Write-Host "[!] SHyFTOO gia presente, aggiorno..." -ForegroundColor Yellow
-    Set-Location $shyftooPath
-    git pull origin main
+    Write-Host "[!] SHyFTOO gia presente, salto download..." -ForegroundColor Yellow
 } else {
-    Write-Host "Clonazione repository SHyFTOO..." -ForegroundColor White
-    git clone $shyftooRepo $shyftooPath
-    if ($LASTEXITCODE -ne 0) {
+    $success = Download-Repository -RepoUrl $shyftooRepo -DestinationPath $shyftooPath -RepoName "SHyFTOO" -UseGit $useGit
+    if (-not $success) {
         Write-Host "[X] ERRORE durante il download di SHyFTOO" -ForegroundColor Red
-        Read-Host "Premi INVIO per chiudere"
+        if (-not $NonInteractive) {
+            Read-Host "Premi INVIO per chiudere"
+        }
         exit 1
     }
 }
-Write-Host "[OK] SHyFTOO scaricato con successo!" -ForegroundColor Green
+Write-Host "[OK] SHyFTOO pronto!" -ForegroundColor Green
 Write-Host ""
 
 # ============================================
@@ -191,19 +236,18 @@ Write-Host ""
 
 $ctmcPath = Join-Path $installPath "CTMCLib"
 if (Test-Path $ctmcPath) {
-    Write-Host "[!] CTMCLib gia presente, aggiorno..." -ForegroundColor Yellow
-    Set-Location $ctmcPath
-    git pull origin main
+    Write-Host "[!] CTMCLib gia presente, salto download..." -ForegroundColor Yellow
 } else {
-    Write-Host "Clonazione repository CTMCLib..." -ForegroundColor White
-    git clone $ctmcRepo $ctmcPath
-    if ($LASTEXITCODE -ne 0) {
+    $success = Download-Repository -RepoUrl $ctmcRepo -DestinationPath $ctmcPath -RepoName "CTMCLib" -UseGit $useGit
+    if (-not $success) {
         Write-Host "[X] ERRORE durante il download di CTMCLib" -ForegroundColor Red
-        Read-Host "Premi INVIO per chiudere"
+        if (-not $NonInteractive) {
+            Read-Host "Premi INVIO per chiudere"
+        }
         exit 1
     }
 }
-Write-Host "[OK] CTMCLib scaricato con successo!" -ForegroundColor Green
+Write-Host "[OK] CTMCLib pronto!" -ForegroundColor Green
 Write-Host ""
 
 # ============================================
