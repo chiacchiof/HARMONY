@@ -2,4 +2,9 @@ node_modules
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# API Keys and sensitive files
 .key
+key
+**/key
+*.key
