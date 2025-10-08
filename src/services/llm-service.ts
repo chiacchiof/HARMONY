@@ -29,9 +29,9 @@ export class LLMService {
       const prompt = FaultTreeGenerator.createFaultTreePrompt(request);
       
       // Usa configurazione ottimizzata per fault tree generation
-      const enhancedConfig = { 
+      const enhancedConfig = {
         ...this.config,
-        maxTokens: Math.max(this.config.maxTokens || 1000, 2000), // Aumenta token limit
+        maxTokens: Math.max(this.config.maxTokens || 1000, 4000), // Aumenta token limit per risposte complete
         temperature: 0.3 // Riduci temperatura per output più deterministico
       };
       
@@ -330,8 +330,8 @@ export class LLMService {
 
   private async callGemini(prompt: string, context?: string): Promise<LLMResponse> {
     const fullPrompt = context ? `${context}\n\nDomanda: ${prompt}` : prompt;
-    
-    const response = await fetch(`${this.config.baseUrl}/v1beta/models/${this.config.model}:generateContent?key=${this.config.apiKey}`, {
+
+    const response = await fetch(`${this.config.baseUrl}/v1/models/${this.config.model}:generateContent?key=${this.config.apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

@@ -44,6 +44,14 @@ export class FaultTreeGenerator {
       if (jsonFenceMatch) {
         try {
           const jsonContent = jsonFenceMatch[1].trim();
+          const parsed = JSON.parse(jsonContent);
+
+          // Controlla se è nel formato alternativo (con nodes/children)
+          if (parsed.nodes && Array.isArray(parsed.nodes)) {
+            console.log('Detected alternative JSON format with nodes/children');
+            return this.convertAlternativeFormat(parsed);
+          }
+
           return this.tryParseJSON(jsonContent, 'JSON fence with tag');
         } catch (e) {
           console.log('Failed to parse JSON fence with tag, trying repair...');
@@ -130,10 +138,75 @@ export class FaultTreeGenerator {
   }
 
   /**
+   * Converte formato alternativo (nodes/children) nel formato standard
+   */
+  private static convertAlternativeFormat(parsed: any): FaultTreeGenerationResult | null {
+    try {
+      const elements: GeneratedElement[] = [];
+      const connections: Array<{ source: string; target: string }> = [];
+      let topEvent: string | undefined;
+
+      if (!parsed.nodes || !Array.isArray(parsed.nodes)) {
+        return null;
+      }
+
+      // Converti i nodi nel formato standard
+      parsed.nodes.forEach((node: any) => {
+        if (node.type === 'BASIC' || node.type === 'basic' || node.type === 'event') {
+          // Evento base
+          elements.push({
+            type: 'event',
+            id: node.id,
+            name: node.label || node.name || node.id,
+            description: node.description,
+            failureRate: node.probability || node.failureRate || 0.001
+          });
+        } else if (node.type === 'AND' || node.type === 'OR' || node.type === 'PAND' ||
+                   node.type === 'SPARE' || node.type === 'SEQ' || node.type === 'FDEP' ||
+                   node.type === 'gate') {
+          // Gate
+          elements.push({
+            type: 'gate',
+            id: node.id,
+            name: node.label || node.name || node.id,
+            description: node.description,
+            gateType: (node.type === 'gate' ? 'OR' : node.type) as GateType
+          });
+
+          // Se ha children, crea le connessioni
+          if (node.children && Array.isArray(node.children)) {
+            node.children.forEach((childId: string) => {
+              connections.push({
+                source: childId,
+                target: node.id
+              });
+            });
+          }
+        }
+      });
+
+      // Il top event è specificato o è il primo nodo
+      topEvent = parsed.top_event || parsed.topEvent || (parsed.nodes.length > 0 ? parsed.nodes[0].id : undefined);
+
+      const description = parsed.description || parsed.system || 'Fault tree generated from alternative format';
+
+      return {
+        elements,
+        connections,
+        topEvent,
+        description
+      };
+    } catch (error) {
+      console.error('Error converting alternative format:', error);
+      return null;
+    }
+  }
+
+  /**
    * Valida che il risultato sia un FaultTreeGenerationResult valido
    */
   private static validateFaultTreeResult(obj: any): boolean {
-    return obj && 
+    return obj &&
            typeof obj === 'object' &&
            Array.isArray(obj.elements) &&
            Array.isArray(obj.connections) &&
@@ -931,55 +1004,53 @@ export class FaultTreeGenerator {
    * Genera prompt specializzato per creazione fault tree
    */
   static createFaultTreePrompt(request: FaultTreeGenerationRequest): string {
-    let prompt = `Come esperto in Dynamic Fault Tree Analysis, genera un fault tree per il seguente sistema:
+    let prompt = `You are an expert in Dynamic Fault Tree Analysis. Generate a fault tree for the following system.
 
-**SISTEMA**: ${request.description}`;
+**SYSTEM**: ${request.description}`;
 
     if (request.topEvent) {
       prompt += `\n**TOP EVENT**: ${request.topEvent}`;
     }
 
     if (request.systemType) {
-      prompt += `\n**TIPO SISTEMA**: ${request.systemType}`;
+      prompt += `\n**SYSTEM TYPE**: ${request.systemType}`;
     }
 
     if (request.components && request.components.length > 0) {
-      prompt += `\n**COMPONENTI**: ${request.components.join(', ')}`;
+      prompt += `\n**COMPONENTS**: ${request.components.join(', ')}`;
     }
 
     prompt += `
 
-IMPORTANTE: Fornisci la risposta esclusivamente nel formato JSON richiesto. Non aggiungere testo prima o dopo il JSON.
+CRITICAL: You MUST respond with ONLY valid JSON in the exact format shown below. Do NOT include any explanatory text before or after the JSON.
+
+Your response must be a single JSON object with this structure:
 
 \`\`\`json
 {
-  "description": "Descrizione del fault tree",
+  "description": "Fault tree description",
   "topEvent": "gate-1",
   "elements": [
     {
       "type": "event",
       "id": "event-1",
-      "name": "Guasto Componente A",
-      "description": "Descrizione dettagliata del guasto",
-      "failureRate": 0.001,
-      "failureProbabilityDistribution": {
-        "type": "exponential",
-        "lambda": 0.001
-      }
+      "name": "Component A Failure",
+      "description": "Detailed failure description",
+      "failureRate": 0.001
     },
     {
       "type": "event",
       "id": "event-2",
-      "name": "Guasto Componente B",
-      "description": "Descrizione dettagliata del guasto",
+      "name": "Component B Failure",
+      "description": "Detailed failure description",
       "failureRate": 0.002
     },
     {
       "type": "gate",
       "id": "gate-1",
-      "name": "Guasto Sistema Principale",
+      "name": "Main System Failure",
       "gateType": "OR",
-      "description": "Guasto del sistema quando uno dei componenti fallisce"
+      "description": "System fails when any component fails"
     }
   ],
   "connections": [
@@ -988,29 +1059,31 @@ IMPORTANTE: Fornisci la risposta esclusivamente nel formato JSON richiesto. Non 
       "target": "gate-1"
     },
     {
-      "source": "event-2", 
+      "source": "event-2",
       "target": "gate-1"
     }
   ]
 }
 \`\`\`
 
-**REGOLE OBBLIGATORIE PER IL JSON**:
-1. **FORMATO RIGOROSO**: Usa esattamente il formato JSON mostrato sopra
-2. **ID UNICI**: Ogni elemento deve avere un ID unico (event-1, event-2, gate-1, etc.)
-3. **TOP EVENT**: Deve sempre essere l'ID di una GATE, mai di un event
-4. **GATE TYPES**: Usa solo questi tipi: "AND", "OR", "PAND", "SPARE", "SEQ", "FDEP"
-5. **CONNESSIONI**: Usa sempre gli ID degli elementi, mai i nomi
-6. **SINTASSI**: Assicurati che il JSON sia valido (virgole, virgolette, parentesi bilanciate)
-7. **NO COMMENTI**: Non includere commenti nel JSON
-8. **NO TESTO EXTRA**: Non aggiungere spiegazioni prima o dopo il JSON
+**MANDATORY JSON RULES**:
+1. **STRICT FORMAT**: Use exactly the JSON format shown above
+2. **UNIQUE IDS**: Each element must have a unique ID (event-1, event-2, gate-1, etc.)
+3. **TOP EVENT**: Must always be the ID of a GATE, never an event
+4. **GATE TYPES**: Use only: "AND", "OR", "PAND", "SPARE", "SEQ", "FDEP"
+5. **CONNECTIONS**: Always use element IDs, never names
+6. **SYNTAX**: Ensure valid JSON (commas, quotes, balanced brackets)
+7. **NO COMMENTS**: Do not include comments in JSON
+8. **JSON ONLY**: Your entire response must be valid JSON with no text before or after
 
-**STRUTTURA DEL FAULT TREE**:
-- Inizia dal top event (gate principale) e procedi verso il basso
-- Gli eventi base rappresentano i guasti fondamentali
-- Le gates rappresentano le logiche di combinazione
-- Usa AND per guasti simultanei, OR per guasti alternativi
-- Considera ridondanze e dipendenze temporali appropriate al sistema`;
+**FAULT TREE STRUCTURE**:
+- Start from top event (main gate) and work downward
+- Base events represent fundamental failures
+- Gates represent combination logic
+- Use AND for simultaneous failures, OR for alternative failures
+- Consider redundancies and temporal dependencies appropriate to the system
+
+RESPOND WITH ONLY THE JSON OBJECT.`;
 
     return prompt;
   }

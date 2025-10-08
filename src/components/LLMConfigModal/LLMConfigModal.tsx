@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LLMProviders, LLMConfig, defaultLLMConfig, saveLLMConfig, validateLLMConfig } from '../../config/llm-config';
+import { LLMProviders, LLMConfig, defaultLLMConfig, saveLLMConfig, validateLLMConfig, availableModels } from '../../config/llm-config';
 import './LLMConfigModal.css';
 
 interface LLMConfigModalProps {
@@ -138,12 +138,19 @@ const LLMConfigModal: React.FC<LLMConfigModalProps> = ({ isOpen, onClose, onConf
 
           <div className="field-group">
             <label>Modello:</label>
-            <input
-              type="text"
+            <select
               value={provider.model}
               onChange={(e) => handleConfigChange(providerKey, 'model', e.target.value)}
-              placeholder="Nome del modello"
-            />
+            >
+              {availableModels[providerKey]?.map((model) => (
+                <option key={model.value} value={model.value}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+            <span className="field-help">
+              {availableModels[providerKey]?.find(m => m.value === provider.model)?.free && '✅ Gratuito'}
+            </span>
           </div>
 
           <div className="field-group">
@@ -237,19 +244,19 @@ const LLMConfigModal: React.FC<LLMConfigModalProps> = ({ isOpen, onClose, onConf
             <h4>💡 Informazioni sui Provider</h4>
             <div className="info-grid">
               <div className="info-item">
-                <strong>OpenAI:</strong> GPT-4, GPT-3.5-turbo
+                <strong>OpenAI:</strong> Modelli GPT-4o e GPT-3.5. Richiede API key a pagamento.
               </div>
               <div className="info-item">
-                <strong>Anthropic:</strong> Claude-3 Haiku, Sonnet, Opus
+                <strong>Anthropic:</strong> Modelli Claude 4.5, 4.1 e 3.x. Richiede API key a pagamento.
               </div>
               <div className="info-item">
-                <strong>Gemini:</strong> Gemini 1.5 Flash, Pro
+                <strong>Gemini:</strong> Modelli 2.5 e 2.0. Flash è gratuito con limiti.
               </div>
               <div className="info-item">
-                <strong>Grok:</strong> Grok-beta (xAI)
+                <strong>Grok:</strong> Modelli Grok di xAI. Richiede API key a pagamento.
               </div>
               <div className="info-item">
-                <strong>Locale:</strong> Ollama, LM Studio, etc.
+                <strong>Locale:</strong> Modelli open-source gratuiti via Ollama o LM Studio.
               </div>
             </div>
           </div>

@@ -1,3 +1,9 @@
+export interface ModelOption {
+  value: string;
+  label: string;
+  free?: boolean;
+}
+
 export interface LLMConfig {
   provider: 'openai' | 'anthropic' | 'gemini' | 'grok' | 'local';
   apiKey: string;
@@ -7,6 +13,41 @@ export interface LLMConfig {
   maxTokens?: number;
   enabled: boolean;
 }
+
+// Modelli disponibili per ogni provider
+export const availableModels: Record<string, ModelOption[]> = {
+  openai: [
+    { value: 'gpt-4o', label: 'GPT-4o' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
+  ],
+  anthropic: [
+    { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
+    { value: 'claude-opus-4-1-20250805', label: 'Claude Opus 4.1' },
+    { value: 'claude-3-7-sonnet-20250224', label: 'Claude 3.7 Sonnet' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+  ],
+  gemini: [
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Free)', free: true },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Free)', free: true },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Free)', free: true },
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
+  ],
+  grok: [
+    { value: 'grok-beta', label: 'Grok Beta' },
+    { value: 'grok-2-latest', label: 'Grok 2 Latest' },
+    { value: 'grok-2-vision-1212', label: 'Grok 2 Vision' }
+  ],
+  local: [
+    { value: 'llama3', label: 'Llama 3 (Free)', free: true },
+    { value: 'mistral', label: 'Mistral (Free)', free: true },
+    { value: 'codellama', label: 'Code Llama (Free)', free: true },
+    { value: 'phi', label: 'Phi (Free)', free: true }
+  ]
+};
 
 export interface LLMProviders {
   openai: LLMConfig;
@@ -38,8 +79,8 @@ export const defaultLLMConfig: LLMProviders = {
   },
   gemini: {
     provider: 'gemini',
-    apiKey: 'AIzaSyBAepcPPBOSXVSgf7gVG1J0CADoUYVn1e0',
-    model: 'gemini-1.5-flash',
+    apiKey: '',
+    model: 'gemini-2.0-flash',
     baseUrl: 'https://generativelanguage.googleapis.com',
     temperature: 0.7,
     maxTokens: 1000,
