@@ -15,6 +15,7 @@ import { useLLMConfig } from '../../contexts/LLMContext';
 import { useModelPersistence } from '../../contexts/ModelPersistenceContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { usePanel } from '../../contexts/PanelContext';
+import CTMCResultsService from '../../services/ctmc-results-service';
 import './MarkovChainEditor.css';
 
 const MarkovChainEditor: React.FC = () => {
@@ -262,6 +263,10 @@ const MarkovChainEditor: React.FC = () => {
 
         const file = await fileHandle.getFile();
         const { model } = await FileService.openModelWithValidation(file, 'markov-chain');
+
+        // Clear previous CTMC results when loading a new model
+        CTMCResultsService.clearResults();
+
         setMarkovChainModel(model as MarkovChainModel);
 
         saveMarkovChainOpenedFile({
@@ -295,6 +300,10 @@ const MarkovChainEditor: React.FC = () => {
         if (file) {
           try {
             const { model } = await FileService.openModelWithValidation(file, 'markov-chain');
+
+            // Clear previous CTMC results when loading a new model
+            CTMCResultsService.clearResults();
+
             setMarkovChainModel(model as MarkovChainModel);
 
             saveMarkovChainOpenedFile({
@@ -410,6 +419,9 @@ ${markovChainModel.transitions.map(transition => {
   const handleNewModel = useCallback(() => {
     if (markovChainModel.states.length > 0 || markovChainModel.transitions.length > 0) {
       if (window.confirm('Are you sure you want to create a new model? All unsaved changes will be lost.')) {
+        // Clear previous CTMC results when creating a new model
+        CTMCResultsService.clearResults();
+
         setMarkovChainModel({ states: [], transitions: [] });
         setSelectedElement(null);
         saveMarkovChainOpenedFile(null); // Reset del file aperto
