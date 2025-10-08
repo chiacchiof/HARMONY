@@ -2,7 +2,7 @@
 REM ============================================
 REM HARMONY - Launcher Script
 REM ============================================
-REM Avvia l'applicazione Harmony (Frontend React)
+REM Avvia frontend (React) e backend (Express/MATLAB)
 REM ============================================
 
 cls
@@ -65,14 +65,46 @@ if not exist "node_modules" (
     echo.
 )
 
+REM Verifica che esista il backend server
+if not exist "backend-server.js" (
+    echo [!] ATTENZIONE: backend-server.js non trovato!
+    echo.
+    echo Il backend e necessario per l'integrazione MATLAB.
+    echo Continuando solo con il frontend...
+    echo.
+)
+
 echo ============================================
-echo    Avvio Harmony...
+echo    Avvio Harmony (Frontend + Backend)...
 echo ============================================
 echo.
-echo L'applicazione si aprira automaticamente nel browser su:
-echo http://localhost:3000
+echo Frontend React:  http://localhost:3000
+echo Backend Express: http://localhost:3001
 echo.
-echo Per fermare Harmony, chiudi questa finestra o premi Ctrl+C
+
+REM Avvia backend se esiste
+if exist "backend-server.js" (
+    echo Avvio backend server ^(porta 3001^)...
+    start "Harmony Backend" cmd /k "node backend-server.js"
+
+    REM Attendi 2 secondi per dare tempo al backend di avviarsi
+    timeout /t 2 /nobreak >nul
+    echo [OK] Backend avviato!
+    echo.
+)
+
+echo Avvio frontend React ^(porta 3000^)...
+echo.
+echo L'applicazione si aprira automaticamente nel browser.
+echo.
+echo Per fermare Harmony:
+if exist "backend-server.js" (
+    echo  - Chiudi questa finestra ^(Frontend^)
+    echo  - Chiudi la finestra "Harmony Backend" ^(Backend^)
+) else (
+    echo  - Chiudi questa finestra
+)
+echo  - Oppure premi Ctrl+C
 echo.
 echo ============================================
 echo.
