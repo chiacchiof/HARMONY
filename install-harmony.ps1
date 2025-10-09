@@ -57,8 +57,18 @@ function Download-Repository {
     if ($UseGit) {
         # Usa Git clone con branch specifico
         Write-Host "  Clonazione con Git (branch: $BranchName)..." -ForegroundColor Gray
-        git clone -b $BranchName $RepoUrl $DestinationPath 2>&1 | Out-Null
-        return $LASTEXITCODE -eq 0
+
+        # Esegui git clone e cattura solo gli errori reali
+        $gitOutput = git clone -b $BranchName $RepoUrl $DestinationPath 2>&1
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  Clonazione completata!" -ForegroundColor Green
+            return $true
+        } else {
+            Write-Host "  Errore durante la clonazione:" -ForegroundColor Red
+            Write-Host "  $gitOutput" -ForegroundColor Red
+            return $false
+        }
     } else {
         # Scarica ZIP da GitHub
         try {
