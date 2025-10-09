@@ -58,16 +58,26 @@ function Download-Repository {
         # Usa Git clone con branch specifico
         Write-Host "  Clonazione con Git (branch: $BranchName)..." -ForegroundColor Gray
 
-        # Esegui git clone e cattura solo gli errori reali
-        $gitOutput = git clone -b $BranchName $RepoUrl $DestinationPath 2>&1
+        # Temporaneamente disabilita ErrorActionPreference per Git
+        $oldErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
 
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  Clonazione completata!" -ForegroundColor Green
-            return $true
-        } else {
-            Write-Host "  Errore durante la clonazione:" -ForegroundColor Red
-            Write-Host "  $gitOutput" -ForegroundColor Red
-            return $false
+        try {
+            # Esegui git clone redirigendo tutto a null (silenzioso)
+            $null = git clone -b $BranchName $RepoUrl $DestinationPath --quiet 2>&1
+
+            # Verifica se la destinazione esiste per confermare successo
+            if (Test-Path $DestinationPath) {
+                Write-Host "  Clonazione completata!" -ForegroundColor Green
+                return $true
+            } else {
+                Write-Host "  Errore: repository non clonato correttamente" -ForegroundColor Red
+                return $false
+            }
+        }
+        finally {
+            # Ripristina ErrorActionPreference originale
+            $ErrorActionPreference = $oldErrorAction
         }
     } else {
         # Scarica ZIP da GitHub

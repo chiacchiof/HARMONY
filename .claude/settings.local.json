@@ -22,7 +22,9 @@
       "Read(//c/SHyFTOO/**)",
       "Bash(copy:*)",
       "Bash(git fetch:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
