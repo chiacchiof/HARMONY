@@ -339,20 +339,26 @@ const SHyFTAModal: React.FC<SHyFTAModalProps> = ({
     setShowStopConfirmation(false);
   };
 
-  // Debug function to test results loading  
+  // Debug function to test results loading
   const handleTestResultsLoading = async () => {
     console.log('🧪 [DEBUG] Testing results loading manually...');
-    
+
+    // Validate shyftaLibFolder is configured
+    if (!shyftaLibFolder || shyftaLibFolder.trim() === '') {
+      alert('❌ Errore: Configura prima il percorso della cartella SHyFTALib nel campo "📁 Cartella SHyFTALib"');
+      return;
+    }
+
     // Set loading state
     setIsLoadingResults(true);
-    
-    // Test with your actual results.mat path
-    const testPath = 'C:/SHyFTOO/output/results.mat';
-    console.log(`📁 Testing with path: ${testPath}`);
-    
+
+    const resultsPath = `${shyftaLibFolder}/output/results.mat`;
+    console.log(`📁 Loading results from configured path: ${resultsPath}`);
+    console.log(`📚 SHyFTA library path: ${shyftaLibFolder}`);
+
     try {
       const success = await MatlabResultsService.loadResultsAfterSimulation(
-        'C:/SHyFTOO', // Use your actual SHyFTA path
+        shyftaLibFolder, // Use configured SHyFTA path from modal
         faultTreeModel.events,
         faultTreeModel.gates,
         missionTime,
