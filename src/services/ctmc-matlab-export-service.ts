@@ -274,6 +274,48 @@ fprintf("Time step: %.4f\\n\\n", deltaT);
 fprintf("\\n=== Risultati Finali ===\\n");
 fprintf("Distribuzione al tempo T=%.2f:\\n", T);
 fprintf("π(T) = %s\\n", mat2str(pi_T, 6));
+
+% 6. Salvataggio risultati
+% Create results structure
+result = pi_T;
+states = 0:${stateCount-1};
+Q = []; % Not available for simulation mode
+
+% Save to MAT file
+resultsFile = fullfile(pwd, 'output', 'results.mat');
+if exist('probabilityMatrix', 'var') && exist('timeSteps', 'var')
+    save(resultsFile, 'result', 'timeSteps', 'probabilityMatrix', 'Q', 'pi0', 'states', 'transitions', 'T', 'deltaT');
+else
+    save(resultsFile, 'result', 'Q', 'pi0', 'states', 'transitions', 'T');
+end
+fprintf("\\nRisultati salvati in: %s\\n", resultsFile);
+
+% Save as JSON for Node.js parsing
+resultsStruct.result = result;
+resultsStruct.states = states;
+resultsStruct.transitions = transitions;
+if exist('probabilityMatrix', 'var') && exist('timeSteps', 'var')
+    resultsStruct.timeSteps = timeSteps;
+    resultsStruct.probabilityMatrix = probabilityMatrix;
+end
+resultsStruct.t = T;
+resultsStruct.deltaT = deltaT;
+resultsStruct.Solver = 'Simulation';
+resultsStruct.analysisTime = datestr(now, 'yyyy-mm-dd HH:MM:SS');
+
+jsonFile = fullfile(pwd, 'output', 'results.json');
+jsonText = jsonencode(resultsStruct);
+fid = fopen(jsonFile, 'w');
+if fid == -1
+    fprintf("Warning: Could not create JSON file\\n");
+else
+    fprintf(fid, '%s', jsonText);
+    fclose(fid);
+    fprintf("JSON results saved to: %s\\n", jsonFile);
+end
+
+fprintf("\\nSimulazione completata!\\n");
+fprintf("SIMULATION_COMPLETED\\n");
 `;
 
     return matlabCode;
