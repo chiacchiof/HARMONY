@@ -66,7 +66,7 @@ fprintf("�(t=%.2f) uniformization: %s\n", t, mat2str(pi_t_uni, 6));
 fprintf("� stationary: %s\n", mat2str(pi_inf, 6));
 
 % 9. Save results including time evolution
-resultsFile = fullfile(pwd, 'output/results.mat');
+resultsFile = fullfile(pwd, 'output', 'results.mat');
 save(resultsFile, 'timeSteps', 'probabilityMatrix', 'pi_t_expm', 'pi_t_uni', 'pi_inf', 'Q', 'pi0', 'states', 'transitions', 't', 'deltaT');
 fprintf("\nResults saved to: %s\n", resultsFile);
 fprintf("Time evolution matrix: %dx%d (time x states)\n", size(probabilityMatrix, 1), size(probabilityMatrix, 2));
@@ -85,7 +85,7 @@ resultsStruct.deltaT = deltaT;
 resultsStruct.analysisTime = datestr(now, 'yyyy-mm-dd HH:MM:SS');
 
 % Convert to JSON and save
-jsonFile = fullfile(pwd, 'output/results.json');
+jsonFile = fullfile(pwd, 'output', 'results.json');
 jsonText = jsonencode(resultsStruct);
 fid = fopen(jsonFile, 'w');
 if fid == -1
