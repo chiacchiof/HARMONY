@@ -1100,10 +1100,11 @@ exit;
           const jsonData = fs.readFileSync(jsonPath, 'utf8');
           const results = JSON.parse(jsonData);
           
-          // Cleanup temporary files
+          // Cleanup temporary files (keep extract_results.m for debugging)
           try {
-            fs.unlinkSync(scriptPath);
+            // Only delete the JSON file, keep extract_results.m for local testing
             fs.unlinkSync(jsonPath);
+            console.log(`🧪 extract_results.m kept for debugging: ${scriptPath}`);
           } catch (cleanupError) {
             console.warn('⚠️ Could not clean up temp files:', cleanupError.message);
           }
