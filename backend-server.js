@@ -904,7 +904,14 @@ try
     % Load all variables to ensure counter_i is available
     load('${resultsPath.replace(/\\/g, '/')}');
     fprintf('Loaded all variables from results.mat\\n');
-    
+
+    % Conservative approach: pause to ensure all variables are fully loaded
+    pause(0.5);
+
+    % Get list of all loaded variables in workspace
+    allLoadedVars = who;
+    fprintf('Total variables loaded: %d\\n', length(allLoadedVars));
+
     % Try to extract counter_i (actual iterations executed) from workspace
     actualIterations = ${iterations}; % Default fallback
     if exist('counter_i', 'var')
@@ -913,24 +920,25 @@ try
     else
         fprintf('counter_i not found, using default iterations = %d\\n', actualIterations);
     end
-    
+
     % Initialize results structure
     results = struct();
     results.success = true;
     results.components = {};
     results.actualIterations = actualIterations;
     results.maxIterations = ${iterations};
-    
+
     % Extract data for each component using _tfail variables
     fprintf('Looking for _tfail variables for each component...\\n');
-    
+
     for i = 1:length(componentNames)
         compName = strtrim(componentNames{i});
         if ~isempty(compName)
             % Look for the corresponding _tfail variable
             tfailVarName = [compName '_tfail'];
-            
-            if exist(tfailVarName, 'var')
+
+            % Check if variable exists in the loaded workspace using ismember
+            if ismember(tfailVarName, allLoadedVars)
                 % Get failure times array
                 failureTimes = eval(tfailVarName);
                 
