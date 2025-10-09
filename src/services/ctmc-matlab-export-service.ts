@@ -461,7 +461,7 @@ ${solutionCode}
 ${resultsCode}
 
 % 7. Salvataggio risultati
-resultsFile = fullfile(pwd, 'output/results.mat');
+resultsFile = fullfile(pwd, 'output', 'results.mat');
 if exist('probabilityMatrix', 'var')
     save(resultsFile, 'result', 'timeSteps', 'probabilityMatrix', 'Q', 'pi0', 'states', 'transitions', 't', 'deltaT');
     fprintf("\\nRisultati salvati in: %s\\n", resultsFile);
@@ -490,7 +490,7 @@ else
 end
 
 % Convert to JSON and save
-jsonFile = fullfile(pwd, 'output/results.json');
+jsonFile = fullfile(pwd, 'output', 'results.json');
 jsonText = jsonencode(resultsStruct);
 fid = fopen(jsonFile, 'w');
 if fid == -1
