@@ -121,10 +121,11 @@ function Download-Repository {
 Write-Host "[1/6] Verifica prerequisiti..." -ForegroundColor Yellow
 Write-Host ""
 
-# Verifica Git (opzionale - useremo download ZIP se non disponibile)
-$useGit = Test-Command "git"
-if ($useGit) {
+# Verifica Git (opzionale - useremo download ZIP per maggiore affidabilità)
+$useGit = $false  # Forza download ZIP per evitare problemi con versioni diverse di Git
+if (Test-Command "git") {
     Write-Host "[OK] Git trovato: $(git --version)" -ForegroundColor Green
+    Write-Host "[i] Uso download ZIP per maggiore compatibilità" -ForegroundColor Gray
 } else {
     Write-Host "[!] Git non trovato - uso download diretto da GitHub" -ForegroundColor Yellow
 }
