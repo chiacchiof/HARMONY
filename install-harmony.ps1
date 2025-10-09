@@ -9,6 +9,7 @@
 
 param(
     [string]$InstallPath = "C:\Harmony",
+    [string]$Branch = "main",
     [switch]$NonInteractive
 )
 
@@ -25,6 +26,10 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "   HARMONY - Installazione Automatica" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
+if ($Branch -ne "main") {
+    Write-Host "[!] Installazione da branch: $Branch" -ForegroundColor Yellow
+    Write-Host ""
+}
 
 # Funzione per verificare se un comando esiste
 function Test-Command {
@@ -45,22 +50,23 @@ function Download-Repository {
         [string]$RepoUrl,
         [string]$DestinationPath,
         [string]$RepoName,
-        [bool]$UseGit
+        [bool]$UseGit,
+        [string]$BranchName = "main"
     )
 
     if ($UseGit) {
-        # Usa Git clone
-        Write-Host "  Clonazione con Git..." -ForegroundColor Gray
-        git clone $RepoUrl $DestinationPath 2>&1 | Out-Null
+        # Usa Git clone con branch specifico
+        Write-Host "  Clonazione con Git (branch: $BranchName)..." -ForegroundColor Gray
+        git clone -b $BranchName $RepoUrl $DestinationPath 2>&1 | Out-Null
         return $LASTEXITCODE -eq 0
     } else {
         # Scarica ZIP da GitHub
         try {
-            $zipUrl = $RepoUrl -replace '\.git$', '/archive/refs/heads/main.zip'
+            $zipUrl = $RepoUrl -replace '\.git$', "/archive/refs/heads/$BranchName.zip"
             $zipFile = Join-Path $env:TEMP "$RepoName.zip"
             $extractPath = Join-Path $env:TEMP "$RepoName-extract"
 
-            Write-Host "  Scarico ZIP da GitHub..." -ForegroundColor Gray
+            Write-Host "  Scarico ZIP da GitHub (branch: $BranchName)..." -ForegroundColor Gray
             Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -UseBasicParsing
 
             Write-Host "  Estrazione file..." -ForegroundColor Gray
@@ -189,12 +195,14 @@ Write-Host ""
 # ============================================
 Write-Host "[3/6] Download Harmony da GitHub..." -ForegroundColor Yellow
 Write-Host ""
+Write-Host "Branch selezionato: $Branch" -ForegroundColor Cyan
+Write-Host ""
 
 $harmonyPath = Join-Path $installPath "Harmony"
 if (Test-Path $harmonyPath) {
     Write-Host "[!] Harmony gia presente, salto download..." -ForegroundColor Yellow
 } else {
-    $success = Download-Repository -RepoUrl $harmonyRepo -DestinationPath $harmonyPath -RepoName "Harmony" -UseGit $useGit
+    $success = Download-Repository -RepoUrl $harmonyRepo -DestinationPath $harmonyPath -RepoName "Harmony" -UseGit $useGit -BranchName $Branch
     if (-not $success) {
         Write-Host "[X] ERRORE durante il download di Harmony" -ForegroundColor Red
         if (-not $NonInteractive) {
@@ -313,7 +321,7 @@ Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "Pacchetti installati:" -ForegroundColor Cyan
-Write-Host "  - Harmony:  $harmonyPath" -ForegroundColor White
+Write-Host "  - Harmony:  $harmonyPath (branch: $Branch)" -ForegroundColor White
 Write-Host "  - SHyFTOO:  $shyftooPath" -ForegroundColor White
 Write-Host "  - CTMCLib:  $ctmcPath" -ForegroundColor White
 Write-Host ""
