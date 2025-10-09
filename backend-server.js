@@ -866,11 +866,12 @@ app.post('/api/matlab/execute-stream', async (req, res) => {
 
 // Parse results.mat file for reliability data
 app.get('/api/results/parse', async (req, res) => {
-  const { resultsPath, components, iterations, missionTime, timestep = 1 } = req.query;
+  const { resultsPath, components, iterations, missionTime, timestep = 1, shyftaPath } = req.query;
   let responseSent = false; // Flag to prevent double responses
-  
+
   console.log(`📈 Results parsing requested:`);
   console.log(`   📁 Results file: ${resultsPath}`);
+  console.log(`   📚 SHyFTA path: ${shyftaPath || 'not provided (using results directory)'}`);
   console.log(`   🧩 Components: ${components}`);
   console.log(`   🔄 Iterations: ${iterations}`);
   console.log(`   ⏱️ Mission time: ${missionTime}h`);
@@ -1059,19 +1060,24 @@ end
 exit;
 `;
     
-    // Write the MATLAB script
-    const scriptPath = path.join(path.dirname(resultsPath), 'extract_results.m');
-    const jsonPath = path.join(path.dirname(resultsPath), 'temp_results.json');
-    
+    // Determine working directory: use shyftaPath if provided, otherwise use results directory
+    const workingDir = shyftaPath ? shyftaPath : path.dirname(resultsPath);
+    const outputDir = path.dirname(resultsPath);
+
+    // Write the MATLAB script in the output directory (where results.mat is)
+    const scriptPath = path.join(outputDir, 'extract_results.m');
+    const jsonPath = path.join(outputDir, 'temp_results.json');
+
     fs.writeFileSync(scriptPath, matlabScript);
     console.log(`📝 MATLAB extraction script created: ${scriptPath}`);
-    
-    // Execute MATLAB script
+    console.log(`📂 MATLAB working directory: ${workingDir}`);
+
+    // Execute MATLAB script from the SHyFTA directory (or results directory if not provided)
     const matlabProcess = spawn('matlab', [
-      '-batch', 
-      `cd('${path.dirname(resultsPath).replace(/\\/g, '/')}'); extract_results`
+      '-batch',
+      `cd('${workingDir.replace(/\\/g, '/')}'); cd('${outputDir.replace(/\\/g, '/')}'); extract_results`
     ], {
-      cwd: path.dirname(resultsPath),
+      cwd: workingDir,
       stdio: 'pipe'
     });
     

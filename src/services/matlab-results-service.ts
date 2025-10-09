@@ -65,32 +65,44 @@ export class MatlabResultsService {
    * Carica e analizza il file results.mat via backend MATLAB
    */
   static async loadResultsFromFile(
-    filePath: string, 
-    events: BaseEvent[], 
+    filePath: string,
+    events: BaseEvent[],
     gates: Gate[],
     missionTime: number,
     iterations: number,
-    config: ResultsProcessingConfig = { timestep: 1 }
+    config: ResultsProcessingConfig = { timestep: 1 },
+    shyftaPath?: string  // Optional: path to SHyFTA library folder
   ): Promise<SimulationResults> {
-    
+
     console.log(`📁 Loading real results from: ${filePath}`);
-    
+    if (shyftaPath) {
+      console.log(`📚 SHyFTA library path: ${shyftaPath}`);
+    }
+
     try {
       // Prepare component names for the backend
       const allComponents = [...events.map(e => e.name), ...gates.map(g => g.name)];
       const componentsParam = allComponents.join(',');
-      
+
       console.log(`📋 Components to parse: ${componentsParam}`);
-      
+
+      // Build query parameters
+      const params: Record<string, string> = {
+        resultsPath: filePath,
+        components: componentsParam,
+        iterations: iterations.toString(),
+        missionTime: missionTime.toString(),
+        timestep: config.timestep.toString(),
+      };
+
+      // Add shyftaPath if provided
+      if (shyftaPath) {
+        params.shyftaPath = shyftaPath;
+      }
+
       // Call backend API to parse the results.mat file
       const response = await fetch(
-        `http://${window.location.hostname}:3001/api/results/parse?` + new URLSearchParams({
-          resultsPath: filePath,
-          components: componentsParam,
-          iterations: iterations.toString(),
-          missionTime: missionTime.toString(),
-          timestep: config.timestep.toString(),
-        }).toString()
+        `http://${window.location.hostname}:3001/api/results/parse?` + new URLSearchParams(params).toString()
       );
       
       if (!response.ok) {
@@ -314,15 +326,16 @@ export class MatlabResultsService {
   ): Promise<boolean> {
     try {
       const resultsPath = `${shyftaPath}/output/results.mat`;
-      
+
       console.log('🔍 [MatlabResultsService] Loading results after simulation...');
       console.log(`   📁 Results path: ${resultsPath}`);
+      console.log(`   📚 SHyFTA path: ${shyftaPath}`);
       console.log(`   📊 Components: ${events.length} events, ${gates.length} gates`);
       console.log(`   ⚙️ Config: timestep=${config.timestep}h`);
-      
- 
-      
-      await this.loadResultsFromFile(resultsPath, events, gates, missionTime, iterations, config);
+
+
+
+      await this.loadResultsFromFile(resultsPath, events, gates, missionTime, iterations, config, shyftaPath);
       
       console.log('✅ [MatlabResultsService] Results loaded and processed successfully!');
       console.log(`   📈 Components with results: ${this.simulationResults?.components.length}`);
