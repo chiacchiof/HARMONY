@@ -128,38 +128,50 @@ const RightPanel: React.FC<RightPanelProps> = ({
       // Debug: log della configurazione
       console.log('LLM Config:', llmConfig);
       console.log('Current Provider:', currentProvider);
-      
+
       // Usa il provider selezionato manualmente
       const selectedProvider = llmConfig[currentProvider as keyof LLMProviders];
       console.log('Selected Provider Config:', selectedProvider);
-      
-      if (selectedProvider && selectedProvider.provider !== 'local' && selectedProvider.enabled && selectedProvider.apiKey) {
-        // Usa il servizio LLM esterno
-        console.log('Using external LLM:', selectedProvider.provider);
+
+      // Verifica se il provider è valido (esterno con API key o locale abilitato)
+      const isValidProvider = selectedProvider && selectedProvider.enabled &&
+        (selectedProvider.provider === 'local' || selectedProvider.apiKey);
+
+      if (isValidProvider) {
+        // Usa il servizio LLM (esterno o locale)
+        console.log('Using LLM provider:', selectedProvider.provider);
         const llmService = new LLMService(selectedProvider);
-        
+
         // Aggiungi contesto del fault tree corrente se disponibile
-        const context = currentFaultTree ? 
-          `Fault tree corrente: ${currentFaultTree.events.length} eventi, ${currentFaultTree.gates.length} porte` : 
+        const context = currentFaultTree ?
+          `Fault tree corrente: ${currentFaultTree.events.length} eventi, ${currentFaultTree.gates.length} porte` :
           undefined;
-        
+
         const response = await llmService.generateResponse(messageText, context);
-        
+
         if (response.error) {
+          console.warn('LLM provider error:', response.error);
+          // Se c'è un errore, usa il fallback locale
           throw new Error(response.error);
         }
-        
+
+        // Se la risposta proviene dal fallback locale (modello 'fallback'),
+        // significa che il servizio locale non era disponibile
+        if (response.model === 'fallback') {
+          console.log('Local LLM not available, using predefined responses');
+        }
+
         const botMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           text: response.content,
           sender: 'bot',
           timestamp: new Date()
         };
-        
+
         setMessages(prev => [...prev, botMessage]);
       } else {
-        // Fallback al sistema locale
-        console.log('Using local fallback');
+        // Fallback al sistema locale con risposte predefinite
+        console.log('No valid provider configured, using local fallback');
         const botResponse = generateBotResponse(messageText);
         const botMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
@@ -167,7 +179,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           sender: 'bot',
           timestamp: new Date()
         };
-        
+
         setMessages(prev => [...prev, botMessage]);
       }
     } catch (error) {
@@ -217,8 +229,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
     try {
       const selectedProvider = llmConfig[currentProvider as keyof LLMProviders];
-      
-      if (selectedProvider && selectedProvider.enabled && selectedProvider.apiKey) {
+
+      // Verifica se il provider è valido (esterno con API key o locale abilitato)
+      const isValidProvider = selectedProvider && selectedProvider.enabled &&
+        (selectedProvider.provider === 'local' || selectedProvider.apiKey);
+
+      if (isValidProvider) {
+        console.log('Using LLM provider for markov chain generation:', selectedProvider.provider);
         const llmService = new LLMService(selectedProvider);
         const prompt = `Crea una Markov Chain per: ${message}. Rispondi SOLO con un JSON valido nel formato:
 {
@@ -314,29 +331,34 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
     try {
       const selectedProvider = llmConfig[currentProvider as keyof LLMProviders];
-      
-      if (selectedProvider && selectedProvider.enabled && selectedProvider.apiKey) {
+
+      // Verifica se il provider è valido (esterno con API key o locale abilitato)
+      const isValidProvider = selectedProvider && selectedProvider.enabled &&
+        (selectedProvider.provider === 'local' || selectedProvider.apiKey);
+
+      if (isValidProvider) {
+        console.log('Using LLM provider for fault tree generation:', selectedProvider.provider);
         const llmService = new LLMService(selectedProvider);
         const request = LLMService.extractGenerationRequest(message);
-        
+
         const generatedModel = await llmService.generateFaultTree(request);
-        
+
         if (generatedModel) {
           onGenerateFaultTree(generatedModel);
-          
+
           const successMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             text: `✅ Ho generato un fault tree con:\n• ${generatedModel.events.length} eventi base\n• ${generatedModel.gates.length} porte logiche\n• ${generatedModel.connections.length} connessioni\n\nIl modello è stato aggiunto all'editor grafico!`,
             sender: 'bot',
             timestamp: new Date()
           };
-          
+
           setMessages(prev => [...prev, successMessage]);
         } else {
-          throw new Error('Impossibile generare il fault tree');
+          throw new Error('Impossibile generare il fault tree - il servizio LLM non ha restituito un modello valido');
         }
       } else {
-        throw new Error('Provider LLM non configurato');
+        throw new Error('Provider LLM non configurato correttamente. Verifica le impostazioni.');
       }
     } catch (error) {
       console.error('Errore generazione fault tree:', error);

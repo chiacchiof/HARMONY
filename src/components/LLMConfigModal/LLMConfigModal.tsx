@@ -13,6 +13,8 @@ const LLMConfigModal: React.FC<LLMConfigModalProps> = ({ isOpen, onClose, onConf
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [activeTab, setActiveTab] = useState<string>('openai');
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [loadingOllamaModels, setLoadingOllamaModels] = useState<boolean>(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -29,8 +31,48 @@ const LLMConfigModal: React.FC<LLMConfigModalProps> = ({ isOpen, onClose, onConf
       // Reset stati
       setErrors({});
       setSaveSuccess(false);
+
+      // Carica i modelli Ollama disponibili
+      fetchOllamaModels();
     }
   }, [isOpen]);
+
+  // Funzione per recuperare i modelli disponibili da Ollama
+  const fetchOllamaModels = async () => {
+    setLoadingOllamaModels(true);
+    try {
+      const baseUrl = config.local.baseUrl || 'http://localhost:11434';
+      const response = await fetch(`${baseUrl}/api/tags`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // L'API Ollama restituisce un array di modelli con struttura: { models: [{ name: "..." }, ...] }
+        if (data.models && Array.isArray(data.models)) {
+          const modelNames = data.models.map((model: any) => model.name);
+          setOllamaModels(modelNames);
+          console.log('Ollama models loaded:', modelNames);
+        } else {
+          console.warn('Ollama API returned unexpected format:', data);
+          setOllamaModels([]);
+        }
+      } else {
+        console.warn('Failed to fetch Ollama models:', response.status);
+        // Se Ollama non è raggiungibile, usa la lista predefinita
+        setOllamaModels(['llama3', 'mistral', 'codellama', 'phi']);
+      }
+    } catch (error) {
+      console.warn('Error fetching Ollama models:', error);
+      // Fallback alla lista predefinita
+      setOllamaModels(['llama3', 'mistral', 'codellama', 'phi']);
+    } finally {
+      setLoadingOllamaModels(false);
+    }
+  };
 
   const handleConfigChange = (provider: keyof LLMProviders, field: keyof LLMConfig, value: any) => {
     const newConfig = {
@@ -41,13 +83,18 @@ const LLMConfigModal: React.FC<LLMConfigModalProps> = ({ isOpen, onClose, onConf
       }
     };
     setConfig(newConfig);
-    
+
     // Valida la configurazione
     const providerErrors = validateLLMConfig(newConfig[provider]);
     setErrors(prev => ({
       ...prev,
       [provider]: providerErrors
     }));
+
+    // Se il provider è local e il campo è baseUrl, ricarica i modelli
+    if (provider === 'local' && field === 'baseUrl') {
+      setTimeout(() => fetchOllamaModels(), 300); // Debounce per evitare troppe richieste
+    }
   };
 
   const handleSave = () => {
@@ -138,19 +185,60 @@ const LLMConfigModal: React.FC<LLMConfigModalProps> = ({ isOpen, onClose, onConf
 
           <div className="field-group">
             <label>Modello:</label>
-            <select
-              value={provider.model}
-              onChange={(e) => handleConfigChange(providerKey, 'model', e.target.value)}
-            >
-              {availableModels[providerKey]?.map((model) => (
-                <option key={model.value} value={model.value}>
-                  {model.label}
-                </option>
-              ))}
-            </select>
-            <span className="field-help">
-              {availableModels[providerKey]?.find(m => m.value === provider.model)?.free && '✅ Gratuito'}
-            </span>
+            {providerKey === 'local' ? (
+              <>
+                <select
+                  value={provider.model}
+                  onChange={(e) => handleConfigChange(providerKey, 'model', e.target.value)}
+                  disabled={loadingOllamaModels}
+                >
+                  {loadingOllamaModels ? (
+                    <option>Caricamento modelli...</option>
+                  ) : ollamaModels.length > 0 ? (
+                    ollamaModels.map((modelName) => (
+                      <option key={modelName} value={modelName}>
+                        {modelName}
+                      </option>
+                    ))
+                  ) : (
+                    availableModels[providerKey]?.map((model) => (
+                      <option key={model.value} value={model.value}>
+                        {model.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <span className="field-help">
+                  {loadingOllamaModels ? '⏳ Caricamento...' :
+                   ollamaModels.length > 0 ? `✅ ${ollamaModels.length} modelli disponibili` :
+                   '⚠️ Ollama non raggiungibile'}
+                  <button
+                    className="refresh-models-button"
+                    onClick={fetchOllamaModels}
+                    disabled={loadingOllamaModels}
+                    style={{ marginLeft: '8px', padding: '2px 8px', fontSize: '0.85em' }}
+                  >
+                    🔄 Ricarica
+                  </button>
+                </span>
+              </>
+            ) : (
+              <>
+                <select
+                  value={provider.model}
+                  onChange={(e) => handleConfigChange(providerKey, 'model', e.target.value)}
+                >
+                  {availableModels[providerKey]?.map((model) => (
+                    <option key={model.value} value={model.value}>
+                      {model.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="field-help">
+                  {availableModels[providerKey]?.find(m => m.value === provider.model)?.free && '✅ Gratuito'}
+                </span>
+              </>
+            )}
           </div>
 
           <div className="field-group">
