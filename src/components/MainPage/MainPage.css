@@ -16,6 +16,14 @@
   width: 90%;
 }
 
+.harmony-logo {
+  display: block;
+  margin: 0 auto 1.5rem;
+  max-width: 120px;
+  height: auto;
+  border-radius: 8px;
+}
+
 .login-form h1 {
   text-align: center;
   color: #333;

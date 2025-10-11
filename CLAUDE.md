@@ -17,6 +17,9 @@ npm run build
 
 # Run tests
 npm test
+
+# Convert logo PNG to ICO format (for Windows icons)
+npm run convert-icon
 ```
 
 ## Architecture Overview
@@ -83,6 +86,24 @@ src/
 - Multiple providers: OpenAI, Anthropic, Gemini, Grok, Local
 - Fallback mechanism: External API → Local model → Predefined responses
 - Provider configuration with API keys, models, and parameters
+
+## Branding and Icons
+
+**Logo Files:**
+- **Source**: `public/assets/LogoHarmony.png` (high-quality PNG)
+- **Windows Icon**: `public/LogoHarmony.ico` (generated from PNG)
+
+**Icon Usage:**
+- Browser favicon (multi-format support)
+- Homepage logo display
+- Desktop shortcut icon (Windows)
+- Mobile app icon (Apple Touch)
+
+**Icon Management:**
+- Run `npm run convert-icon` to regenerate ICO from PNG
+- Desktop shortcut created automatically by `install-harmony.ps1`
+- Manual shortcut creation available via `create-desktop-shortcut.bat`
+- See `ICON-README.md` for detailed documentation
 
 ## File Operations
 

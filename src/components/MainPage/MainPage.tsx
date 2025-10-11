@@ -17,6 +17,7 @@ const MainPage: React.FC = () => {
     <div className="main-page">
       <div className="login-container">
         <div className="login-form">
+          <img src="/assets/LogoHarmony.png" alt="HARMONY Logo" className="harmony-logo" />
           <h1>HARMONY</h1>
           <h2>Hybrid Availability and Reliability MOdelliNg sYstems</h2>
           <h3>Dynamic Hybrid Fault Tree & Markov Chain</h3>

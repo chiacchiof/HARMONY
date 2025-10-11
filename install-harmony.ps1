@@ -319,9 +319,15 @@ try {
     $Shortcut.Description = "Avvia Harmony Fault Tree Editor"
 
     # Usa l'icona di Harmony se disponibile
-    $iconPath = Join-Path $harmonyPath "public\favicon.ico"
+    $iconPath = Join-Path $harmonyPath "public\LogoHarmony.ico"
     if (Test-Path $iconPath) {
         $Shortcut.IconLocation = $iconPath
+    } else {
+        # Fallback a favicon.ico se LogoHarmony.ico non esiste
+        $iconPath = Join-Path $harmonyPath "public\favicon.ico"
+        if (Test-Path $iconPath) {
+            $Shortcut.IconLocation = $iconPath
+        }
     }
 
     $Shortcut.Save()
